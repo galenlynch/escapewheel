@@ -164,8 +164,8 @@ def test_the_registry_travels_with_the_packet(tmp_path, registry, minimal):
     assert "registry_version" not in manifest
     descriptor = manifest["registries"]["core"]
     assert descriptor["role"] == "core"
-    assert descriptor["version"] == registry["registry_version"] == "0.15.0"
-    assert descriptor["path"] == "registries/core/0.15.0.json.gz"
+    assert descriptor["version"] == registry["registry_version"] == "0.16.0"
+    assert descriptor["path"] == "registries/core/0.16.0.json.gz"
     body = gzip.decompress((root / descriptor["path"]).read_bytes())
     assert hashlib.sha256(body).hexdigest() == descriptor["sha256"]
     assert json.loads(body) == dict(registry)

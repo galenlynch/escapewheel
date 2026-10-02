@@ -73,7 +73,7 @@ presence = "nullable"
 role = "identifier"
 identity = "assigned"
 references = "core.processing_runs"
-description = "The run that produced it. Null means it came off the device as recorded. The manifest records outputs per resource and cannot distinguish streams within one table."
+description = "The run that produced its events, where the packet records it. Null says only that the packet names no producing run."
 
 [[columns]]
 name = "metadata"

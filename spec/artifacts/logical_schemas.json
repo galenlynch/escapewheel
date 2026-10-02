@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
   "registry_id": "core",
-  "registry_version": "0.15.0",
+  "registry_version": "0.16.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.2",
@@ -107,7 +107,7 @@
             "presence": "nullable",
             "role": "identifier",
             "identity": "assigned",
-            "description": "The run that produced this array. Null means it was acquired rather than computed."
+            "description": "The run that produced this array, where the packet records it. Null says only that the packet names no producing run."
           },
           {
             "name": "sample_rate_hz",
@@ -747,7 +747,7 @@
             "presence": "nullable",
             "role": "identifier",
             "identity": "assigned",
-            "description": "The run that produced this array. Null means it was acquired rather than computed."
+            "description": "The run that produced this array, where the packet records it. Null says only that the packet names no producing run."
           },
           {
             "name": "sample_rate_hz",
@@ -2436,7 +2436,7 @@
             "presence": "nullable",
             "role": "identifier",
             "identity": "assigned",
-            "description": "The run that produced this record, where provenance is recorded."
+            "description": "The run that produced this record, where the packet records it. Null says only that the packet names no producing run."
           },
           {
             "name": "parent_curation_id",
@@ -2847,7 +2847,7 @@
             "presence": "nullable",
             "role": "identifier",
             "identity": "assigned",
-            "description": "The run that produced this coordinate."
+            "description": "The run that produced this coordinate, where the packet records it. Null says only that the packet names no producing run."
           }
         ],
         "primary_key": [
@@ -3178,7 +3178,7 @@
             "presence": "nullable",
             "role": "identifier",
             "identity": "assigned",
-            "description": "The run that produced it. Null means it came off the device as recorded. The manifest records outputs per resource and cannot distinguish streams within one table."
+            "description": "The run that produced its events, where the packet records it. Null says only that the packet names no producing run."
           },
           {
             "name": "metadata",
@@ -4795,7 +4795,7 @@
             "presence": "nullable",
             "role": "identifier",
             "identity": "assigned",
-            "description": "The run that produced this record, where provenance is recorded."
+            "description": "The run that produced this record, where the packet records it. Null says only that the packet names no producing run."
           },
           {
             "name": "parameters",
@@ -5353,7 +5353,7 @@
             "presence": "nullable",
             "role": "identifier",
             "identity": "assigned",
-            "description": "The run that produced this coordinate."
+            "description": "The run that produced this coordinate, where the packet records it. Null says only that the packet names no producing run."
           }
         ],
         "primary_key": [

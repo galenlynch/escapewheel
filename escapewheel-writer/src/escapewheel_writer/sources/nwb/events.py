@@ -47,8 +47,8 @@ class Events(NWBFile):
     def event_streams(self) -> list[dict[str, Any]]:
         """`core.event_streams`, one row per acquisition TimeSeries.
 
-        `processing_run_id` is null, which says the events *came off the device as
-        recorded*: an acquisition TimeSeries is what the rig detected and logged online.
+        `processing_run_id` is null, which says only that the packet names no producing run
+        (Part 01 §3.12): the source records no run for an acquisition TimeSeries.
 
         `event_type` is the stream's, not the event's (Part 01 §3.12), and it is the source's field
         name normalised -- `left_lick_time` becomes `left_lick`. Nothing derives it at read time:

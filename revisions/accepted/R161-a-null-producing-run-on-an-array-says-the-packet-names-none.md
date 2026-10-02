@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-10-02 |
 | **Based on** | `0815350e32f1a583964d51d7ec01d211de337747` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -154,14 +154,12 @@ At the baseline R159 and R160 are accepted, three other drafts are open and no p
 amends only Part 05. R160 adds three declarations to the core registry and takes the core version
 `0.15.0`. Two of the three other drafts change the core registry:
 
-- `core-declares-a-clocks-transform-in-typed-columns-alone.md` removes one column of `core.clocks`;
-  and
-- `a-unit-is-identified-outside-its-packet-by-its-name.md` makes nine name columns `required` and
-  advances the registry meta-schema and the registry-contract descriptor as well as the core
-  version. It declares no rule.
+- one removes one column of `core.clocks`; and
+- one makes nine name columns `required` and advances the registry meta-schema and the
+  registry-contract descriptor as well as the core version. It declares no rule.
 
-The third, `a-recipe-accepts-a-discarded-value-by-naming-its-column.md`, changes the recipe schema.
-None of them amends Part 01 §3.12 or Part 01 §3.17 or changes a declaration of a
+The third, which has a recipe accept a discarded value by naming its column, changes the recipe
+schema. None of them amends Part 01 §3.12 or Part 01 §3.17 or changes a declaration of a
 `processing_run_id` column. The only shared text is the core version in Part 02 §9.2 and its
 projections in Part 08 §2 and Part 08 §3. At the baseline the core registry holds 47 tables and its
 version is `0.15.0`, the version the probe of §2.7 used, so this revision takes a later one, and

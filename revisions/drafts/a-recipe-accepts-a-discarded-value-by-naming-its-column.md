@@ -260,10 +260,10 @@ refuses a preference
 for a resource an entry declares under `contributes`, and a column override needs a preference
 (§3.3), so no column override names either table in such a recipe.
 
-The three other open drafts are
-`a-null-producing-run-on-an-array-says-the-packet-names-none.md`,
+R161, accepted after the baseline, rewords seven registry descriptions and amends Part 01 and
+Part 02 §9.2. The two other open drafts are
 `core-declares-a-clocks-transform-in-typed-columns-alone.md` and
-`a-unit-is-identified-outside-its-packet-by-its-name.md`. None amends Part 05 §3.1, Part 05 §3.4,
+`a-unit-is-identified-outside-its-packet-by-its-name.md`. None of the three amends Part 05 §3.1, Part 05 §3.4,
 Part 05 §3.5 or Part 05 §3.6, and none changes the recipe schema. The unit-name draft changes the count of §2.9, as that section says, and makes every owned
 name a column a source may omit and a build fills under the reference writer's practice.
 

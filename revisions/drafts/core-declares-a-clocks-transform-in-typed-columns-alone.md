@@ -37,11 +37,10 @@ Part 02 §9.2. An appended section would leave the first miscounting and the sec
 the registry no longer carries.
 
 R159, accepted, amends only sections of Part 05. R160, accepted, adds three declarations to the
-core registry and takes `0.15.0`. Of the three other open drafts, two advance the same
-`registry_version`.
-`a-null-producing-run-on-an-array-says-the-packet-names-none.md` rewords the description of
-`processing_run_id` on the core tables that declare it nullable.
-`a-unit-is-identified-outside-its-packet-by-its-name.md` makes the name of every owned assigned
+core registry and takes `0.15.0`. R161, accepted after the baseline, and one other open draft
+advance the same `registry_version`.
+R161 §3.4 rewords the description of `processing_run_id` on the core tables that declare it
+nullable. `a-unit-is-identified-outside-its-packet-by-its-name.md` makes the name of every owned assigned
 identifier `required` and has a validator report a name two rows of a table share; it also advances
 the registry meta-schema and the registry-contract descriptor. The fourth,
 `a-recipe-accepts-a-discarded-value-by-naming-its-column.md`, changes no registry declaration.

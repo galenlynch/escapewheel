@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R160 accepted. R42 and R73 withdrawn. 0 proposals and 4 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R161 accepted. R42 and R73 withdrawn. 0 proposals and 3 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 368 columns, 117 references, 91 Tier 2 rules (2 advisory)
@@ -135,13 +135,11 @@ read what each target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Four drafts await acceptance
+## 3a. Three drafts await acceptance
 
 The drafts are under `revisions/drafts/`, and `revisions/drafts/README.md` gives their order and
 each one's appraisal. No proposal is open.
 
-- **A null producing run says the packet names none.** An array or event stream naming no
-  producing run says only that the packet names none, and seven descriptions are reworded.
 - **A recipe accepts a discarded value by naming its column.** An `[overrides]` entry naming a
   column releases a null column of a corresponding row, and a build refuses an entry that can
   release nothing.
@@ -319,13 +317,11 @@ remain, with a third found while the credential draft was appraised.
   output of the complete result.
 
 The same reading found four defects in the specification and the registry. Part 05 §1 and Part 11
-§3 are repaired. Two wait on drafts in `revisions/drafts/`. Two more were found while the drafts
-were appraised: one in Part 04 §7 with the null-run draft, and one in Part 05 §15.6 with the
+§3 are repaired, and R161 rewords the false `processing_run_id` description of both array-asset
+tables. One waits on a draft in `revisions/drafts/`. Two more were found while the drafts
+were appraised: one in Part 04 §7 with the draft R161 became, and one in Part 05 §15.6 with the
 clock-transform draft, which wants a proposal of its own.
 
-- **The description of `processing_run_id` on both array-asset tables is false.** It says a null
-  means the array was acquired, and a computed array whose run the packet does not record also
-  carries null.
 - **`core.clocks.transform_to_parent` is still declared.** R3 §3.4 replaced it with the two typed
   columns.
 - **A held file's undeclared column is invisible to an amendment.** Part 05 §15.6 compares rows

@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "revision": "R161",
+  "based_on": "0815350e32f1a583964d51d7ec01d211de337747",
+  "clauses": {
+    "R161 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/01_semantic_standard.md",
+          "anchor": "ew-array-asset-concept"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "no packet fact separates an acquired array or stream from a computed one whose run the packet does not record, so no validator finding or fixture distinguishes the rule, and no reference package reports a producing run"
+      },
+      "implementations": {
+        "unchanged": "no reference package reads a null run on an array as acquisition or reports an array's producing run"
+      },
+      "documentation": {
+        "unchanged": "no document outside the specification states what a null producing run means"
+      }
+    },
+    "R161 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/01_semantic_standard.md",
+          "anchor": "ew-event-stream-concept"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "no packet fact separates an acquired array or stream from a computed one whose run the packet does not record, so no validator finding or fixture distinguishes the rule, and no reference package reports a producing run"
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/sources/nwb/events.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no document outside the specification states what a null producing run means"
+      }
+    },
+    "R161 §3.3": {
+      "owners": [
+        {
+          "path": "spec/parts/01_semantic_standard.md",
+          "anchor": "ew-array-asset-concept"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "no packet fact separates an acquired array or stream from a computed one whose run the packet does not record, so no validator finding or fixture distinguishes the rule, and no reference package reports a producing run"
+      },
+      "implementations": {
+        "unchanged": "the reference adapters name no run on any array, which the reworded clause permits"
+      },
+      "documentation": {
+        "unchanged": "no document outside the specification states what a null producing run means"
+      }
+    },
+    "R161 §3.4": {
+      "owners": [
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.array_assets/table/columns/8/description"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/analysis.array_assets/table/columns/8/description"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.event_streams/table/columns/7/description"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.sorting_runs/table/columns/6/description"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.curation_versions/table/columns/7/description"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.electrode_coordinates/table/columns/6/description"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.unit_coordinates/table/columns/6/description"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/artifacts/logical_schemas.json",
+          "spec/informative/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_core_descriptions.py::test_a_null_processing_run_says_only_that_the_packet_names_none"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/core.array_assets.toml",
+          "spec/source/core/analysis.array_assets.toml",
+          "spec/source/core/core.event_streams.toml",
+          "spec/source/core/core.sorting_runs.toml",
+          "spec/source/core/core.curation_versions.toml",
+          "spec/source/core/core.electrode_coordinates.toml",
+          "spec/source/core/core.unit_coordinates.toml"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no document outside the specification repeats the seven descriptions"
+      }
+    },
+    "R161 §3.5": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/registry_version"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/artifacts/logical_schemas.json",
+          "spec/parts/08_example_packet.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: structural checks",
+            "id": "core registry version is 0.16.0"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_an_amending_build_adds_sidecars_to_a_packet_bound_to_the_earlier_registry"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/registry.toml",
+          "spec/tools/check.py",
+          "spec/tools/framework_data.py",
+          "escapewheel-writer/tests/test_writer.py",
+          "escapewheel-writer/tests/test_sidecars.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "spec/README.md"
+        ]
+      }
+    }
+  }
+}

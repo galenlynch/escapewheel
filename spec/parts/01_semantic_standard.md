@@ -241,6 +241,12 @@ A stream emits **one kind** of event, so a source emitting several on one channe
 several streams. What a stream's events carry beyond a tick is that named declaration's to declare, not
 core's: how many marks an event has and of what type is a property of what produced it.
 
+An event stream that names no processing run states only that the packet names no run that produced
+its events. A consumer MUST NOT conclude from an event stream naming no processing run that its
+events came off a device as recorded. A consumer that reports a stream's producing run MUST report,
+for such a stream, that the packet names no producing run. A consumer that reports no stream's
+producing run owes only the first of these. No checker verifies either.
+
 <a id="ew-unit-concept" data-spec-anchor="canonical"></a>
 ### 3.13 Unit
 
@@ -292,8 +298,14 @@ device is a reference. Parts 02 and 06 own logical declaration and resource-leve
 Parts 03 and 04 own physical encoding, location, and packet binding.
 
 Where a packet records the processing run that produced an array and the writer knows which run
-that is, the writer MUST name that run on the array asset; an acquired array names none. No checker
-verifies this.
+that is, the writer MUST name that run on the array asset, and it names no run for an array that no
+run the packet records produced. No checker verifies this.
+
+An array asset that names no producing run states only that the packet names no run that produced
+the array. A consumer MUST NOT conclude from an array asset naming no producing run that the array
+was acquired. A consumer that reports an array's producing run MUST report, for such an array, that
+the packet names no producing run. A consumer that reports no array's producing run owes only the
+first of these. No checker verifies either.
 
 <a id="ew-media-asset-concept" data-spec-anchor="canonical"></a>
 ### 3.18 Media asset

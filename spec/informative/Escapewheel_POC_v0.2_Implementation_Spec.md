@@ -81,11 +81,11 @@ candidate is versioned independently of the identifiers a packet records.
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](../parts/01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](../parts/02_core_logical_schemas.md#ew-core-logical-schema-scope) |
 | `registry_id` | `core` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
-| `registry_version` | `0.15.0` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
+| `registry_version` | `0.16.0` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
 
 Part 02 §9.2 defines registry self-description and compatibility. A manifest records the core
 registry's `registry_id` and `registry_version` as the member name and `version` of its descriptor
-in `registries` (Part 04 §8). Current development packets use core registry `0.15.0` and are
+in `registries` (Part 04 §8). Current development packets use core registry `0.16.0` and are
 regenerated rather than treated as compatible with the earlier development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
 Part 04 §§3 and 8 define the manifest fields that record these identifiers.
@@ -834,6 +834,12 @@ A stream emits **one kind** of event, so a source emitting several on one channe
 several streams. What a stream's events carry beyond a tick is that named declaration's to declare, not
 core's: how many marks an event has and of what type is a property of what produced it.
 
+An event stream that names no processing run states only that the packet names no run that produced
+its events. A consumer MUST NOT conclude from an event stream naming no processing run that its
+events came off a device as recorded. A consumer that reports a stream's producing run MUST report,
+for such a stream, that the packet names no producing run. A consumer that reports no stream's
+producing run owes only the first of these. No checker verifies either.
+
 <a id="ew-unit-concept" data-spec-anchor="canonical"></a>
 ### 3.13 Unit
 
@@ -885,8 +891,14 @@ device is a reference. Parts 02 and 06 own logical declaration and resource-leve
 Parts 03 and 04 own physical encoding, location, and packet binding.
 
 Where a packet records the processing run that produced an array and the writer knows which run
-that is, the writer MUST name that run on the array asset; an acquired array names none. No checker
-verifies this.
+that is, the writer MUST name that run on the array asset, and it names no run for an array that no
+run the packet records produced. No checker verifies this.
+
+An array asset that names no producing run states only that the packet names no run that produced
+the array. A consumer MUST NOT conclude from an array asset naming no producing run that the array
+was acquired. A consumer that reports an array's producing run MUST report, for such an array, that
+the packet names no producing run. A consumer that reports no array's producing run owes only the
+first of these. No checker verifies either.
 
 <a id="ew-media-asset-concept" data-spec-anchor="canonical"></a>
 ### 3.18 Media asset
@@ -1626,7 +1638,7 @@ The incorporated registry meta-schema has `$id`
 schema MUST carry that value in `$schema`. A registry document SHOULD carry `$schema` as its first
 member, so that the head of the file shows which meta-schema governs it; member order carries no
 other meaning, and no checker verifies it. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.15.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.16.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 
@@ -4793,7 +4805,7 @@ Two files are 97.6% of what the packet owns: `core.spike_events` at 345 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.15.0.json.gz
+    core/             0.16.0.json.gz
     aind_opto/        0.12.0.json.gz
     aind_unit_qc/     0.13.0.json.gz
     dynamic_foraging/ 0.14.0.json.gz
@@ -4832,7 +4844,7 @@ The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one 
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": {"role": "core", "version": "0.15.0", "path": "registries/core/0.15.0.json.gz", "sha256": "…"},
+    "core": {"role": "core", "version": "0.16.0", "path": "registries/core/0.16.0.json.gz", "sha256": "…"},
     "aind_opto": {"role": "extension", "version": "0.12.0", "path": "registries/aind_opto/0.12.0.json.gz", "sha256": "…"},
     "aind_unit_qc": {"role": "extension", "version": "0.13.0", "path": "registries/aind_unit_qc/0.13.0.json.gz", "sha256": "…"},
     "dynamic_foraging": {"role": "extension", "version": "0.14.0", "path": "registries/dynamic_foraging/0.14.0.json.gz", "sha256": "…"},

@@ -82,7 +82,7 @@ presence = "nullable"
 role = "identifier"
 identity = "assigned"
 references = "core.processing_runs"
-description = "The run that produced this array. Null means it was acquired rather than computed."
+description = "The run that produced this array, where the packet records it. Null says only that the packet names no producing run."
 
 [[columns]]
 name = "sample_rate_hz"

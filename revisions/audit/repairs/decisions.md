@@ -40,7 +40,7 @@ same day once its entry stated the options again with what was measured.
 | 12 | a writer MUST name a media asset's device where its source states one | `b5696685` |
 | 13 | a reader exposes a resource's content class and lineage policy | `b5696685` |
 | 14 | Part 02 §9.2 recommends that a registry document carry `$schema` first | `b5696685` |
-| 15 | the reading of a null changes what a consumer concludes, so it is proposed as a revision | draft `a-null-producing-run-on-an-array-says-the-packet-names-none.md` |
+| 15 | the reading of a null changes what a consumer concludes, so it is proposed as a revision | R161 |
 | 16 | nothing is owed: the ledger note on R53 §2.3.1 already records it | — |
 | 17 | proposed | draft `a-unit-is-identified-outside-its-packet-by-its-name.md` |
 | 18 | proposed | draft `a-recipe-accepts-a-discarded-value-by-naming-its-column.md` |

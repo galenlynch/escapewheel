@@ -654,7 +654,7 @@ The incorporated registry meta-schema has `$id`
 schema MUST carry that value in `$schema`. A registry document SHOULD carry `$schema` as its first
 member, so that the head of the file shows which meta-schema governs it; member order carries no
 other meaning, and no checker verifies it. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.15.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.16.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 

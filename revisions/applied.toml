@@ -434,7 +434,7 @@ note = "declared: core.unit_observation_intervals"
 
 [clause."R23 §2"]
 disposition = "registry"
-note = "declared: core.event_streams"
+note = "declared: core.event_streams; its reading of a null processing_run_id is replaced by R161 §3.2 and R161 §3.4"
 
 [clause."R23 §3"]
 disposition = "registry"
@@ -2120,7 +2120,7 @@ note = "rig.json declares two camera assemblies with serials 23022730 and 230227
 [clause."R102 §3.1"]
 disposition = "applied"
 where = [{ part = "01", anchor = "ew-array-asset-concept" }]
-note = "restored 2026-10-02; the writer's obligation to name the run that produced an array, where the packet records that run, was absent. The registry declares processing_run_id on core.array_assets and analysis.array_assets, int32 nullable, each referencing core.processing_runs. R130 §3.7 removes the manifest member this clause kept"
+note = "restored 2026-10-02; the writer's obligation to name the run that produced an array, where the packet records that run, was absent. The registry declares processing_run_id on core.array_assets and analysis.array_assets, int32 nullable, each referencing core.processing_runs. R130 §3.7 removes the manifest member this clause kept. R161 §3.1 and R161 §3.4 replace its reading of a null, and R161 §3.3 its clause that an acquired array names no run"
 
 [clause."R102 §3.2"]
 disposition = "applied"
@@ -4405,6 +4405,27 @@ disposition = "applied"
 where = [{ part = "05", anchor = "ew-import-normalization", note = "an amending build adds a documentation row of a new key and refuses one that differs from a held row" }]
 
 [clause."R160 §3.8"]
+disposition = "superseded"
+by = "R161"
+note = "R161 §3.5 advances the core `registry_version` from 0.15.0 to 0.16.0; was Part 02 ew-registry-self-description"
+
+[clause."R161 §3.1"]
 disposition = "applied"
-where = [{ part = "02", anchor = "ew-registry-self-description", note = "core 0.15.0" }]
+where = [{ part = "01", anchor = "ew-array-asset-concept", note = "an array asset naming no producing run says only that the packet names none, and a consumer does not conclude acquisition; unchecked" }]
+
+[clause."R161 §3.2"]
+disposition = "applied"
+where = [{ part = "01", anchor = "ew-event-stream-concept", note = "a stream naming no processing run says only that the packet names none, and a consumer does not conclude its events came off a device as recorded; unchecked" }]
+
+[clause."R161 §3.3"]
+disposition = "applied"
+where = [{ part = "01", anchor = "ew-array-asset-concept", note = "a writer names no run for an array that no run the packet records produced; unchecked" }]
+
+[clause."R161 §3.4"]
+disposition = "registry"
+note = "the processing_run_id descriptions of seven core tables"
+
+[clause."R161 §3.5"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-self-description", note = "core 0.16.0" }]
 note = "the registry source carries the value; Part 08 §§2 and 3 project it and are checked against the built example"

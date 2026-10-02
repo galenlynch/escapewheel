@@ -8,7 +8,7 @@ This generated rendering is not a standalone specification. See
 
 ```text
 51 resources, 47 tables, 368 columns, 117 references, 91 Tier 2 rules
-registry 0.15.0   logical standard escapewheel-logical-v0.1
+registry 0.16.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -31,7 +31,7 @@ registry 0.15.0   logical standard escapewheel-logical-v0.1
 | `band` | string | nullable | open; reserving `wideband`, `ap`, `lfp` | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with Part 02 §9.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split. |
 | `clock_id` | int32 | nullable | — | Clock for time axis. |
 | `device_id` | int32 | nullable | — | The device that produced this array. |
-| `processing_run_id` | int32 | nullable | — | The run that produced this array. Null means it was acquired rather than computed. |
+| `processing_run_id` | int32 | nullable | — | The run that produced this array, where the packet records it. Null says only that the packet names no producing run. |
 | `sample_rate_hz` | float64 | nullable | finite | Sample rate if regularly sampled. |
 | `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of the array's values, as a UCUM code. |
 | `conversion` | float64 | nullable | finite | Multiply stored values by this before offset. |
@@ -155,7 +155,7 @@ registry 0.15.0   logical standard escapewheel-logical-v0.1
 | `band` | string | nullable | open; reserving `wideband`, `ap`, `lfp` | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with Part 02 §9.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split. |
 | `clock_id` | int32 | nullable | — | Clock for time axis. |
 | `device_id` | int32 | nullable | — | The device that produced this array. |
-| `processing_run_id` | int32 | nullable | — | The run that produced this array. Null means it was acquired rather than computed. |
+| `processing_run_id` | int32 | nullable | — | The run that produced this array, where the packet records it. Null says only that the packet names no producing run. |
 | `sample_rate_hz` | float64 | nullable | finite | Sample rate if regularly sampled. |
 | `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of the array's values, as a UCUM code. |
 | `conversion` | float64 | nullable | finite | Multiply stored values by this before offset. |
@@ -509,7 +509,7 @@ registry 0.15.0   logical standard escapewheel-logical-v0.1
 | `curator` | string | nullable | free | Curator. |
 | `curation_tool` | string | nullable | free | Tool. |
 | `curation_tool_version` | string | nullable | free | Tool version. |
-| `processing_run_id` | int32 | nullable | — | The run that produced this record, where provenance is recorded. |
+| `processing_run_id` | int32 | nullable | — | The run that produced this record, where the packet records it. Null says only that the packet names no producing run. |
 | `parent_curation_id` | int32 | nullable | — | Parent curation. |
 | `created_at` | timestamp | nullable | — | Creation time. |
 | `notes` | string | nullable | free | Notes. |
@@ -588,7 +588,7 @@ registry 0.15.0   logical standard escapewheel-logical-v0.1
 | `coordinate_basis` | string | **required** | open | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (Part 01 §3.8). A consumer that does not recognise a basis MUST NOT treat it as measured (Part 01 §3.8). |
 | `region_id` | int32 | nullable | — | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
 | `region_label` | string | nullable | open | That structure's short name, so a consumer without the atlas can read the annotation. |
-| `processing_run_id` | int32 | nullable | — | The run that produced this coordinate. |
+| `processing_run_id` | int32 | nullable | — | The run that produced this coordinate, where the packet records it. Null says only that the packet names no producing run. |
 
 **Primary key** — `electrode_id`, `coordinate_frame`, `coordinate_basis`  
 
@@ -657,7 +657,7 @@ registry 0.15.0   logical standard escapewheel-logical-v0.1
 | `detail_kind` | string | nullable | resolves optional | A table specialising this stream's events, as a dotted resource ID. A kind the packet cannot resolve records that the detail is elsewhere (Part 02 §8.3). Resolved against `core.events`' key by Part 02 §8.3's shared key, through the reference `discriminates_via` names. |
 | `device_id` | int32 | nullable | — | The device that produced it, where one is identified. |
 | `clock_id` | int32 | **required** | — | The clock its events are timed on. |
-| `processing_run_id` | int32 | nullable | — | The run that produced it. Null means it came off the device as recorded. The manifest records outputs per resource and cannot distinguish streams within one table. |
+| `processing_run_id` | int32 | nullable | — | The run that produced its events, where the packet records it. Null says only that the packet names no producing run. |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `event_stream_id`  
@@ -1007,7 +1007,7 @@ registry 0.15.0   logical standard escapewheel-logical-v0.1
 | `probe_id` | int32 | nullable | — | Probe ID. |
 | `sorter_name` | string | nullable | free | Sorter name. |
 | `sorter_version` | string | nullable | free | Sorter version. |
-| `processing_run_id` | int32 | nullable | — | The run that produced this record, where provenance is recorded. |
+| `processing_run_id` | int32 | nullable | — | The run that produced this record, where the packet records it. Null says only that the packet names no producing run. |
 | `parameters` | json_string | optional | — | Sorter parameters. |
 | `input_array_asset_id` | int32 | nullable | — | Input array asset. |
 | `started_at` | timestamp | nullable | — | Start time. |
@@ -1113,7 +1113,7 @@ registry 0.15.0   logical standard escapewheel-logical-v0.1
 | `coordinate_basis` | string | **required** | open | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (Part 01 §3.8). A consumer that does not recognise a basis MUST NOT treat it as measured (Part 01 §3.8). |
 | `region_id` | int32 | nullable | — | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
 | `region_label` | string | nullable | open | That structure's short name, so a consumer without the atlas can read the annotation. |
-| `processing_run_id` | int32 | nullable | — | The run that produced this coordinate. |
+| `processing_run_id` | int32 | nullable | — | The run that produced this coordinate, where the packet records it. Null says only that the packet names no producing run. |
 
 **Primary key** — `session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis`  
 

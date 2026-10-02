@@ -624,3 +624,14 @@ locations = [
 
 [target."R151 §3.1"]
 locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/analysis.spike_events/table/rules/2/id", equals = "analysis.spike_events.on_reference_clock" }]
+
+[target."R161 §3.4"]
+locations = [
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.array_assets/table/columns/8/name", equals = "processing_run_id" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/analysis.array_assets/table/columns/8/name", equals = "processing_run_id" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.event_streams/table/columns/7/name", equals = "processing_run_id" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.sorting_runs/table/columns/6/name", equals = "processing_run_id" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.curation_versions/table/columns/7/name", equals = "processing_run_id" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.electrode_coordinates/table/columns/6/name", equals = "processing_run_id" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.unit_coordinates/table/columns/6/name", equals = "processing_run_id" },
+]
