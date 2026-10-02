@@ -3037,7 +3037,7 @@ this.
 A writer that writes a resolution document MUST write one that satisfies the schema. A reader MAY
 validate a resolution document against the schema, and need not. A resolution document's
 `$schema`, where present, names its meta-schema by `$id`: it is identity, not a fetch instruction,
-and a reader MUST NOT dereference it. A reader MUST NOT resolve a source
+and a reader MUST NOT dereference it, which no checker verifies. A reader MUST NOT resolve a source
 through a document whose `sources_standard_version` it does not know.
 
 A reader MUST report an unresolved `source` as unresolved, and a validator MUST NOT fail structural validation for one:
