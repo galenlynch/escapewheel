@@ -16,6 +16,15 @@ def retyped(column: str, type_: pa.DataType):
     return recast
 
 
+def with_column(column: str):
+    """Add `column`, all null, which the table's declaration does not declare."""
+
+    def recast(t: pa.Table) -> pa.Table:
+        return t.append_column(column, pa.nulls(t.num_rows, pa.string()))
+
+    return recast
+
+
 def without_column(column: str):
     """Leave `column` out of the file."""
 
@@ -25,7 +34,7 @@ def without_column(column: str):
     return recast
 
 
-#: Three variants that break the physical schema, not the data.
+#: Variants that break the physical schema, not the data.
 SCHEMA_PACKETS = (
     Packet(
         "bad_type",
@@ -42,5 +51,16 @@ SCHEMA_PACKETS = (
         "missing_column",
         variant(recast={"core.intervals": without_column("clock_id")}),
         Expected("error", "schema.column_absent"),
+    ),
+    Packet(
+        "undeclared_column",
+        # Part 02 §6.1: a column is undeclared whatever its values, every one null included.
+        variant(recast={"core.intervals": with_column("extra")}),
+        Expected("error", "schema.column_undeclared"),
+    ),
+    Packet(
+        "extension_undeclared_column",
+        variant(recast={KIND: with_column("extra")}),
+        Expected("error", "schema.column_undeclared", registry="dynamic_foraging"),
     ),
 )

@@ -9,13 +9,13 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R165 accepted. R42 and R73 withdrawn. 2 proposals and 2 drafts are open. None of them is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R166 accepted. R42 and R73 withdrawn. 2 proposals and 1 draft are open. None of them is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 91 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
-135 conformance packets
+137 conformance packets
 <!-- END facts: corpus -->
 
 <!-- BEGIN facts: extensions -->
@@ -134,9 +134,9 @@ read what each target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Two drafts await acceptance
+## 3a. One draft awaits acceptance
 
-The drafts are under `revisions/drafts/`. Two proposals are open:
+The draft is under `revisions/drafts/`. Two proposals are open:
 
 - a null identifier says only that a row names nothing, as the default reading of every nullable
   naming column, with `label_id` padding and the axis-form columns as the exceptions; and
@@ -150,12 +150,12 @@ The drafts are under `revisions/drafts/`. Two proposals are open:
 causes from Part 11 §8. Its ISO basis is read in the 1992 draft and the 1999 edition, not in the
 2023 edition Part 11 selects.
 
-- **An amendment drops a held column only where its recipe names it.** A draft, promoted
-  2026-10-02, appraised and revised. A new subsection of Part 02 §6 makes a table holding an
-  undeclared column non-conforming and Part 05 §5.3 reports one at `error`; an amending build
-  refuses, before any source, a held column of any table it does not derive again that the
-  registry it binds does not declare, unless a `[drop]` entry names it, and then writes the table
-  without it. The recipe schema advances to admit `[drop]`.
+**Accepted as R166, 2026-10-02:** Part 02 §6.1 makes a table holding a column its declaration does
+not declare non-conforming, and Part 05 §5.3 reports one at `error` under
+`schema.column_undeclared`. An amending build refuses, before any source opens, a held column of a
+table it does not derive again that the registry it binds does not declare, unless a `[drop]` entry
+names it, and then writes the table without it. Recipe schema 0.5.0 admits `[drop]`.
+
 - **A change is one document from Open to Accepted.** A process draft, opened 2026-10-02 with no
   proposal and not appraised. One change document under `revisions/changes/` replaces the proposal
   and the draft, moving in place from Open to Ready. Only the stage fields, citations, ledger and
@@ -275,8 +275,8 @@ natural.
   no gain is carried, so a packet alone cannot put them in physical units. Add a conversion when an
   importer needs one.
 - **Zarr.jl over an object store, and Julia as a Zarr writer, are untested.**
-- **The corpus expects four check IDs no part names.** `array.dimension_names`, `owned.digest`,
-  `schema.column_absent` and `schema.column_type` are the reference validator's spellings, so those
+- **The corpus expects two check IDs no part names.** `array.dimension_names` and `owned.digest`
+  are the reference validator's spellings, so those
   packets test this validator and not the specification. It matters only if the corpus is to judge
   a second validator.
 - **An in-process source that omits an empty table escapes a refusal a delivered one draws.**
@@ -345,9 +345,8 @@ Part 05 §15.6 with the draft R163 became, which wants a proposal of its own.
   over the columns the amended manifest's registry declares, and no validator check reports a file
   column the bound registry does not declare. An amendment binding a registry that stopped declaring
   a column therefore drops the column's values from a table it rewrites, and keeps them unreported
-  in one it does not. The draft in
-  `revisions/drafts/an-amendment-drops-a-held-column-only-where-its-recipe-names-it.md` refuses
-  unless the recipe names the column.
+  in one it does not. R166 refuses unless the recipe names the column, and has a validator
+  report a column a table's declaration does not declare.
 - **An amendment re-checks only the resources it wrote.** The reference build passes the validator
   the written resources alone as the set to re-check
   (`escapewheel-writer/src/escapewheel_writer/publication.py`, line 233), so a rule a newer registry

@@ -56,6 +56,8 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "bad_type": ("error", "schema.column_type"),
     "extension_bad_type": ("error", "schema.column_type"),
     "missing_column": ("error", "schema.column_absent"),
+    "undeclared_column": ("error", "schema.column_undeclared"),
+    "extension_undeclared_column": ("error", "schema.column_undeclared"),
     "no_reference_clock": ("error", "core.sessions.reference_clock_declared"),
     "clock_cycle": ("error", "core.clocks.parent_chain_well_founded"),
     "unreachable_clock": ("error", "core.sessions.every_clock_reaches_the_reference"),

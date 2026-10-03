@@ -94,6 +94,7 @@
 "5.3" = "Fixed representations"
 "5.4" = "Finite values"
 "6" = "Presence"
+"6.1" = "Undeclared columns"
 "7" = "References"
 "7.1" = "Session scope"
 "8" = "Column semantics"
@@ -1584,6 +1585,12 @@ aliases = []
 part = "01"
 section = "2.2"
 title = "Time basis"
+aliases = []
+
+[anchor.ew-undeclared-columns]
+part = "02"
+section = "6.1"
+title = "Undeclared columns"
 aliases = []
 
 [anchor.ew-unit-and-clock-context]

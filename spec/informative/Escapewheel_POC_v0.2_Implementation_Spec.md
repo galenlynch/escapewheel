@@ -1342,6 +1342,17 @@ A present nullable column is preferred to an absent one, because a stable column
 
 Duplication is permitted only where it buys otherwise-unavailable access. Axis names are carried in `core.array_dimensions` because a Zarr binding in another language cannot see them.
 
+<a id="ew-undeclared-columns" data-spec-anchor="canonical"></a>
+### 6.1 Undeclared columns
+
+A table MUST NOT hold a column that its declaration does not declare. Its declaration is the one its
+resource entry's `declaration_id` names in a registry the packet's manifest binds
+([Part 04 §10](../parts/04_packet_catalog.md#ew-packet-manifest-conformance)). A column is undeclared
+whatever its values, every value null included, and whatever wrote it.
+[Part 05 §5.3](../parts/05_validation_and_import.md#ew-validation-shim) has a validator report one, and
+[Part 05 §3.5](../parts/05_validation_and_import.md#ew-recipe-check) has an amending build refuse or drop one
+a held table carries.
+
 <a id="ew-logical-references" data-spec-anchor="canonical"></a>
 ## 7. References
 
@@ -3484,11 +3495,12 @@ A recipe declares, for one packet:
 - which run is preferred among runs sharing an activity and scope (§12);
 - session facts no source carries;
 - each packet the build replaces (§9.3); and
-- where it amends a packet, the version it amends (§15.1).
+- where it amends a packet, the version it amends (§15.1) and the held columns the amendment drops
+  (§3.5).
 
 A recipe MAY declare a fact a source it reads also states; §3.6 says which of the two the packet gets. `core.subjects` is not a resource the recipe supplies unconditionally: a source that states a subject MAY own it, arbitrated as any other resource two sources can produce, and the recipe's `[subject]` block supplies the table only where no source owns it.
 
-A recipe is a [TOML 1.0](#ew-validation-normative-references) document. This part incorporates `artifacts/recipe.schema.json`, whose `$id` is `https://escapewheel.org/schemas/recipe/0.4.0`, as the shape of a recipe's decoded form. The schema owns the member names, types, required members, closure and patterns; this prose owns what each member means and every refusal of §3.5. TOML dates and times decode to values JSON Schema has no type for, so the schema leaves the facts under `[session]` and `[subject]` and a preferred run's `chosen_at` untyped. §3.6 types a fact when it normalizes it, and a build normalizes `chosen_at` to the type of `core.preferred_runs.chosen_at`. An omitted member keeps the meaning this part gives its absence. The table is an informative projection of the schema.
+A recipe is a [TOML 1.0](#ew-validation-normative-references) document. This part incorporates `artifacts/recipe.schema.json`, whose `$id` is `https://escapewheel.org/schemas/recipe/0.5.0`, as the shape of a recipe's decoded form. The schema owns the member names, types, required members, closure and patterns; this prose owns what each member means and every refusal of §3.5. TOML dates and times decode to values JSON Schema has no type for, so the schema leaves the facts under `[session]` and `[subject]` and a preferred run's `chosen_at` untyped. §3.6 types a fact when it normalizes it, and a build normalizes `chosen_at` to the type of `core.preferred_runs.chosen_at`. An omitted member keeps the meaning this part gives its absence. The table is an informative projection of the schema.
 
 | member | form | constraint |
 |---|---|---|
@@ -3501,6 +3513,7 @@ A recipe is a [TOML 1.0](#ew-validation-normative-references) document. This par
 | `preference` | table | keys are dotted resource identifiers; each entry is §3.3's |
 | `preferred_run` | array of tables | each requires `activity_type`, `scope_kind`, a dotted resource identifier, `scope`, `processing_run_name`, and a non-empty `reason`, and admits `chosen_at` (§12) |
 | `materialize` | array of tables | each requires `resource`; every other key is a parameter |
+| `drop` | table | keys are `resource.column` names; each value a non-empty string; admitted only beside `packet.amends` (§3.5) |
 | `commit` | table | members are a build's own limits |
 
 A recipe MUST NOT list a source kind in more than one `source` entry, and a build MUST refuse one that does, naming the kind. A preference, an ownership refusal, and a build's reports name a source by its kind.
@@ -3693,6 +3706,40 @@ An amending build (§15.1) MUST also refuse, before it opens any source:
 An amending build MUST NOT refuse a column override on the ground that the build amends. A column
 override in an amending recipe releases as §3.4 has it, among the recipe's sources only (§3.3).
 
+An amending build MUST also refuse, before it opens any source and naming the table and the column,
+a table resource the packet's current manifest names whose file holds a column that the table's
+declaration, in the registry the build binds for it, does not declare
+([Part 02 §6.1](../parts/02_core_logical_schemas.md#ew-undeclared-columns)), unless:
+
+- a `drop` entry names that column; or
+- a `materialize` entry names that resource, so that the build derives the table again rather than
+  carrying its held rows.
+
+A `drop` entry resolves the refusal in every case. Where the registry the packet's current manifest
+binds under the registry ID of the table's declaration declares the column, a recipe also resolves
+it by naming no registry under that ID, so that the build binds that registry (§15.1). The refusal
+MUST name a `drop` entry as a remedy, and MUST name binding that registry only where that registry
+declares the column.
+
+A recipe's top-level `drop` table names held columns an amending build drops. An entry's key is a
+resource's dotted identifier followed by a column name, spelled as a column override's key (§3.6),
+and its value is a non-empty string saying why the recipe gives up the column's values. A recipe
+carrying `drop` MUST give `[packet].amends`. Where a `drop` entry names a column that the file of the
+resource the packet's current manifest names holds, an amending build MUST NOT refuse over that
+column, and MUST write the table without it, whether or not it adds a row to the table (§4.3).
+
+An amending build MUST refuse, before it opens any source and naming the entry's key, a `drop`
+entry:
+
+- whose resource the packet's current manifest does not name;
+- whose resource a `materialize` entry also names; or
+- whose column the resource's declaration, in the registry the build binds, declares.
+
+A `drop` entry is **idle** where the packet's current manifest names no file of its resource that
+holds its column. An amending build MUST report an idle entry as a warning and MUST NOT refuse on
+it. It MUST report as information each column it drops, naming the table, the column and the
+entry's reason. No checker verifies these reports or the remedies a refusal names.
+
 For every other refusal of this section, the tables and clocks the packet holds count as supplied
 and declared, so a required reference or a clock parent the packet satisfies draws no refusal.
 
@@ -3824,8 +3871,9 @@ It then settles against the packet each delivered row that ownership keeps (§3.
 
 An amending build MUST refuse every other delivered row, naming the table and the row, so it
 refuses a delivered row of a documentation table that shares a held row's primary key and is not
-equal to it. A table to which it adds no row keeps its resource entry, so the amendment does not
-write it. A documentation table to which it adds rows holds the packet's rows and the added ones,
+equal to it. A table to which it adds no row and from which it drops no column (§3.5) keeps its
+resource entry, so the amendment does not write it. A table from which it drops a column holds every
+held row with its other columns' values unchanged, and the rows the build adds. A documentation table to which it adds rows holds the packet's rows and the added ones,
 and the amendment replaces that resource as §15.2 permits. An amending build thereby adds sidecars
 and scope rows to those a packet lists, and neither removes nor replaces one.
 
@@ -3897,6 +3945,25 @@ profile, then check available resource-owned metadata: physical order, file pres
 types and footer features, Zarr version, rank and codecs, and checksums outside SQL. A query cannot
 observe them, so such a check written as SQL fails silently rather than loudly. Dense-array checks
 obtain the axes table from the resolved declaration.
+
+For each table resource the current manifest names whose file's columns it reads, a validator MUST
+report at `error`, naming the resource and the column:
+
+- under the check ID `schema.column_absent`, a `required` or `nullable` column the file does not
+  hold;
+- under the check ID `schema.column_type`, a declared column the file holds at a type other than its
+  declared type; and
+- under the check ID `schema.column_undeclared`, a column the file holds that the resource's
+  declaration does not declare
+  ([Part 02 §6.1](../parts/02_core_logical_schemas.md#ew-undeclared-columns)).
+
+Apart from the timestamp of
+[Part 03 §5.5](../parts/03_portable_physical_profile.md#ew-parquet-reader-floor), no part fixes which Parquet
+type represents each declared type. Each finding concerns one resource, so
+[§9.5](#ew-verdict-composition) attributes it to the registry whose declaration the resource's entry
+names. The shim declares as the inputs of each check the packet manifest, which binds the registry
+holding the declaration, and the table resource, so §15.4 re-runs each check on every amendment. A
+file that only a superseded manifest names is not checked again.
 
 For each dense array whose metadata it reads, a validator MUST report at `error`:
 
@@ -4531,6 +4598,12 @@ A writer performing an amendment that writes a canonical table other than `core.
 remove, every analysis and compatibility-projection resource whose `derived_from` chain
 ([Part 04 §7](../parts/04_packet_catalog.md#ew-resource-lineage)) reaches that table. The three provenance
 tables are exempt because their rows record what ran, not what was measured.
+
+A row of a canonical table is compared over the columns its declaration declares in the registry
+the amended manifest binds, as §15.6 compares rows, so an amendment that removes a column that
+declaration does not declare (§3.5) changes no row. An amendment that writes a canonical table only
+to remove such a column writes that table, and the duty above to derive again or remove holds as
+for any other written table.
 
 <a id="ew-superseded-manifest-retention" data-spec-anchor="canonical"></a>
 ### 15.3 Superseded manifests

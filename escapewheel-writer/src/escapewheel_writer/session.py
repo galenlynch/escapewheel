@@ -3,6 +3,7 @@
 - :func:`build` -- run every source and return a writer holding the packet, uncommitted.
 - :func:`import_packet` -- build the packet a recipe describes and commit it.
 - :func:`prepare`, :class:`Prepared` -- what a build settles before it opens a source.
+- :func:`held_column_problems` -- an amending recipe's refusals over held columns and `[drop]`.
 - :func:`commit_arguments` -- the limits and materializers a recipe passes a commit.
 - :func:`materializers` -- the recipe's `[[materialize]]` entries as callables `commit` runs.
 - :class:`Context` -- what earlier sources produced, for the sources that consume it.
@@ -29,6 +30,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
+from escapewheel_reader.registries import declared_tables
 from escapewheel_reader.resource_ids import (
     ANALYSIS_SPIKE_EVENTS,
     CORE_CLOCK_ANCHORS,
@@ -399,7 +401,80 @@ def prepare(
         held_tables=() if held is None else held.tables_named(),
         held_clocks=() if held is None else held.clock_names(),
     )
+    if held is not None:
+        problems += held_column_problems(
+            recipe, held, [checked_registry, *(extension.document for extension in extension_contexts)]
+        )
     return Prepared(registry_context, tuple(extension_contexts), held, tuple(problems))
+
+
+def held_column_problems(recipe: Recipe, held: Held, documents: Sequence[Mapping[str, Any]]) -> list[Problem]:
+    """Return an amending recipe's refusals and reports over held columns and `[drop]` (Part 05 §3.5).
+
+    Decided from the recipe, the registries the build binds and the held files' footers, before
+    any source opens. Records on `held` the columns the amendment drops and the tables it derives
+    again, which the commit then honours.
+    """
+    bound: dict[str, tuple[Mapping[str, Any], Mapping[str, Any]]] = {}
+    for document in documents:
+        for declaration_id, spec in declared_tables(document).items():
+            bound[declaration_id] = (document, spec)
+    own = {registry_id: declared_tables(document) for registry_id, document in held.documents().items()}
+    undeclared = held.undeclared({declaration_id: spec for declaration_id, (_, spec) in bound.items()})
+    held.rederived = frozenset(spec.resource for spec in recipe.materialize)
+    held.release(recipe.drop, undeclared)
+    problems: list[Problem] = []
+    for resource_id, columns in sorted(undeclared.items()):
+        if resource_id in held.rederived:
+            continue
+        document, _ = bound[held.declaration(resource_id)]
+        registry_id = str(document.get("registry_id", "core"))
+        mine = own.get(registry_id, {}).get(held.declaration(resource_id))
+        for column in columns:
+            key = f"{resource_id}.{column}"
+            if key in recipe.drop:
+                problems.append(
+                    Problem(
+                        Level.INFO,
+                        f"[drop] {key}: the build writes {resource_id} without {column}, because {recipe.drop[key]}",
+                        RecipeFault.COLUMN_DROPPED,
+                    )
+                )
+                continue
+            remedy = f'name it in [drop] as {key} = "<why its values are given up>"'
+            # Binding the packet's own registry helps only where that registry still declares it.
+            if mine is not None and any(c["name"] == column for c in mine["columns"]):
+                remedy += f", or name no {registry_id} registry so the build binds the one the packet binds"
+            problems.append(
+                Problem(
+                    Level.ERROR,
+                    f"{resource_id} holds {column}, which {registry_id} {document.get('registry_version')} does not "
+                    f"declare; {remedy}",
+                    RecipeFault.HELD_COLUMN_UNDECLARED,
+                )
+            )
+    tables = set(held.tables_named())
+    for key in sorted(recipe.drop):
+        resource_id, _, column = key.rpartition(".")
+        found = bound.get(held.declaration(resource_id)) if resource_id in tables else None
+        if resource_id not in tables:
+            problem = f"[drop] {key} names {resource_id}, which the packet does not hold as a table"
+        elif resource_id in held.rederived:
+            problem = f"[drop] {key} names {resource_id}, which a [[materialize]] entry derives again"
+        elif found is not None and any(c["name"] == column for c in found[1]["columns"]):
+            problem = f"[drop] {key} names a column the registry the build binds declares"
+        else:
+            if column not in undeclared.get(resource_id, ()):
+                problems.append(
+                    Problem(
+                        Level.WARNING,
+                        f"[drop] {key} drops nothing: the packet's file of {resource_id} holds no {column}",
+                        RecipeFault.DROP_IDLE,
+                    )
+                )
+            continue
+        problems.append(Problem(Level.ERROR, problem, RecipeFault.DROP_UNSOUND))
+    return problems
 
 
 def build(  # noqa: C901
@@ -883,6 +958,7 @@ __all__ = [
     "commit_arguments",
     "composed",
     "grouped_encoding_exceptions",
+    "held_column_problems",
     "import_packet",
     "materializers",
     "note_unclaimed",

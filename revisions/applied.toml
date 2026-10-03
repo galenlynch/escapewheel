@@ -4533,3 +4533,35 @@ where = [{ part = "11", anchor = "ew-tier-2-evaluation-outcomes" }]
 [clause."R165 §3.5"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-incomplete-validation" }]
+
+[clause."R166 §3.1"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-undeclared-columns" }]
+
+[clause."R166 §3.2"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validation-shim" }]
+
+[clause."R166 §3.3"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-check" }]
+
+[clause."R166 §3.4"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-check" }, { part = "05", anchor = "ew-import-normalization" }]
+
+[clause."R166 §3.5"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-check" }]
+
+[clause."R166 §3.6"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-check" }]
+
+[clause."R166 §3.7"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-amendment-scope" }]
+
+[clause."R166 §3.8"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-purpose" }]

@@ -13,7 +13,7 @@ from escapewheel_writer.errors import (
     UsageError,
     UsageFault,
 )
-from tests.builders import commit_tables, import_runs
+from tests.builders import commit_tables, earlier_registry, held_dropped_json, import_runs
 
 # -- amending a committed packet --------------------------------------------------------
 
@@ -115,37 +115,77 @@ def test_an_amendment_may_not_change_a_held_row(tmp_path, registry, minimal):
     assert (refused.value.code, refused.value.resource_id) == (AmendmentFault.CHANGES_HELD, "core.clocks")
 
 
-def test_an_amendment_binding_a_registry_without_a_held_column_rewrites_its_rows_without_it(
-    tmp_path, registry, minimal
-):
-    """Part 05 §15.6 compares held rows over the columns the amended manifest's registry declares, so
-    a value in a column that registry no longer declares survives only in the superseded file."""
-    import copy
+DROPPED = {"core.source_files.dropped_json": "the calibration moved to a sidecar"}
+ADDED_FILES = [{"source_file_id": "f1", "uri": "file:///x"}, {"source_file_id": "f2", "uri": "file:///y"}]
 
+
+def _file(root, resource_id):
+    entries = json.loads((root / "packet.json").read_text())["resources"]
+    return root / next(e["uri"] for e in entries if e["resource_id"] == resource_id)
+
+
+def test_an_amendment_binding_a_registry_without_a_held_column_is_refused(tmp_path, registry, minimal):
+    """Part 05 §3.5: a rewrite would lose the column's values and nothing would say so."""
+    root = held_dropped_json(tmp_path, registry, minimal)
+    with pytest.raises(AmendmentRefused) as refused:
+        _amend(root, registry, {"core.source_files": ADDED_FILES})
+    assert (refused.value.code, refused.value.resource_id) == (
+        AmendmentFault.HELD_COLUMN_UNDECLARED,
+        "core.source_files",
+    )
+    assert "dropped_json" in str(refused.value)
+    assert json.loads((root / "packet.json").read_text())["packet_version"] == "0.1.0"
+
+
+def test_a_dropped_held_column_is_written_out_of_the_table(tmp_path, registry, minimal):
+    """Part 05 §3.5: the superseded file keeps the values the new version gives up."""
     import pyarrow.parquet as pq
 
-    earlier = copy.deepcopy(dict(registry))
-    earlier["registry_version"] = "0.0.1"
-    columns = earlier["resources"]["core.source_files"]["table"]["columns"]
-    columns.insert(
-        next(i for i, c in enumerate(columns) if c["name"] == "metadata"),
-        {"name": "dropped_json", "type": "json_string", "presence": "optional", "role": "data", "description": "x"},
-    )
-    held = {"source_file_id": "f1", "uri": "file:///x", "dropped_json": '{"slope":2.0,"offset":5.0}'}
-    root = tmp_path / "s001"
-    commit_tables(root, earlier, {**minimal, "core.source_files": [held]})
-
-    def source_files():
-        entries = json.loads((root / "packet.json").read_text())["resources"]
-        return root / next(e["uri"] for e in entries if e["resource_id"] == "core.source_files")
-
-    superseded = source_files()
-    rows = [{"source_file_id": "f1", "uri": "file:///x"}, {"source_file_id": "f2", "uri": "file:///y"}]
-    assert _amend(root, registry, {"core.source_files": rows}).passed
-    rewritten = pq.read_table(source_files())
+    root = held_dropped_json(tmp_path, registry, minimal)
+    superseded = _file(root, "core.source_files")
+    writer = PacketWriter(registry, packet_id=root.name)
+    writer.add("core.source_files", ADDED_FILES)
+    assert writer.amend(root, drop=DROPPED).passed
+    rewritten = pq.read_table(_file(root, "core.source_files"))
     assert "dropped_json" not in rewritten.column_names
     assert sorted(rewritten.column("uri").to_pylist()) == ["file:///x", "file:///y"]
     assert pq.read_table(superseded).column("dropped_json").to_pylist() == ['{"slope":2.0,"offset":5.0}']
+
+
+def test_a_dropped_column_rewrites_a_table_the_amendment_adds_no_row_to(tmp_path, registry, minimal):
+    """Part 05 §4.3: the table is written without the column, every held row kept."""
+    import pyarrow.parquet as pq
+
+    root = held_dropped_json(tmp_path, registry, minimal)
+    superseded = _file(root, "core.source_files")
+    writer = PacketWriter(registry, packet_id=root.name)
+    writer.add("core.processing_runs", import_runs())
+    assert writer.amend(root, drop=DROPPED).passed
+    rewritten = _file(root, "core.source_files")
+    assert rewritten != superseded
+    assert pq.read_table(rewritten).to_pylist() == pq.read_table(superseded).drop_columns(["dropped_json"]).to_pylist()
+
+
+def test_a_table_left_holding_an_undeclared_column_fails_validation(tmp_path, registry, minimal, monkeypatch):
+    """Part 02 §6.1: the column is undeclared whatever wrote it, so a table the amendment does not
+    write fails once the manifest binds a registry that does not declare it."""
+    root = held_dropped_json(tmp_path, registry, minimal)
+    monkeypatch.setattr(Held, "refuse_undeclared", lambda self, undeclared: None)
+    with pytest.raises(CommitRefused) as refused:
+        _amend(root, registry, {"core.processing_runs": import_runs()})
+    found = [(f.check, f.resource, f.column) for f in refused.value.report.findings]
+    assert ("schema.column_undeclared", "core.source_files", "dropped_json") in found
+
+
+def test_an_amendment_under_the_packets_own_registry_keeps_the_column(tmp_path, registry, minimal):
+    """The registry the packet binds declares the column, so nothing is undeclared."""
+    import pyarrow.parquet as pq
+
+    root = held_dropped_json(tmp_path, registry, minimal)
+    writer = PacketWriter(earlier_registry(registry), packet_id=root.name)
+    writer.add("core.processing_runs", import_runs())
+    assert writer.amend(root).passed
+    assert "dropped_json" in pq.read_schema(_file(root, "core.source_files")).names
 
 
 def test_an_amendment_drops_a_row_the_packet_holds(tmp_path, registry, minimal):

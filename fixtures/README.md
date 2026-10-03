@@ -82,6 +82,8 @@ prose description, and is not all of them.
 | `bad_type` | `start_tick` written as int32 | `schema.column_type` |
 | `extension_bad_type` | the extension's `trial_id` written as float64 | `schema.column_type`, filed under `dynamic_foraging`, which fails while core passes |
 | `missing_column` | required column absent from the file | `schema.column_absent` |
+| `undeclared_column` | an all-null column `core.intervals` does not declare | `schema.column_undeclared` |
+| `extension_undeclared_column` | the same column added to the extension's table | `schema.column_undeclared`, filed under `dynamic_foraging` |
 | `owned_without_digest` | a packet-owned resource records no `digest` | `packet.resource.digest_missing` |
 | `crc64nvme_one_byte_off`, `crc32c_one_byte_off`, `crc32_one_byte_off` | a recorded CRC is of the file with one byte flipped | `owned.digest`, with checksums |
 | `crc_prefix_disagrees` | an external prefix's CRC32C member digest differs from the one its listing value covers | `packet.resource.member_digest` |

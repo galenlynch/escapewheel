@@ -191,8 +191,8 @@ not in Part 03's encoding section or in each Part 01 concept. An ordinary change
 subsection at the end of Part 02 §6, which takes its own anchor when created. Part 01 §§3.12 and 3.17 keep their concept-specific conclusions
 ("came off a device as recorded", "was acquired"), which the general rule does not state.
 
-The open amendment-column proposal also adds a subsection to Part 02 §6. It goes first, and this
-rule's subsection follows its. Neither depends on the other's content.
+R166 §3.1 added a subsection at the end of Part 02 §6 on a column a table's declaration does not
+declare. This rule's subsection follows it. Neither depends on the other's content.
 
 ## 5. Impact sketch
 

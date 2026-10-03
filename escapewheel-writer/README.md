@@ -263,6 +263,25 @@ the held run automatically, with the reason naming Part 05 §12. A `[[preferred_
 a different choice, naming the run by `processing_run_name` among the packet's runs and this
 build's.
 
+A held table whose file holds a column its bound declaration does not declare, as one written under
+an earlier registry may, refuses the build before any source opens, unless a `[[materialize]]` entry
+derives that table again (Part 05 §3.5). The refusal names the remedies: a `[drop]` entry keyed
+`resource.column`, whose value says why the values are given up, and, where the packet's own
+registry still declares the column, naming no registry of that ID so the build binds the packet's
+own. A dropped column's table is written without it, whether or not the build adds a row to it, and
+the superseded version's file keeps the values:
+
+```toml
+[drop]
+"core.source_files.dropped_json" = "the calibration moved to a sidecar"
+```
+
+The build reports each drop, and warns of an entry for a column the held file does not hold. It
+refuses an entry naming a resource the packet does not hold as a table, one a `[[materialize]]`
+entry derives again, or a column the bound declaration declares. A derived resource whose source a
+drop rewrites is derived again or removed like any other (Part 05 §15.2). `PacketWriter.amend`
+takes the same entries as `drop`.
+
 ## A replacing recipe names the packets it replaces
 
 A recipe's `[packet].replaces` lists the packets the build replaces, each a packet root or a

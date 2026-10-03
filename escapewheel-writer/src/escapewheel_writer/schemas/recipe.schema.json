@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/recipe/0.4.0",
+  "$id": "https://escapewheel.org/schemas/recipe/0.5.0",
   "title": "Escapewheel session recipe",
   "description": "Shape of a session recipe, per Part 05 §3.1: a TOML 1.0 document, validated in its decoded form. Top-level members are closed, so a misspelled block is refused rather than dropped; a source entry and a materialization are open, because every key they do not name is an option or a parameter their adapter or materializer checks. Fact values under `session` and `subject`, and a preferred run's `chosen_at`, are untyped here: TOML dates and times decode to values JSON Schema has no type for, and a build types each when it normalizes it (Part 05 §§3.1 and 3.6).",
   "type": "object",
@@ -289,12 +289,35 @@
       },
       "description": "Analysis resources to derive once the core resources are staged. Every other key is a parameter."
     },
+    "drop": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "\\S",
+        "description": "Why the recipe gives up the column's held values (Part 05 §3.5)."
+      },
+      "description": "Held columns an amending build drops, keyed `resource.column` (Part 05 §3.5)."
+    },
     "commit": {
       "type": "object",
       "description": "The build's own limits, such as `memory_budget`; their names are the implementation's."
     }
   },
   "additionalProperties": false,
+  "dependentSchemas": {
+    "drop": {
+      "properties": {
+        "packet": {
+          "required": [
+            "amends"
+          ]
+        }
+      }
+    }
+  },
   "$defs": {
     "resource": {
       "type": "string",

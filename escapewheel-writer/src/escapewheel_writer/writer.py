@@ -624,6 +624,38 @@ class PacketWriter:
                 )
             check_parquet_floor(path)
             entries.append(resource_entry(resource_id, resource_id, encode(relative.split("/")), owned=path))
+        if only is None and self._held is not None:
+            entries += self._stage_dropped(staging, place, {e["resource_id"] for e in entries})
+        return entries
+
+    def _stage_dropped(
+        self, staging: Path, place: Callable[[str, str, str], str], staged: Collection[str]
+    ) -> list[dict[str, Any]]:
+        """Write each held table a column is dropped from and no row was added to (Part 05 §4.3).
+
+        A table rows were added to was already written over its declared columns, which leaves the
+        dropped ones out. The held entry's lineage stands, since every row is the one it describes.
+        """
+        held = self._held
+        assert held is not None
+        entries = []
+        for resource_id in sorted(set(held.drops) - set(staged)):
+            declaration_id = held.declaration(resource_id)
+            spec = self.spec(declaration_id)
+            assert spec is not None
+            table = held.without_dropped(resource_id)
+            relative = place("tables", resource_id, "parquet")
+            path = staging / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            options = parquet_options(resource_id, spec, table.schema, self._encoding_exceptions, table)
+            pq.write_table(table, path, **options)
+            self.rows_written[resource_id] = table.num_rows
+            check_parquet_floor(path)
+            entry = resource_entry(resource_id, declaration_id, encode(relative.split("/")), owned=path)
+            if lineage := held.entries[resource_id].get("derived_from"):
+                entry["derived_from"] = list(lineage)
+            entries.append(entry)
+            held.drop_only.add(resource_id)
         return entries
 
     def _prefer_added_runs(self, held: Held | None) -> None:
@@ -802,6 +834,7 @@ class PacketWriter:
         limits: Mapping[str, Any] | None = None,
         say: Callable[[str], None] = lambda _: None,
         materialize: Sequence[Callable[[Any, PacketWriter], None]] = (),
+        drop: Mapping[str, str] | None = None,
     ) -> Report:
         """Publish what this writer holds as a new version of a committed packet (Part 05 §15).
 
@@ -825,6 +858,10 @@ class PacketWriter:
         materialize : sequence of callable, optional
             As for `commit`, each given the staged amended packet, so a derived resource is derived
             from what the new version holds and replaces the one the packet names (Part 05 §8).
+        drop : Mapping, optional
+            `resource.column` to a reason, as a recipe's `[drop]` entries: held columns the bound
+            declarations do not declare, which the amendment writes their tables without
+            (Part 05 §3.5). Where absent, those a build recorded on the held packet stand.
 
         Returns
         -------
@@ -837,7 +874,8 @@ class PacketWriter:
             If `root` holds no committed manifest. Use `commit` to create a packet.
         AmendmentRefused
             If a delivered row would change or grow what the packet holds, which is a new packet
-            rather than a new version of this one (Part 05 §15.2).
+            rather than a new version of this one (Part 05 §15.2), or if a held table holds a column
+            its bound declaration does not declare and nothing drops (Part 05 §3.5).
         UsageError
             If `packet_version` does not sort after the packet's, or has another major version.
         CommitRefused
@@ -854,6 +892,12 @@ class PacketWriter:
             self.amending(Held.open(root))
         held = self._held
         assert held is not None
+        # Before anything is staged: a table rewritten without such a column would lose its values
+        # unreported, and one left alone would keep a column no bound registry describes.
+        undeclared = held.undeclared()
+        if drop is not None:
+            held.release(drop, undeclared)
+        held.refuse_undeclared(undeclared)
         superseded = dict(held.manifest)
         version = packet_version or bump(str(superseded["packet_version"]))
         if semver(version) <= semver(str(superseded["packet_version"])):

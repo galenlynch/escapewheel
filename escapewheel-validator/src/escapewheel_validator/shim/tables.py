@@ -1,7 +1,7 @@
 """A table's physical schema, and the values a registry constrains without a rule.
 
-- :func:`check_schemas` -- column presence and physical type, and each table's encodings against
-  the reader floor.
+- :func:`check_schemas` -- column presence, physical type and undeclared columns, and each table's
+  encodings against the reader floor.
 - :func:`check_duplication` -- pairs of columns holding equal values in every row.
 - :func:`check_unfilled_metadata` -- a declared `metadata` column no row fills.
 - :func:`check_reserved_values` -- a value outside a column's reserved set.
@@ -31,7 +31,11 @@ from .floors import check_parquet_floor
 
 
 def check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> dict[str, Any]:
-    """Check column presence and physical type, which SQL cannot see (Part 05 §5.3)."""
+    """Check each file's columns against its declaration, which SQL cannot see (Part 05 §5.3).
+
+    Run over every table the current manifest names on every validation, not only those an
+    amendment wrote, since the manifest that binds the declaration is one of these checks' inputs.
+    """
     declared = {r.resource_id for r in packet.resources()}
     present: dict[str, Any] = {}
     for resource_id, spec in tables.items():
@@ -46,6 +50,15 @@ def check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> 
         present[resource_id] = handle
         for column in spec["columns"]:
             _check_column(resource_id, column, schema, report)
+        declared_names = {column["name"] for column in spec["columns"]}
+        for name in schema.names:
+            if name not in declared_names:
+                report.add_about(
+                    resource_id,
+                    check_table.SCHEMA_COLUMN_UNDECLARED,
+                    f"{resource_id}.{name} is held, and its declaration does not declare it",
+                    column=name,
+                )
         path, filesystem = (handle.path, None) if handle.is_local else handle.location.store()
         try:
             footer = pq.read_metadata(path, filesystem=filesystem)

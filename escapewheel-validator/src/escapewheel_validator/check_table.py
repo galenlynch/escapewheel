@@ -198,8 +198,9 @@ TIME_ORIGIN_UNMAPPABLE = _named("time.origin_unmappable", _ERROR, _COLUMN)
 TIME_ORIGIN_NOT_EARLIEST = _named("time.origin_not_earliest", _ERROR, _COLUMN)
 
 # A table's file against its declared columns.
-SCHEMA_COLUMN_ABSENT = _unnamed("schema.column_absent", _ERROR, _COLUMN)
-SCHEMA_COLUMN_TYPE = _unnamed("schema.column_type", _ERROR, _COLUMN)
+SCHEMA_COLUMN_ABSENT = _named("schema.column_absent", _ERROR, _COLUMN)
+SCHEMA_COLUMN_TYPE = _named("schema.column_type", _ERROR, _COLUMN)
+SCHEMA_COLUMN_UNDECLARED = _named("schema.column_undeclared", _ERROR, _COLUMN)
 
 # The manifest's session inventory against `core.sessions`.
 CORE_SESSIONS_MANIFEST_SESSIONS_MATCH = _named("core.sessions.manifest_sessions_match", _ERROR, _RESOURCE)
@@ -429,6 +430,7 @@ __all__ = [
     "RESOURCE_UNREADABLE",
     "SCHEMA_COLUMN_ABSENT",
     "SCHEMA_COLUMN_TYPE",
+    "SCHEMA_COLUMN_UNDECLARED",
     "SOURCES_ABSOLUTE_URI",
     "SOURCES_DECLARED",
     "SOURCES_DECLARED_COUNT",

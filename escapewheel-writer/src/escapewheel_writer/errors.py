@@ -208,6 +208,15 @@ class RecipeFault(StrEnum):
     PREFERRED_RUN_UNKNOWN = "preferred_run_unknown"
     #: A `preferred_run` entry's activity or scope differs from its run's.
     PREFERRED_RUN_DIFFERS = "preferred_run_differs"
+    #: A held table holds a column the registry the build binds does not declare, and no entry drops it.
+    HELD_COLUMN_UNDECLARED = "held_column_undeclared"
+    #: A `[drop]` entry names a resource the packet does not hold as a table, one the recipe derives
+    #: again, or a declared column.
+    DROP_UNSOUND = "drop_unsound"
+    #: A `[drop]` entry names a column no held file of its resource holds.
+    DROP_IDLE = "drop_idle"
+    #: The build drops a held column a `[drop]` entry names.
+    COLUMN_DROPPED = "column_dropped"
 
 
 class RecipeError(WriterError):
@@ -361,6 +370,8 @@ class AmendmentFault(StrEnum):
     HELD_KEY_TAKEN = "held_key_taken"
     #: Delivered rows would change or grow a group of rows the packet holds.
     CHANGES_HELD = "changes_held"
+    #: A held table holds a column its bound declaration does not declare, and nothing drops it.
+    HELD_COLUMN_UNDECLARED = "held_column_undeclared"
 
 
 class AmendmentRefused(WriterError, ValueError):

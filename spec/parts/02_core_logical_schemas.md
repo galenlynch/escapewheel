@@ -358,6 +358,17 @@ A present nullable column is preferred to an absent one, because a stable column
 
 Duplication is permitted only where it buys otherwise-unavailable access. Axis names are carried in `core.array_dimensions` because a Zarr binding in another language cannot see them.
 
+<a id="ew-undeclared-columns" data-spec-anchor="canonical"></a>
+### 6.1 Undeclared columns
+
+A table MUST NOT hold a column that its declaration does not declare. Its declaration is the one its
+resource entry's `declaration_id` names in a registry the packet's manifest binds
+([Part 04 §10](04_packet_catalog.md#ew-packet-manifest-conformance)). A column is undeclared
+whatever its values, every value null included, and whatever wrote it.
+[Part 05 §5.3](05_validation_and_import.md#ew-validation-shim) has a validator report one, and
+[Part 05 §3.5](05_validation_and_import.md#ew-recipe-check) has an amending build refuse or drop one
+a held table carries.
+
 <a id="ew-logical-references" data-spec-anchor="canonical"></a>
 ## 7. References
 

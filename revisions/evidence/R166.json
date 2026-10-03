@@ -1,0 +1,396 @@
+{
+  "version": 1,
+  "revision": "R166",
+  "based_on": "18d05c61eb7eeaea900659ffdf34f5e57d568525",
+  "clauses": {
+    "R166 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-undeclared-columns"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_tables.py::test_a_column_the_declaration_does_not_declare_fails_whatever_its_values"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_tables.py::test_an_extension_table_undeclared_column_is_filed_under_the_extension"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "undeclared_column"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "extension_undeclared_column"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/shim/tables.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R166 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_tables.py::test_a_column_the_declaration_does_not_declare_fails_whatever_its_values"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_tables.py::test_an_extension_table_undeclared_column_is_filed_under_the_extension"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "undeclared_column"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "extension_undeclared_column"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending.py::test_a_table_left_holding_an_undeclared_column_fails_validation"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/shim/tables.py",
+          "escapewheel-validator/src/escapewheel_validator/check_table.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R166 §3.3": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending.py::test_an_amendment_binding_a_registry_without_a_held_column_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_a_held_undeclared_column_refuses_the_build_before_any_source"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_naming_no_core_registry_binds_the_packets_own"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_a_held_analysis_table_is_refused_dropped_or_derived_again"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_a_held_analysis_table_derived_again_carries_no_held_column"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/session.py",
+          "escapewheel-writer/src/escapewheel_writer/amending.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R166 §3.4": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        },
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-import-normalization"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending.py::test_a_dropped_held_column_is_written_out_of_the_table"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending.py::test_a_dropped_column_rewrites_a_table_the_amendment_adds_no_row_to"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_a_drop_entry_builds_and_reports_the_drop"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_a_held_analysis_table_is_refused_dropped_or_derived_again"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/amending.py",
+          "escapewheel-writer/src/escapewheel_writer/recipe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R166 §3.5": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_an_unsound_drop_entry_is_refused[core.units.extra-does not hold as a table]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_an_unsound_drop_entry_is_refused[core.clocks.origin-the registry the build binds declares]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_a_drop_naming_a_table_derived_again_is_refused"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/session.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R166 §3.6": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_a_drop_entry_for_a_column_the_file_lacks_is_idle"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_a_drop_entry_builds_and_reports_the_drop"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_a_held_undeclared_column_refuses_the_build_before_any_source"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_where_the_packets_own_registry_lacks_the_column_only_drop_is_named"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/session.py",
+          "escapewheel-writer/src/escapewheel_writer/errors.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R166 §3.7": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-amendment-scope"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_drop.py::test_a_drop_only_rewrite_of_a_derived_from_table_leaves_the_derived_one_stale"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/amending.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R166 §3.8": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-recipe-purpose"
+        },
+        {
+          "path": "spec/artifacts/recipe.schema.json",
+          "pointer": "/properties/drop"
+        },
+        {
+          "path": "spec/artifacts/recipe.schema.json",
+          "pointer": "/dependentSchemas/drop"
+        },
+        {
+          "path": "spec/artifacts/recipe.schema.json",
+          "pointer": "/$id"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-writer/src/escapewheel_writer/schemas/recipe.schema.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_amending_recipe_may_drop_a_held_column"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_drop_the_schema_refuses[unamending]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_drop_the_schema_refuses[two-segments]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_drop_the_schema_refuses[blank-reason]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    }
+  }
+}

@@ -165,6 +165,34 @@ def test_a_recipe_failing_the_schema_is_refused_on_load(tmp_path, body, where):
     assert any(where in p.message for p in refused.value.problems)
 
 
+def _dropping(tmp_path, key, reason, *, amends=True):
+    path = write_recipe(tmp_path, f'\n[drop]\n"{key}" = "{reason}"\n')
+    if amends:
+        path.write_text(path.read_text().replace("[packet]\n", '[packet]\namends = "0.1.0"\n', 1))
+    return path
+
+
+def test_an_amending_recipe_may_drop_a_held_column(tmp_path):
+    """Part 05 §3.1: `drop` keys a held column by resource and column, beside `packet.amends`."""
+    recipe = Recipe.load(_dropping(tmp_path, "core.source_files.extra", "superseded"))
+    assert recipe.drop == {"core.source_files.extra": "superseded"}
+
+
+@pytest.mark.parametrize(
+    ("key", "reason", "amends", "where"),
+    [
+        ("core.source_files.extra", "superseded", False, "'amends' is a required property"),
+        ("core.source_files", "superseded", True, "does not match"),
+        ("core.source_files.extra", " ", True, "drop/core.source_files.extra"),
+    ],
+    ids=["unamending", "two-segments", "blank-reason"],
+)
+def test_a_drop_the_schema_refuses(tmp_path, key, reason, amends, where):
+    with pytest.raises(RecipeUnreadable) as refused:
+        Recipe.load(_dropping(tmp_path, key, reason, amends=amends))
+    assert any(where in p.message for p in refused.value.problems)
+
+
 def test_a_defaulted_entry_contributes_and_does_not_own_what_it_lists_under_contributes(tmp_path, registry):
     """Part 05 §3.4: an entry's own `contributes` is a contribution, whatever the default reads."""
     body = '\n[[source]]\nkind = "sorter"\nroot = "s"\ncontributes = ["core.units"]\n'

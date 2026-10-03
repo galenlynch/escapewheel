@@ -479,6 +479,8 @@ class Recipe:
     replaces: tuple[str, ...] = ()
     #: Part 05 §12: each run the recipe prefers among runs sharing an activity and scope.
     preferred_runs: tuple[Mapping[str, Any], ...] = ()
+    #: Part 05 §3.5: each `[drop]` entry, `resource.column` to why the recipe gives up its held values.
+    drop: Mapping[str, str] = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: str | Path, *, out: str | Path | None = None) -> Recipe:
@@ -612,6 +614,7 @@ class Recipe:
             amends=packet.get("amends"),
             replaces=tuple(str(entry) for entry in packet.get("replaces", ())),
             preferred_runs=tuple(written.get("preferred_run", ())),
+            drop=document.get("drop", {}),
         )
 
     def with_sample(self, sample: int) -> Recipe:

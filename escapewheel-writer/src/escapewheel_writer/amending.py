@@ -101,6 +101,13 @@ class Held:
         self.prevail = False
         #: Kind to every name the packet numbered, so a run added can be named apart (Part 05 §12).
         self.held_names: dict[str, set[str]] = {}
+        #: Resource ID to the held columns a `[drop]` entry releases, which the amendment writes the
+        #: table without (Part 05 §3.5).
+        self.drops: dict[str, list[str]] = {}
+        #: Tables a `[[materialize]]` entry derives again, so their held columns are not carried.
+        self.rederived: frozenset[str] = frozenset()
+        #: Tables written only to drop a column, whose rows are the held ones and derive nothing anew.
+        self.drop_only: set[str] = set()
         self._connection: Any = None
         self._spill: Path | None = None
         self._version: Version | None = None
@@ -168,7 +175,8 @@ class Held:
         """Drop each derived resource the amendment neither wrote nor left current (Part 05 §15.2).
 
         One whose `derived_from` chain reaches a canonical table the amendment wrote, other than a
-        provenance table, was derived from rows that are no longer all the packet holds.
+        provenance table, was derived from rows that are no longer all the packet holds. One written
+        only to drop a column was not derived again, so it is stale all the same.
         """
         rewritten = {e["resource_id"] for e in written}
         sources = {r for r in rewritten if self.canonical(r) and r not in PROVENANCE}
@@ -176,7 +184,7 @@ class Held:
         stale = {
             e["resource_id"]
             for e in resources
-            if e["resource_id"] not in rewritten
+            if (e["resource_id"] not in rewritten or e["resource_id"] in self.drop_only)
             and self.classes.get(str(e.get("declaration_id", e["resource_id"]))) in DERIVED
             and chain_reaches(chains, e["resource_id"], sources)
         }
@@ -185,6 +193,59 @@ class Held:
     def tables_named(self) -> list[str]:
         """Return every table the manifest names, which an amending recipe counts as supplied."""
         return [rid for rid, entry in self.entries.items() if str(entry.get("uri", "")).endswith(".parquet")]
+
+    def declaration(self, resource_id: str) -> str:
+        """Return the declaration a held resource's entry names."""
+        return str(self.entries[resource_id].get("declaration_id", resource_id))
+
+    def undeclared(self, declarations: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, list[str]]:
+        """Return, by resource ID, each held table's columns its bound declaration does not declare.
+
+        Read from each file's footer, so a build decides it before any source opens (Part 05 §3.5).
+        `declarations` defaults to those `bind` took; a table whose declaration is not among them is
+        left to the refusal of an unknown declaration.
+        """
+        bound = self.tables if declarations is None else declarations
+        found: dict[str, list[str]] = {}
+        for resource_id in self.tables_named():
+            spec = bound.get(self.declaration(resource_id))
+            if spec is None:
+                continue
+            declared = {c["name"] for c in spec["columns"]}
+            if extra := [n for n in pq.read_schema(self.packet.path(resource_id)).names if n not in declared]:
+                found[resource_id] = extra
+        return found
+
+    def release(self, drop: Mapping[str, str], undeclared: Mapping[str, Sequence[str]]) -> None:
+        """Record each held undeclared column a `[drop]` entry names, as one the amendment drops."""
+        self.drops = {}
+        for key in sorted(drop):
+            resource_id, _, column = key.rpartition(".")
+            if column in undeclared.get(resource_id, ()):
+                self.drops.setdefault(resource_id, []).append(column)
+
+    def refuse_undeclared(self, undeclared: Mapping[str, Sequence[str]]) -> None:
+        """Refuse a held column no bound declaration declares that no entry drops (Part 05 §3.5).
+
+        A table derived again is exempt, since its held rows are not carried.
+
+        Raises
+        ------
+        AmendmentRefused
+            Naming the first such table and every such column of it.
+        """
+        for resource_id in sorted(set(undeclared) - self.rederived):
+            if kept := [c for c in undeclared[resource_id] if c not in self.drops.get(resource_id, ())]:
+                raise AmendmentRefused(
+                    f"{resource_id} holds {', '.join(kept)}, which its bound declaration does not declare; "
+                    f"name each in [drop] to write the table without it (Part 05 §3.5)",
+                    code=AmendmentFault.HELD_COLUMN_UNDECLARED,
+                    resource_id=resource_id,
+                )
+
+    def without_dropped(self, resource_id: str) -> pa.Table:
+        """Return a held table without the columns the amendment drops from it, every row kept."""
+        return pq.read_table(self.packet.path(resource_id)).drop_columns(self.drops[resource_id])
 
     def clock_names(self) -> list[str]:
         """Return the `clock_name` of every `core.clocks` row the packet holds (Part 05 §3.5)."""

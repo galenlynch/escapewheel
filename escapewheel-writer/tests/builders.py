@@ -17,6 +17,28 @@ def commit_tables(root, registry, tables, **kwargs):
     return writer.commit(root)
 
 
+def earlier_registry(registry):
+    """The registry at a version whose `core.source_files` declares one more column, `dropped_json`."""
+    import copy
+
+    earlier = copy.deepcopy(dict(registry))
+    earlier["registry_version"] = "0.0.1"
+    columns = earlier["resources"]["core.source_files"]["table"]["columns"]
+    columns.insert(
+        next(i for i, c in enumerate(columns) if c["name"] == "metadata"),
+        {"name": "dropped_json", "type": "json_string", "presence": "optional", "role": "data", "description": "x"},
+    )
+    return earlier
+
+
+def held_dropped_json(tmp_path, registry, minimal):
+    """A packet committed under `earlier_registry`, holding a value in the column `registry` lacks."""
+    root = tmp_path / "s001"
+    held = {"source_file_id": "f1", "uri": "file:///x", "dropped_json": '{"slope":2.0,"offset":5.0}'}
+    commit_tables(root, earlier_registry(registry), {**minimal, "core.source_files": [held]})
+    return root
+
+
 def import_runs(**overrides):
     """A materialization activity (Part 06 §5), which is what an amendment normally carries."""
     return [

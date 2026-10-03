@@ -95,6 +95,30 @@ def test_wrong_column_type_is_caught_before_any_query(packet_root):
     assert any(f.check == "schema.column_type" for f in report.findings)
 
 
+def test_a_column_the_declaration_does_not_declare_fails_whatever_its_values(packet_root):
+    """Part 02 §6.1: an all-null column is undeclared too, and Part 05 §9.5 files it under core."""
+    intervals = read_table(packet_root, "intervals")
+    rewrite_table(packet_root, "intervals", intervals.append_column("extra", pa.nulls(intervals.num_rows, pa.string())))
+    report = validate(open_packet(packet_root))
+    found = [f for f in report.findings if f.check == "schema.column_undeclared"]
+    assert [(f.level, f.registry, f.resource, f.column) for f in found] == [
+        ("error", "core", "core.intervals", "extra")
+    ]
+    assert not report.passed
+
+
+def test_an_extension_table_undeclared_column_is_filed_under_the_extension(packet_root):
+    root = add_extension(packet_root)
+    table = pq.read_table(root / "tables" / "task" / "trials.parquet")
+    pq.write_table(
+        table.append_column("extra", pa.array([1, 2], type=pa.int64())), root / "tables" / "task" / "trials.parquet"
+    )
+    report = validate(open_packet(root))
+    finding = next(f for f in report.findings if f.check == "schema.column_undeclared")
+    assert finding.registry == "task" and finding.column == "extra"
+    assert verdicts_of(report, "core", "task") == ("failed", "passed", "failed")
+
+
 def test_a_declared_metadata_column_no_row_fills_is_reported(packet_root):
     """Part 05 §5.3, at `info`. The column may be absent from the file, so this can never fail."""
     report = validate(open_packet(packet_root))
