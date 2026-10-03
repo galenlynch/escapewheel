@@ -152,6 +152,17 @@ Three packets bind the fixture-local extension `rig`, whose `rig.neuropixels` is
 `device_detail_unkinded` leaves it null and `device_detail_other_kind` names `core.probes`, and
 each draws `rig.neuropixels.device_id.names_a_row_of_its_kind` under `rig`.
 
+Five packets exercise Part 01 §3.18's frames, each cataloguing its media assets as referenced
+videos that nothing opens. `media_frames` is clean: one asset's ticks repeat once and never fall,
+and another's frames alternate between the two clocks, its ticks falling only from a frame on one
+clock to the next, on the other. `frames_timed_in_decode_order` times one asset's frames in the
+order a stream with bidirectional frames stores them while its `pts` ascend, and draws
+`core.media_frames.t_tick_nondecreasing_with_frame_index` and not
+`pts_increases_with_frame_index`; `frames_fall_behind_another_clock` draws the same rule where two
+frames of one clock fall with a frame of the other between them. `frames_pts_out_of_order` swaps two
+`pts` and draws `core.media_frames.pts_increases_with_frame_index`, and `frames_index_skips` skips
+index 5 and draws `core.media_frames.frame_index_contiguous`.
+
 Six packets exercise how Part 02 §12.1 numbers units, whose two units, both in one curation, are
 labelled `"17"` and `"42"`. `unit_labels_by_length` relabels them `"7"` and `"007"`, and numbers them
 in that order, which is length order; `null_unit_labels` leaves both labels null, and

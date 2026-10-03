@@ -651,3 +651,13 @@ locations = [
   { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.subjects/table/columns/1/name", equals = "subject_name" },
   { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.units/table/columns/2/name", equals = "unit_name" },
 ]
+
+[target."R168 §3.4"]
+locations = [
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.media_frames/table/columns/2/name", equals = "frame_index" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.media_frames/table/columns/5/name", equals = "pts" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.media_frames/table/columns/6/name", equals = "dropped" },
+]
+
+[target."R168 §3.6"]
+locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.media_frames/table/rules/2/id", equals = "core.media_frames.t_tick_nondecreasing_with_frame_index" }]

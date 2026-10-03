@@ -219,7 +219,7 @@ def test_an_amending_build_adds_sidecars_to_a_packet_bound_to_the_earlier_regist
     amend = _recipe(tmp_path, README, amends="0.1.0", name="amend.toml")
     _commit(amend, amend=True)
     manifest = json.loads((amend.out / "packet.json").read_text())
-    assert manifest["registries"]["core"]["version"] == "0.18.0"
+    assert manifest["registries"]["core"]["version"] == "0.19.0"
     assert [r["resource_id"] for r in open_packet(amend.out).table("core.sidecars").to_pylist()] == ["core.readme"]
 
     again = _recipe(tmp_path, README + VIEWER, amends=manifest["packet_version"], name="again.toml")

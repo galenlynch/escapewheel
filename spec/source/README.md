@@ -7,7 +7,7 @@ registry `core`, stored at `registries/core/<version>.json.gz` (Part 04 §8, Par
 
 <!-- BEGIN generated: counts -->
 ```
-51 resources, 47 tables, 367 columns, 117 references, 91 Tier 2 rules
+51 resources, 47 tables, 367 columns, 117 references, 92 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -122,7 +122,7 @@ selects `escapewheel-rule-sql-v0.2`; individual rules cannot override it. Inline
 table's whole logical contract readable in one declaration.
 
 <!-- BEGIN generated: rules -->
-91 rules over 29 tables: 82 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
+92 rules over 29 tables: 83 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
@@ -137,6 +137,7 @@ table's whole logical contract readable in one declaration.
 | `analysis.spike_events` | 3 |
 | `core.intervals` | 3 |
 | `core.media_assets` | 3 |
+| `core.media_frames` | 3 |
 | `analysis.array_labels` | 2 |
 | `core.array_assets` | 2 |
 | `core.array_labels` | 2 |
@@ -144,7 +145,6 @@ table's whole logical contract readable in one declaration.
 | `core.clock_observation_intervals` | 2 |
 | `core.devices` | 2 |
 | `core.event_stream_observation_intervals` | 2 |
-| `core.media_frames` | 2 |
 | `core.sorting_run_channels` | 2 |
 | `core.spike_events` | 2 |
 | `core.unit_electrodes` | 2 |

@@ -7,8 +7,8 @@ This generated rendering is not a standalone specification. See
 [Part 00 §2](../parts/00_architecture.md#ew-specification-authority) for the sources that bind.
 
 ```text
-51 resources, 47 tables, 367 columns, 117 references, 91 Tier 2 rules
-registry 0.18.0   logical standard escapewheel-logical-v0.1
+51 resources, 47 tables, 367 columns, 117 references, 92 Tier 2 rules
+registry 0.19.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -763,11 +763,11 @@ registry 0.18.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `media_asset_id` | int32 | **required** | — | Media asset ID. |
-| `frame_index` | int64 | **required** | — | Frame index. |
+| `frame_index` | int64 | **required** | — | The frame's index in the order the asset presents its frames, counting from 0; not a count of exposures (Part 01 §3.18). |
 | `t_tick` | int64 | **required** | — | Frame time tick. |
 | `clock_id` | int32 | **required** | — | Clock ID. |
-| `pts` | int64 | nullable | — | Container presentation timestamp, verbatim in the container's own time base. |
-| `dropped` | bool | nullable | — | Dropped-frame flag. |
+| `pts` | int64 | nullable | — | The frame's presentation timestamp on the container's presentation timeline, after any edit list, in the container's own time base and not rescaled; not a time on any clock the packet declares (Part 01 §3.18). |
+| `dropped` | bool | nullable | — | True where the writer knows the capture produced a frame between the asset's previous frame and this one, or before the first, that the asset lacks; false where it determined none is missing; null where it could not tell. Carries no count (Part 01 §3.18). |
 
 **Primary key** — `media_asset_id`, `frame_index`  
 
@@ -779,10 +779,11 @@ registry 0.18.0   logical standard escapewheel-logical-v0.1
 
 **Amendment groups** — (`media_asset_id`)  
 
-**Tier 2 rules** — 2
+**Tier 2 rules** — 3
 
 - `core.media_frames.frame_index_contiguous` — error: frame_index is not contiguous from 0 within an asset
 - `core.media_frames.pts_increases_with_frame_index` — error: pts is not strictly increasing in frame_index order within an asset, so the frames are not numbered in presentation order
+- `core.media_frames.t_tick_nondecreasing_with_frame_index` — error: t_tick decreases in frame_index order among an asset's frames on one clock, so the frames are not timed in the order they are numbered
 
 ### `core.preferred_runs`
 

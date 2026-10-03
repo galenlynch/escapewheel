@@ -185,8 +185,8 @@ def shipped_rule_defects() -> list[str]:
                     check_rule(rule["sql"], document, core_resources=core)
                 except Exception as exc:
                     defects.append(f"{rule['id']}: {str(exc).splitlines()[0]}")
-    if count != 140:
-        defects.append(f"shipped rule count is {count}, expected 140")
+    if count != 141:
+        defects.append(f"shipped rule count is {count}, expected 141")
     return defects
 
 

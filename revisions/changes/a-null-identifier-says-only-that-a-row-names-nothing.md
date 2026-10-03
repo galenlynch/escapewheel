@@ -163,9 +163,8 @@ concept-specific conclusions ("came off a device as recorded", "was acquired"), 
 rule does not state. R166 §3.1 added Part 02 §6.1 on a column a declaration does not declare; the
 new subsection follows it, and neither depends on the other's content.
 
-`a-frames-pts-and-dropped-flag-each-have-one-meaning.md` also advances the core registry version
-and touches no section this change amends. Its order after this one in the changes README fixes
-which version each takes; §3.4 names no value, so either order leaves the Decision unchanged.
+R168 also advances the core registry version and touches no section this change amends. §3.4
+names no value, so the Decision stands whichever version the incorporated registry carries.
 
 ## 3. Decision
 

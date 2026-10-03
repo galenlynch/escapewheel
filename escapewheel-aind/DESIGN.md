@@ -133,9 +133,17 @@ Each camera writes a CSV beside its video, with one line per frame and three col
 - a frame counter that skips where frames were lost, from which `dropped` is derived;
 - the camera's own clock in nanoseconds, against which the repair was checked.
 
-`pts` comes from none of the three. It is the frame's presentation timestamp in the container, an
-integer in the container's own time base (Part 01 §3.18), and it locates a row in the file a
-consumer opens. The asset declares the rate those timestamps count at, so
+`dropped` is true where the counter skips between a frame and the one before it, and false where
+it steps by one. At the first frame it is false for a video holding every frame its CSV times. A
+video holding fewer is placed by assuming its first frame is the CSV's first exposure, which a
+transcode that lost the leading frames would break undetectably, so its first flag is null (Part 01
+§3.18).
+
+`pts` comes from none of the three. It is the frame's presentation timestamp in the container, on
+the timeline the container presents after its edit list, an integer in the container's own time
+base (Part 01 §3.18), and it locates a row in the file a consumer opens. ffprobe reports it that
+way by default, and flags `D` a packet the edit list excludes, which the adapter skips as no frame
+of the asset. The asset declares the rate those timestamps count at, so
 `pts * pts_rate_den / pts_rate_num` gives seconds of video without opening the file, and `t_tick`
 gives the same frame on the rig clock.
 

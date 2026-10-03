@@ -5,6 +5,7 @@ from .axes import AXIS_PACKETS
 from .devices import DEVICE_PACKETS
 from .digests import DIGEST_PACKETS
 from .floors import FLOOR_PACKETS
+from .frames import FRAME_PACKETS
 from .intervals import INTERVAL_PACKETS
 from .opaque import OPAQUE_PACKETS
 from .record import Packet
@@ -28,6 +29,7 @@ PACKETS: tuple[Packet, ...] = (
     *AXIS_PACKETS,
     *INTERVAL_PACKETS,
     *DEVICE_PACKETS,
+    *FRAME_PACKETS,
     *UNIT_PACKETS,
     *OPAQUE_PACKETS,
     *AMENDMENT_PACKETS,

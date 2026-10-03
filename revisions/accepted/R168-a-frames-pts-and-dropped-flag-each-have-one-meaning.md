@@ -2,9 +2,10 @@
 
 | | |
 |---|---|
-| **Status** | **Ready** |
+| **Status** | **Accepted** 2026-10-02 |
 | **Opened** | 2026-10-02 |
 | **Based on** | `04da4ef50a6e4066520778be78eaeedce41e7804` |
+| **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 01 §3.18; Part 02 §9.2; Part 08 §2; Part 08 §3; the core registry |
 | **Depends on** | R69 §2.1 (the presentation order this keeps); R69 §2.2 (the frames an index counts, which this replaces in part); R68 §2.2 (what a presentation timestamp holds, which this replaces in part); R69 §2.3 (the rule on `pts` order, beside which this adds one on `t_tick`); R164 §3.5 (the core registry version at the baseline) |
@@ -136,8 +137,8 @@ of `dropped`.
 
 ### 2.5 Other open work advances the same version
 
-The other open change document, `a-null-identifier-says-only-that-a-row-names-nothing.md`, rewrites
-core descriptions of nullable naming columns, which `pts` and `dropped` are not, and advances the
+The other change document open at the baseline, on what a null identifier says, rewrites core
+descriptions of nullable naming columns, which `pts` and `dropped` are not, and advances the
 core registry version. The two share only that version and its restatements in Part 02 §9.2 and
 Part 08, so §3.7 names no target and fixes no order between them.
 

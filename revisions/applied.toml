@@ -4593,3 +4593,29 @@ where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-revision-scope" }, {
 [clause."R167 §3.7"]
 disposition = "applied"
 where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-revision-scope" }]
+
+[clause."R168 §3.1"]
+disposition = "applied"
+where = [{ part = "01", anchor = "ew-media-asset-concept" }]
+
+[clause."R168 §3.2"]
+disposition = "applied"
+where = [{ part = "01", anchor = "ew-media-asset-concept" }]
+
+[clause."R168 §3.3"]
+disposition = "applied"
+where = [{ part = "01", anchor = "ew-media-asset-concept" }]
+
+[clause."R168 §3.4"]
+disposition = "registry"
+
+[clause."R168 §3.5"]
+disposition = "applied"
+where = [{ part = "01", anchor = "ew-media-asset-concept" }]
+
+[clause."R168 §3.6"]
+disposition = "registry"
+
+[clause."R168 §3.7"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-self-description" }]

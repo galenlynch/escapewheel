@@ -29,7 +29,7 @@ name = "frame_index"
 type = "int64"
 presence = "required"
 role = "structural_index"
-description = "Frame index."
+description = "The frame's index in the order the asset presents its frames, counting from 0; not a count of exposures (Part 01 §3.18)."
 
 [[columns]]
 name = "t_tick"
@@ -52,14 +52,14 @@ name = "pts"
 type = "int64"
 presence = "nullable"
 role = "data"
-description = "Container presentation timestamp, verbatim in the container's own time base."
+description = "The frame's presentation timestamp on the container's presentation timeline, after any edit list, in the container's own time base and not rescaled; not a time on any clock the packet declares (Part 01 §3.18)."
 
 [[columns]]
 name = "dropped"
 type = "bool"
 presence = "nullable"
 role = "data"
-description = "Dropped-frame flag."
+description = "True where the writer knows the capture produced a frame between the asset's previous frame and this one, or before the first, that the asset lacks; false where it determined none is missing; null where it could not tell. Carries no count (Part 01 §3.18)."
 
 [[rules]]
 id = "core.media_frames.frame_index_contiguous"
@@ -86,3 +86,17 @@ FROM (
 ) AS derived_1
 WHERE prev IS NOT NULL
   AND pts <= prev'''
+
+[[rules]]
+id = "core.media_frames.t_tick_nondecreasing_with_frame_index"
+level = "error"
+message = "t_tick decreases in frame_index order among an asset's frames on one clock, so the frames are not timed in the order they are numbered"
+sql = '''
+SELECT media_asset_id, clock_id, frame_index, t_tick, prev AS previous_t_tick
+FROM (
+  SELECT media_asset_id, clock_id, frame_index, t_tick,
+    LAG(t_tick) OVER (PARTITION BY media_asset_id, clock_id ORDER BY frame_index) AS prev
+  FROM core.media_frames
+) AS derived_1
+WHERE prev IS NOT NULL
+  AND t_tick < prev'''

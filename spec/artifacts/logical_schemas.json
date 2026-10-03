@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.12.0",
   "registry_id": "core",
-  "registry_version": "0.18.0",
+  "registry_version": "0.19.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.2",
@@ -3653,7 +3653,7 @@
             "type": "int64",
             "presence": "required",
             "role": "structural_index",
-            "description": "Frame index."
+            "description": "The frame's index in the order the asset presents its frames, counting from 0; not a count of exposures (Part 01 \u00a73.18)."
           },
           {
             "name": "t_tick",
@@ -3675,14 +3675,14 @@
             "type": "int64",
             "presence": "nullable",
             "role": "data",
-            "description": "Container presentation timestamp, verbatim in the container's own time base."
+            "description": "The frame's presentation timestamp on the container's presentation timeline, after any edit list, in the container's own time base and not rescaled; not a time on any clock the packet declares (Part 01 \u00a73.18)."
           },
           {
             "name": "dropped",
             "type": "bool",
             "presence": "nullable",
             "role": "data",
-            "description": "Dropped-frame flag."
+            "description": "True where the writer knows the capture produced a frame between the asset's previous frame and this one, or before the first, that the asset lacks; false where it determined none is missing; null where it could not tell. Carries no count (Part 01 \u00a73.18)."
           }
         ],
         "primary_key": [
@@ -3730,6 +3730,12 @@
             "level": "error",
             "message": "pts is not strictly increasing in frame_index order within an asset, so the frames are not numbered in presentation order",
             "sql": "SELECT media_asset_id, frame_index, pts, prev AS previous_pts\nFROM (\n  SELECT media_asset_id, frame_index, pts,\n    LAG(pts) OVER (PARTITION BY media_asset_id ORDER BY frame_index) AS prev\n  FROM core.media_frames\n  WHERE pts IS NOT NULL\n) AS derived_1\nWHERE prev IS NOT NULL\n  AND pts <= prev"
+          },
+          {
+            "id": "core.media_frames.t_tick_nondecreasing_with_frame_index",
+            "level": "error",
+            "message": "t_tick decreases in frame_index order among an asset's frames on one clock, so the frames are not timed in the order they are numbered",
+            "sql": "SELECT media_asset_id, clock_id, frame_index, t_tick, prev AS previous_t_tick\nFROM (\n  SELECT media_asset_id, clock_id, frame_index, t_tick,\n    LAG(t_tick) OVER (PARTITION BY media_asset_id, clock_id ORDER BY frame_index) AS prev\n  FROM core.media_frames\n) AS derived_1\nWHERE prev IS NOT NULL\n  AND t_tick < prev"
           }
         ],
         "amendment_groups": [

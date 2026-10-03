@@ -223,14 +223,16 @@ class VideoSource(Compensates):
         return {"pts_rate_num": int(den or 1), "pts_rate_den": int(num)}
 
     def _presentation(self, video: Path) -> np.ndarray:
-        """Presentation timestamps of the frames the video actually holds, in container units.
+        """Presentation timestamps of the frames the video presents, in container units (Part 01 §3.18).
 
-        Read from the container index rather than by decoding -- 13 s for 2.5 M frames. Sorted,
-        because packets arrive in decode order and B-frames reorder them; diffing decode order
-        reports gaps that are not there.
+        Read from the container index rather than by decoding -- 13 s for 2.5 M frames. ffprobe
+        reports them after the edit list and flags `D` a packet the list excludes, which is no
+        frame of the asset. Sorted, because packets arrive in decode order and B-frames reorder
+        them; diffing decode order reports gaps that are not there.
         """
-        out = _ffprobe(video, "packet=pts")
-        values = np.fromiter((int(x) for x in out.replace(",", " ").split()), dtype=np.int64)
+        out = _ffprobe(video, "packet=pts,flags")
+        presented = (line.split(",") for line in out.split())
+        values = np.fromiter((int(pts) for pts, flags in presented if "D" not in flags), dtype=np.int64)
         values.sort()
         return values
 
@@ -250,7 +252,8 @@ class VideoSource(Compensates):
         counter = table.column(COLUMNS[1]).to_numpy(zero_copy_only=False).astype(np.int64)
 
         pts = self._presentation(video)
-        if pts.size == counter.size:
+        complete = pts.size == counter.size
+        if complete:
             # A complete video is read in order: timestamps can skip where a transcode was
             # stitched from chunks without any picture going missing.
             rows = np.arange(pts.size, dtype=np.int64)
@@ -295,10 +298,14 @@ class VideoSource(Compensates):
                     AindNote.FRAME_EXTRAPOLATED,
                 )
             )
-        # True where anything is missing immediately before this frame, from either cause.
+        # True where anything is missing immediately before this frame, from either cause. An
+        # incomplete video's first frame is assumed to be the first exposure, so whether any came
+        # before it is unknown, which the flag records as null (Part 01 §3.18).
         gap = np.empty(ticks.size, dtype=bool)
         gap[0] = False
         np.greater(np.diff(exposures), 1, out=gap[1:])
+        unknown = np.zeros(ticks.size, dtype=bool)
+        unknown[0] = not complete
 
         for start in range(0, ticks.size, self.batch_rows):
             stop = min(start + self.batch_rows, ticks.size)
@@ -309,7 +316,7 @@ class VideoSource(Compensates):
                     "t_tick": pa.array(ticks[start:stop]),
                     "clock_id": pa.array([self.clock_id] * (stop - start)),
                     "pts": pa.array(pts[start:stop]),
-                    "dropped": pa.array(gap[start:stop]),
+                    "dropped": pa.array(gap[start:stop], mask=unknown[start:stop]),
                 }
             )
 

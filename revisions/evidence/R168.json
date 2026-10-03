@@ -1,0 +1,297 @@
+{
+  "version": 1,
+  "revision": "R168",
+  "based_on": "04da4ef50a6e4066520778be78eaeedce41e7804",
+  "clauses": {
+    "R168 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/01_semantic_standard.md",
+          "anchor": "ew-media-asset-concept"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-aind",
+            "nodeid": "tests/test_video_source.py::test_a_packet_the_edit_list_excludes_is_no_frame"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-aind",
+            "nodeid": "tests/test_video_source.py::test_frames_are_numbered_in_presentation_order_whatever_order_they_are_stored_in"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-aind/src/escapewheel_aind/video.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-aind/DESIGN.md"
+        ]
+      }
+    },
+    "R168 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/01_semantic_standard.md",
+          "anchor": "ew-media-asset-concept"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-aind",
+            "nodeid": "tests/test_video_source.py::test_a_packet_the_edit_list_excludes_is_no_frame"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-aind/src/escapewheel_aind/video.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-aind/DESIGN.md"
+        ]
+      }
+    },
+    "R168 §3.3": {
+      "owners": [
+        {
+          "path": "spec/parts/01_semantic_standard.md",
+          "anchor": "ew-media-asset-concept"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-aind",
+            "nodeid": "tests/test_video_source.py::test_a_complete_video_flags_a_skip_in_the_frame_counter"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-aind",
+            "nodeid": "tests/test_video_source.py::test_a_short_video_cannot_tell_what_preceded_its_first_frame"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-aind/src/escapewheel_aind/video.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-aind/DESIGN.md"
+        ]
+      }
+    },
+    "R168 §3.4": {
+      "owners": [
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.media_frames/table/columns/2"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.media_frames/table/columns/5"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.media_frames/table/columns/6"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: structural checks",
+            "id": "core registry version is 0.19.0"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/core.media_frames.toml"
+        ]
+      },
+      "documentation": {
+        "unchanged": "The descriptions are their own documentation; the registry README's counts do not change."
+      }
+    },
+    "R168 §3.5": {
+      "owners": [
+        {
+          "path": "spec/parts/01_semantic_standard.md",
+          "anchor": "ew-media-asset-concept"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "media_frames"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "frames_timed_in_decode_order"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "frames_fall_behind_another_clock"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/core.media_frames.toml",
+          "escapewheel-aind/src/escapewheel_aind/video.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R168 §3.6": {
+      "owners": [
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.media_frames/table/rules/2"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "media_frames"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "frames_timed_in_decode_order"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "frames_fall_behind_another_clock"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "frames_pts_out_of_order"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "frames_index_skips"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/core.media_frames.toml",
+          "fixtures/corpus_packets/frames.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R168 §3.7": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/registry_version"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/artifacts/logical_schemas.json",
+          "spec/parts/08_example_packet.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: structural checks",
+            "id": "core registry version is 0.19.0"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_an_amending_build_adds_sidecars_to_a_packet_bound_to_the_earlier_registry"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/registry.toml",
+          "spec/tools/check.py",
+          "spec/tools/framework_data.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "spec/README.md"
+        ]
+      }
+    }
+  }
+}

@@ -19,12 +19,18 @@ HARP_ROW = {"clock_id": "harp", "session_id": "s001", "tick_rate_num": 31250, "o
 TIMING = "1.0,100,0\n1.002,101,2000000\n1.006,103,6000000\n"
 
 
+def probe(monkeypatch, *pts, discarded=()):
+    """Answer ffprobe with packets in the order given, flagging `discarded` as an edit list excludes them."""
+    packets = "".join(f"{p},{'_D_' if p in discarded else '___'}\n" for p in pts)
+    answers = {"stream=time_base": "1/90000\n", "packet=pts,flags": packets}
+    monkeypatch.setattr(video, "_ffprobe", lambda path, entries: answers[entries])
+
+
 def camera(root, monkeypatch):
     """Write one camera with its timing CSV under `root`, and answer ffprobe from here rather than run it."""
     (root / "bottom_camera.mp4").write_bytes(b"")
     (root / "bottom_camera.csv").write_text(TIMING)
-    answers = {"stream=time_base": "1/90000\n", "packet=pts": "0\n3000\n6000\n"}
-    monkeypatch.setattr(video, "_ffprobe", lambda path, entries: answers[entries])
+    probe(monkeypatch, 0, 3000, 6000)
     return root
 
 
@@ -82,8 +88,7 @@ def test_a_prefixed_video_binds_to_its_own_asset_row(root):
 
 def test_a_complete_video_is_read_in_order_across_a_timestamp_skip(root, monkeypatch):
     """A stitched transcode skips timestamps without losing a picture."""
-    answers = {"stream=time_base": "1/90000\n", "packet=pts": "0\n3000\n12000\n"}
-    monkeypatch.setattr(video, "_ffprobe", lambda path, entries: answers[entries])
+    probe(monkeypatch, 0, 3000, 12000)
     frames = _frames(_source(root))
     assert [f["frame_index"] for f in frames] == [0, 1, 2]
     assert [f["t_tick"] for f in frames] == [31250, 31312, 31532]
@@ -92,11 +97,38 @@ def test_a_complete_video_is_read_in_order_across_a_timestamp_skip(root, monkeyp
 def test_a_short_video_places_each_frame_by_its_timestamp(root, monkeypatch):
     """A transcode that drops a picture keeps the timeline, so the survivors keep their rows."""
     (root / "bottom_camera.csv").write_text("".join(f"{1 + 0.002 * i},{100 + i},0\n" for i in range(5)))
-    answers = {"stream=time_base": "1/90000\n", "packet=pts": "0\n3000\n6000\n12000\n"}
-    monkeypatch.setattr(video, "_ffprobe", lambda path, entries: answers[entries])
+    probe(monkeypatch, 0, 3000, 6000, 12000)
     source = _source(root)
     assert [f["t_tick"] for f in _frames(source)] == [31250, 31312, 31375, 31500]
     assert AindNote.FRAME_ABSENT in codes(source.notes)
+
+
+def test_a_complete_video_flags_a_skip_in_the_frame_counter(root):
+    """The counter skipping 102 is a known loss; nothing precedes the timing file's first exposure."""
+    assert [f["dropped"] for f in _frames(_source(root))] == [False, False, True]
+
+
+def test_a_short_video_cannot_tell_what_preceded_its_first_frame(root, monkeypatch):
+    """A transcode may have lost the leading frames, so the first flag is null rather than false."""
+    (root / "bottom_camera.csv").write_text("".join(f"{1 + 0.002 * i},{100 + i},0\n" for i in range(5)))
+    probe(monkeypatch, 0, 3000, 9000)
+    assert [f["dropped"] for f in _frames(_source(root))] == [None, False, True]
+
+
+def test_frames_are_numbered_in_presentation_order_whatever_order_they_are_stored_in(root, monkeypatch):
+    """Packets arrive in decode order; a frame's index and tick follow the order it is presented."""
+    probe(monkeypatch, 0, 6000, 3000)
+    frames = _frames(_source(root))
+    assert [f["pts"] for f in frames] == [0, 3000, 6000]
+    assert [f["t_tick"] for f in frames] == [31250, 31312, 31532]
+
+
+def test_a_packet_the_edit_list_excludes_is_no_frame(root, monkeypatch):
+    """The excluded packet is stored and never presented, so it has no row and the rest stay complete."""
+    probe(monkeypatch, -3000, 0, 3000, 6000, discarded=(-3000,))
+    frames = _frames(_source(root))
+    assert [f["pts"] for f in frames] == [0, 3000, 6000]
+    assert frames[0]["dropped"] is False
 
 
 #: Part 04 §4.1's resource-ID pattern.

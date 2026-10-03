@@ -25,7 +25,7 @@ def test_every_core_rule_passes_static_profile_check():
         if declaration["kind"] == "table"
         for rule in declaration["table"]["rules"]
     ]
-    assert len(checked) == 91
+    assert len(checked) == 92
 
 
 def test_cross_extension_relation_is_rejected_before_execution():

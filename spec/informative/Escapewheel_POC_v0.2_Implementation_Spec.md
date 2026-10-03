@@ -81,11 +81,11 @@ candidate is versioned independently of the identifiers a packet records.
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](../parts/01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](../parts/02_core_logical_schemas.md#ew-core-logical-schema-scope) |
 | `registry_id` | `core` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
-| `registry_version` | `0.18.0` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
+| `registry_version` | `0.19.0` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
 
 Part 02 §9.2 defines registry self-description and compatibility. A manifest records the core
 registry's `registry_id` and `registry_version` as the member name and `version` of its descriptor
-in `registries` (Part 04 §8). Current development packets use core registry `0.18.0` and are
+in `registries` (Part 04 §8). Current development packets use core registry `0.19.0` and are
 regenerated rather than treated as compatible with the earlier development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
 Part 04 §§3 and 8 define the manifest fields that record these identifiers.
@@ -910,9 +910,19 @@ An image or video, and the timing of its frames.
 
 A frame is indexed by **presentation order**: index *n* is the frame the asset presents nth, counting from 0. A writer MUST NOT number frames in the order the container stores them, which differs wherever a codec reorders — a stream with bidirectional frames displaces one by several positions, and the resulting misattribution of time is monotonic and therefore invisible.
 
-The index counts the frames the asset **holds**, not the exposures the capture produced. A frame lost before or during writing is not recorded and reserves no index; what went missing is recorded in the frames' timing, not as a gap in the numbering. A consumer MUST NOT read a frame's index as a count of exposures, as a camera's own frame counter, or as an offset into anything but this asset. No checker verifies this.
+An asset's frames are the frames it **presents**, in the order it presents them, and the index counts these, not the exposures the capture produced. A frame stored in the container that the container's presentation timeline excludes is not one of the asset's frames and has no row; a stored frame the presentation timeline presents more than once is that many frames, each with its own row and index. A frame lost before or during writing is not recorded and reserves no index; what went missing is recorded in the frames' timing and dropped flag, not as a gap in the numbering. A consumer MUST NOT read a frame's index as a count of exposures, as a camera's own frame counter, or as an offset into anything but this asset. No checker verifies this.
 
-A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). A container's own **presentation timestamp** is a different quantity and is carried separately: an integer in the container's own time base, verbatim. A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets, use it to measure elapsed time, or use it to align a frame to anything else in the packet; what it locates is the frame inside the file. No checker verifies what a consumer does with it.
+The **capture** of a media asset is the sequence of frames its recording device produced, as the writer's source records it, such as the exposures a camera's frame counter numbers. A writer MUST record a frame's **dropped flag** as:
+
+- true only where it knows that the capture produced at least one frame after the asset's previous frame and before this one that the asset does not present;
+- false only where it has determined that the capture produced no such frame; and
+- null otherwise.
+
+For the asset's first frame, these concern the frames the capture produced before it. The flag is true whatever lost the frame, whether the recording host or a later transcode, and carries no count of the frames lost. A consumer MUST NOT read a null flag as true or as false. No checker verifies either.
+
+A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). Within a media asset, a writer MUST NOT give a frame a tick earlier than the tick of a frame the asset presents before it on the same clock; frames may share a tick, and ticks on different clocks are not compared.
+
+A container's own **presentation timestamp** is a different quantity and is carried separately: the frame's time on the container's **presentation timeline**, an integer in the container's own time base. The presentation timeline is the one the container presents after applying any mapping it declares from the timeline its frames are stored on, such as an MP4 edit list; where it declares none, the two coincide. A writer that records a frame's presentation timestamp MUST record that value, and MUST NOT record the frame's timestamp on the stored timeline where the two differ. No checker verifies this. A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets, use it to measure elapsed time, or use it to align a frame to anything else in the packet; what it locates is the frame inside the file. No checker verifies what a consumer does with it.
 
 A consumer MAY pass a presentation timestamp verbatim to a container library to seek the frame it was recorded for, which is the exact route and assumes nothing about ordering.
 
@@ -1652,7 +1662,7 @@ The incorporated registry meta-schema has `$id`
 schema MUST carry that value in `$schema`. A registry document SHOULD carry `$schema` as its first
 member, so that the head of the file shows which meta-schema governs it; member order carries no
 other meaning, and no checker verifies it. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.18.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.19.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 
@@ -4940,7 +4950,7 @@ Two files are 97.6% of what the packet owns: `core.spike_events` at 345 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.18.0.json.gz
+    core/             0.19.0.json.gz
     aind_opto/        0.13.0.json.gz
     aind_unit_qc/     0.14.0.json.gz
     dynamic_foraging/ 0.16.0.json.gz
@@ -4979,7 +4989,7 @@ The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one 
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": {"role": "core", "version": "0.18.0", "path": "registries/core/0.18.0.json.gz", "sha256": "…"},
+    "core": {"role": "core", "version": "0.19.0", "path": "registries/core/0.19.0.json.gz", "sha256": "…"},
     "aind_opto": {"role": "extension", "version": "0.13.0", "path": "registries/aind_opto/0.13.0.json.gz", "sha256": "…"},
     "aind_unit_qc": {"role": "extension", "version": "0.14.0", "path": "registries/aind_unit_qc/0.14.0.json.gz", "sha256": "…"},
     "dynamic_foraging": {"role": "extension", "version": "0.16.0", "path": "registries/dynamic_foraging/0.16.0.json.gz", "sha256": "…"},
