@@ -158,9 +158,10 @@ causes from Part 11 §8. Its ISO basis is read in the 1992 draft and the 1999 ed
   without it. The recipe schema advances to admit `[drop]`.
 - **A change is one document from Open to Accepted.** A process draft, opened 2026-10-02 with no
   proposal and not appraised. One change document under `revisions/changes/` replaces the proposal
-  and the draft, moving in place from Open to Ready, with one appraisal of the Ready text before
-  acceptance. It ratifies the ledger section's rule that a new entry carries no note, and returns
-  changes to the revision guide to the ordinary workflow under the reviewer's approval.
+  and the draft, moving in place from Open to Ready. Only the stage fields, citations, ledger and
+  the reviewer's authorization bind acceptance; the pre-acceptance gates become guidance. It
+  ratifies the ledger section's rule that a new entry carries no note, and returns changes to the
+  revision guide to the ordinary workflow under the reviewer's approval.
 
 ## 3b. Sidecars are declared, and video is not yet packet-owned
 
