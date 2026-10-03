@@ -660,4 +660,4 @@ def generate(
     )
 
 
-__all__ = ["adjacency_settles_uniqueness"]
+__all__ = ["Check", "adjacency_settles_uniqueness", "generate"]

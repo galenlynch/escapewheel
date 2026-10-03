@@ -96,6 +96,8 @@ that defines it.
    :toctree: generated
 
    shim.ordering.verify_order
+   generate.generate
+   generate.Check
    generate.adjacency_settles_uniqueness
    lowering.lower
    amendment.IDENTITY
