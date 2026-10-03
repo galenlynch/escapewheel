@@ -15,7 +15,14 @@ The packet's units and their metrics are two tables, `core.units` and `aind_unit
 where the NWB holds one; the metadata operations read both. A trial is `core.intervals` plus the
 task's own table. The window is stated once, in seconds after the packet's time origin, and an
 NWB is assumed to hold its spike times in seconds on the packet's reference clock; `value` shows
-whether the readers agreed.
+whether the readers agreed. `region units` counts the units with an electrode in one region and
+reads their trains; the NWB has no electrode coordinates of its own, so pynwb and lazynwb reach a
+unit's region through `location` where the units table has it and through its electrodes where not.
+
+Either store may be an `s3://` URI. A remote cell is cold because its process is fresh, and it
+records the bytes the host received. Credentials come from the environment: run
+`eval "$(aws configure export-credentials --format env)"` first, so that PyArrow, DuckDB, s3fs and
+lazynwb all read the same ones.
 
     uv run python readers.py --packet P --nwb N [--json-out results/x.json]
     uv run python readers.py --child READER OPERATION --plan PLAN   # one cell, as JSON
@@ -27,6 +34,7 @@ import argparse
 import importlib
 import json
 import logging
+import os
 import sys
 import warnings
 from pathlib import Path
@@ -34,7 +42,16 @@ from pathlib import Path
 import benchkit
 
 READERS = ("packet", "packet-sql", "pynwb", "lazynwb")
-OPERATIONS = ("open", "units 5 cols", "units all meta", "trials", "every spike", "10 s window", "one train")
+OPERATIONS = (
+    "open",
+    "units 5 cols",
+    "units all meta",
+    "trials",
+    "every spike",
+    "10 s window",
+    "one train",
+    "region units",
+)
 
 # The same five facts about a unit under each store's names.
 FIVE_PACKET = ["local_unit_label", "probe_id", "firing_rate_hz", "n_spikes", "quality_label"]
@@ -64,7 +81,25 @@ def run_packet(plan: dict, operation: str) -> object:
         return packet.table("analysis.spike_events", columns=["t_tick"], t_tick=(lo, hi - 1)).num_rows
     if operation == "one train":
         return spike_times(packet, plan["unit_id"]).num_rows
+    if operation == "region units":
+        import pyarrow.dataset as ds
+
+        where = packet.table("core.electrode_coordinates", columns=["electrode_id", "region_label"])
+        inside = where.filter(pc.equal(where["region_label"], plan["region"]))["electrode_id"]
+        links = packet.table("core.unit_electrodes", columns=["unit_id", "electrode_id"])
+        units = pc.unique(links.filter(pc.is_in(links["electrode_id"], value_set=inside))["unit_id"])
+        spikes = packet.scan("core.spike_events").to_table(
+            columns=["unit_id"], filter=ds.field("unit_id").isin(units.to_pylist())
+        )
+        return len(units), spikes.num_rows
     raise ValueError(operation)
+
+
+REGION_UNITS = (
+    "SELECT count(DISTINCT s.unit_id) AS units, count(*) AS spikes FROM core_spike_events s "
+    "WHERE s.unit_id IN (SELECT link.unit_id FROM core_unit_electrodes link "
+    "JOIN core_electrode_coordinates c USING (session_id, electrode_id) WHERE c.region_label = '{region}')"
+)
 
 
 def run_packet_sql(plan: dict, operation: str) -> object:
@@ -74,7 +109,16 @@ def run_packet_sql(plan: dict, operation: str) -> object:
     packet = open_packet(plan["packet"])
 
     def sql(query: str):
-        return packet.sql(query)
+        if not benchkit.is_remote(plan["packet"]):
+            return packet.sql(query)
+        import duckdb
+
+        # The reader leaves credentials to its caller; these are the environment's.
+        connection = duckdb.connect()
+        connection.execute(
+            f"CREATE SECRET store (TYPE s3, PROVIDER credential_chain, CHAIN 'env', REGION '{plan['region_aws']}')"
+        )
+        return packet.duckdb(connection=connection, for_query=query).sql(query).to_arrow_table()
 
     if operation == "open":
         return sql("SELECT count(*) AS n FROM core_sessions")["n"][0].as_py()
@@ -92,6 +136,9 @@ def run_packet_sql(plan: dict, operation: str) -> object:
         return sql(query)["n"][0].as_py()
     if operation == "one train":
         return sql(f"SELECT t_tick FROM core_spike_events WHERE unit_id = {plan['unit_id']}").num_rows
+    if operation == "region units":
+        found = sql(REGION_UNITS.format(region=plan["region"])).to_pylist()[0]
+        return found["units"], found["spikes"]
     raise ValueError(operation)
 
 
@@ -101,7 +148,8 @@ def run_pynwb(plan: dict, operation: str) -> object:
     from hdmf_zarr.nwb_zarrv2 import NWBZarrV2IO
 
     # An AIND NWB-Zarr stores its object-reference columns with the pickle codec.
-    nwb = NWBZarrV2IO(plan["nwb"], "r", allow_pickle=True).read()
+    options = {"anon": False} if benchkit.is_remote(plan["nwb"]) else None
+    nwb = NWBZarrV2IO(plan["nwb"], "r", allow_pickle=True, storage_options=options).read()
     units = nwb.units
     lo, hi = plan["window_s"]
 
@@ -135,7 +183,33 @@ def run_pynwb(plan: dict, operation: str) -> object:
         labels, probes = column("ks_unit_id"), column("device_name")
         found = np.flatnonzero((labels.astype(str) == plan["unit_label"]) & (probes == plan["probe_name"]))
         return len(units["spike_times"][int(found[0])]) if len(found) else "absent"
+    if operation == "region units":
+        rows = nwb_region_rows(
+            column("location") if "location" in units.colnames else None,
+            np.asarray(nwb.electrodes["location"].data[:]),
+            np.asarray(units["electrodes_index"].data[:]) if "electrodes" in units.colnames else None,
+            np.asarray(units["electrodes"].data[:]) if "electrodes" in units.colnames else None,
+            plan["region"],
+        )
+        return len(rows), sum(len(units["spike_times"][int(row)]) for row in rows)
     raise ValueError(operation)
+
+
+def nwb_region_rows(unit_location, electrode_location, electrode_ends, electrode_rows, region: str):
+    """Units rows in a region: by their own `location` where there is one, else by their electrodes."""
+    import numpy as np
+
+    if unit_location is not None:
+        return np.flatnonzero(unit_location.astype(str) == region)
+    if electrode_rows is None:
+        return np.array([], dtype=int)
+    inside = set(np.flatnonzero(electrode_location.astype(str) == region).tolist())
+    rows, start = [], 0
+    for row, end in enumerate(electrode_ends):
+        if inside.intersection(electrode_rows[start:end].tolist()):
+            rows.append(row)
+        start = end
+    return np.array(rows, dtype=int)
 
 
 def run_lazynwb(plan: dict, operation: str) -> object:
@@ -167,6 +241,17 @@ def run_lazynwb(plan: dict, operation: str) -> object:
         )
         trains = picked.select("spike_times").collect()["spike_times"]
         return int(trains.list.len().item()) if len(trains) else "absent"
+    if operation == "region units":
+        names = frame.collect_schema().names()
+        if "location" in names:
+            picked = frame.filter(pl.col("location") == plan["region"])
+        else:
+            electrodes = lazynwb.scan_nwb(plan["nwb"], "/general/extracellular_ephys/electrodes")
+            inside = electrodes.with_row_index("row").filter(pl.col("location") == plan["region"])
+            rows = inside.select("row").collect()["row"].to_list()
+            picked = frame.filter(pl.col("electrodes").list.eval(pl.element().is_in(rows)).list.any())
+        found = picked.select(pl.col("spike_times").list.len()).collect()["spike_times"]
+        return found.len(), int(found.sum())
     raise ValueError(operation)
 
 
@@ -174,7 +259,7 @@ RUNNERS = {"packet": run_packet, "packet-sql": run_packet_sql, "pynwb": run_pynw
 
 
 def make_plan(
-    packet_path: Path, nwb_path: Path, window: tuple[float, float], unit: str | None, probe: str | None
+    packet_path: str, nwb_path: str, window: tuple[float, float], unit: str | None, probe: str | None, region: str
 ) -> dict:
     """Settle, from the packet, every value a child would otherwise read before its clock starts."""
     from escapewheel_reader import open_packet
@@ -199,8 +284,10 @@ def make_plan(
         sys.exit(f"no unit {unit} on probe {probe}")
     present = {resource.resource_id for resource in packet.manifest.resources}
     return {
-        "packet": str(packet_path),
-        "nwb": str(nwb_path),
+        "packet": packet_path,
+        "nwb": nwb_path,
+        "region": region,
+        "region_aws": os.environ.get("AWS_REGION", "us-west-2"),
         "window_tick": [lo_tick, hi_tick],
         "window_s": [lo_tick / rate, hi_tick / rate],
         "unit_id": chosen[0]["unit_id"],
@@ -215,7 +302,7 @@ def make_plan(
 #: Modules each reader uses, imported before the clock starts: an import costs the same whatever
 #: store is read.
 IMPORTS = {
-    "packet": ("escapewheel_reader", "pyarrow.compute", "pyarrow.dataset"),
+    "packet": ("escapewheel_reader", "pyarrow.compute", "pyarrow.dataset", "pyarrow.fs"),
     "packet-sql": ("escapewheel_reader", "duckdb"),
     "pynwb": ("hdmf_zarr.nwb_zarrv2", "numpy", "pandas"),
     "lazynwb": ("lazynwb", "polars"),
@@ -227,7 +314,7 @@ def child(reader: str, operation: str, plan: dict) -> None:
     warnings.filterwarnings("ignore")
     for module in IMPORTS[reader]:
         importlib.import_module(module)
-    benchkit.cold_child([Path(plan["packet"]), Path(plan["nwb"])], lambda: RUNNERS[reader](plan, operation))
+    benchkit.cold_child([plan["packet"], plan["nwb"]], lambda: RUNNERS[reader](plan, operation))
 
 
 def main() -> None:
@@ -246,6 +333,7 @@ def main() -> None:
     )
     parser.add_argument("--unit", help="unit label within its probe; default the packet's largest unit")
     parser.add_argument("--probe", help="probe name of --unit")
+    parser.add_argument("--region", default="MD", help="region label for `region units`")
     parser.add_argument("--repeat", type=int, default=1, help="cold runs per cell; the median is reported")
     parser.add_argument("--json-out", type=Path, help="write the result here as JSON")
     parser.add_argument("--child", nargs=2, metavar=("READER", "OPERATION"), help=argparse.SUPPRESS)
@@ -254,9 +342,9 @@ def main() -> None:
     if args.child:
         return child(*args.child, json.loads(args.plan))
 
-    packet = benchkit.required_path(args.packet, "BENCH_PACKET", "the packet")
-    nwb = benchkit.required_path(args.nwb, "BENCH_NWB", "the NWB")
-    plan = make_plan(packet, nwb, tuple(args.window), args.unit, args.probe)
+    packet = benchkit.required_store(args.packet, "BENCH_PACKET", "the packet")
+    nwb = benchkit.required_store(args.nwb, "BENCH_NWB", "the NWB")
+    plan = make_plan(packet, nwb, tuple(args.window), args.unit, args.probe, args.region)
     result = {
         "environment": benchkit.environment([packet, nwb]),
         "plan": plan,
@@ -284,6 +372,8 @@ def main() -> None:
             cell = {"reader": reader, "operation": operation, "runs": len(good), **cell}
             result["cells"].append(cell)
             cells.append(f"{cell['seconds']:8.3f}s {cell['peak_mib']:7.0f}MiB" if good else f"{'failed':>21s}")
+            if good and benchkit.is_remote(packet) and cell.get("received_bytes") is not None:
+                cells[-1] = f"{cell['seconds']:7.2f}s {cell['received_bytes'] / 1e6:7.1f}MB"
         print(f"{operation:16s}" + "".join(f"{text:>22s}" for text in cells))
     print("\nwhat each returned, to show the readers were asked the same question:")
     for operation in args.operations:

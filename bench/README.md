@@ -35,8 +35,9 @@ are imported before the clock starts.
 
 | script | question | inputs |
 |---|---|---|
-| `readers.py` | One session read cold four ways: the packet through PyArrow and through DuckDB, and the NWB through pynwb and through lazynwb. The operations are opening the store, unit metadata, trials, every spike, a ten-second window and one unit's train. | `--packet`, `--nwb` |
-| `row_groups.py` | Cold reads of `analysis.spike_events` at several row-group sizes, for a one-second window and for one unit over the whole session. | `--packet`, `--scratch` |
+| `readers.py` | One session read cold four ways: the packet through PyArrow and through DuckDB, and the NWB through pynwb and through lazynwb. The operations are opening the store, unit metadata, trials, every spike, a ten-second window, one unit's train, and the units in one region with their trains. | `--packet`, `--nwb`, either a path or an `s3://` URI |
+| `row_groups.py` | Cold reads of `analysis.spike_events` at several row-group sizes, for a one-second window and for one unit over the whole session, from local disk or from a store. | `--packet`, `--scratch`; for a store, `--store-packet`, `--store-scratch` |
+| `stores.py` | Listing a stored packet or NWB, and downloading it to local disk, in seconds and objects. | `--root NAME=URI`, `--stage-dir` |
 | `containment.py` | Which block holds each trial: a range join, an ASOF join, a binary search, or a stored key, at four scales. | none; the data is synthetic |
 | `benchkit.py` | Shared helpers: path resolution, eviction and its check, child processes, and the environment record. | |
 
@@ -51,6 +52,23 @@ uv run python row_groups.py --packet /nvme/bench/packet --scratch /nvme/bench/ro
     --json-out results/$(date +%F)-row-groups-<session>.json
 uv run python containment.py --json-out results/$(date +%F)-containment.json
 ```
+
+## Reading from a store
+
+A store URI needs no eviction: each cell's process is fresh and holds no client cache. Such a
+cell records the bytes the host received during it instead, so run it on a quiet machine. The
+four clients each find credentials their own way, so export one set into the environment first:
+
+```bash
+eval "$(aws configure export-credentials --format env)"
+uv run python readers.py --packet s3://bucket/prefix/packet --nwb s3://bucket/prefix/session.nwb \
+    --repeat 3 --json-out results/$(date +%F)-readers-<session>-s3.json
+```
+
+lazynwb recognises a stored NWB-Zarr only by `.zarr` in its URI, so stage the NWB under a name
+ending `.nwb.zarr`; without it every lazynwb cell fails with a 404 on the root. The result records
+the store's region, the network interface and its link speed, but not where
+the bucket sits relative to the machine; say so beside the numbers in `results/history.md`.
 
 ## Results
 

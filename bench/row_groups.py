@@ -8,12 +8,19 @@ over the whole session, which only a group short enough to hold part of a bucket
 Only the group size differs between copies; each column keeps the stored codec and encoding,
 though not the codec's level, which Parquet does not record.
 
+With `--store-packet` and `--store-scratch`, the copies are uploaded under the scratch prefix and
+every cell reads from the store instead: the staged packet's own table and the uploaded copies.
+Credentials come from the environment, as for `readers.py`.
+
     uv run python row_groups.py --packet P --scratch DIR [--sizes 131072 1048576 4194304]
+    uv run python row_groups.py --packet P --scratch DIR --store-packet s3://.../packet \
+        --store-scratch s3://.../rowgroups
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -64,7 +71,7 @@ def predicate(query: str, plan: dict) -> tuple[str, int, int]:
     return "unit_id", plan["unit_id"], plan["unit_id"] + 1
 
 
-def read(engine: str, path: Path, column: str, lo: int, hi: int) -> int:
+def read(engine: str, path: str, column: str, lo: int, hi: int) -> int:
     """Rows within the bounds, read the way each engine prunes."""
     if engine == "pyarrow":
         import pyarrow.dataset as ds
@@ -73,8 +80,24 @@ def read(engine: str, path: Path, column: str, lo: int, hi: int) -> int:
         return ds.dataset(path).to_table(columns=[column], filter=(field >= lo) & (field < hi)).num_rows
     import duckdb
 
+    connection = duckdb.connect()
+    if benchkit.is_remote(path):
+        region = os.environ.get("AWS_REGION", "us-west-2")
+        connection.execute("LOAD httpfs")
+        connection.execute(f"CREATE SECRET store (TYPE s3, PROVIDER credential_chain, CHAIN 'env', REGION '{region}')")
     query = f"SELECT count(*) FROM read_parquet('{path}') WHERE {column} >= {lo} AND {column} < {hi}"
-    return duckdb.sql(query).fetchone()[0]
+    return connection.sql(query).fetchone()[0]
+
+
+def upload(source: Path, target: str) -> None:
+    """Copy one local file to a store URI, unless an object of the same size is already there."""
+    from pyarrow import fs
+
+    filesystem, key = fs.FileSystem.from_uri(target)
+    found = filesystem.get_file_info(key)
+    if found.type == fs.FileType.File and found.size == source.stat().st_size:
+        return
+    fs.copy_files(str(source), key, destination_filesystem=filesystem)
 
 
 def make_plan(packet: Path, window: tuple[float, float], unit_id: int | None) -> dict:
@@ -99,6 +122,8 @@ def main() -> None:
     parser.add_argument(
         "--scratch", help="directory for the rewritten copies, on the disk being measured (else BENCH_SCRATCH)"
     )
+    parser.add_argument("--store-packet", help="the same packet staged in a store; cells then read the store")
+    parser.add_argument("--store-scratch", help="store prefix the rewritten copies are uploaded under")
     parser.add_argument("--sizes", nargs="+", type=int, default=[131_072, 1_048_576, 4_194_304])
     parser.add_argument(
         "--window",
@@ -119,12 +144,15 @@ def main() -> None:
         import duckdb  # noqa: F401
         import pyarrow.dataset  # noqa: F401
 
-        return benchkit.cold_child([Path(path)], lambda: read(engine, Path(path), column, int(lo), int(hi)))
+        return benchkit.cold_child([path], lambda: read(engine, path, column, int(lo), int(hi)))
 
     import pyarrow.parquet as pq
 
     packet = benchkit.required_path(args.packet, "BENCH_PACKET", "the packet")
     scratch = benchkit.required_path(args.scratch, "BENCH_SCRATCH", "the scratch directory")
+    remote = bool(args.store_packet)
+    if remote != bool(args.store_scratch):
+        sys.exit("name both --store-packet and --store-scratch, or neither")
     plan = make_plan(packet, tuple(args.window), args.unit_id)
     copies = {"as stored": packet / TABLE}
     for rows in args.sizes:
@@ -134,14 +162,24 @@ def main() -> None:
             rewrite(packet / TABLE, target, rows)
             print(f"wrote {target.name} in {time.perf_counter() - clock:.1f} s", file=sys.stderr)
         copies[f"{rows:,} rows"] = target
+    # Each layout's local file supplies its metadata; `read_from` is what a cell reads.
+    read_from = {name: str(path) for name, path in copies.items()}
+    if remote:
+        read_from["as stored"] = f"{args.store_packet.rstrip('/')}/{TABLE}"
+        for name, path in copies.items():
+            if name != "as stored":
+                read_from[name] = f"{args.store_scratch.rstrip('/')}/{path.name}"
+                upload(path, read_from[name])
 
+    stores = [args.store_packet, args.store_scratch] if remote else [packet, scratch]
     result = {
-        "environment": benchkit.environment([packet, scratch]),
+        "environment": benchkit.environment(stores),
         "core_version": benchkit.core_version(packet),
         "plan": plan,
         "cells": [],
     }
-    print(f"analysis.spike_events of {packet} (core {result['core_version']}), cold, median of {args.repeat}")
+    where = args.store_packet if remote else packet
+    print(f"analysis.spike_events of {where} (core {result['core_version']}), cold, median of {args.repeat}")
     print(f"window {args.window[0]:g}-{args.window[1]:g} s after the origin; unit {plan['unit_id']}\n")
     header = "".join(f"{f'{query}, {engine}':>22s}" for query in QUERIES for engine in ENGINES)
     print(f"{'layout':>16s} {'groups':>7s} {'MB':>7s}{header}")
@@ -152,7 +190,7 @@ def main() -> None:
             column, lo, hi = predicate(query, plan)
             for engine in ENGINES:
                 runs = [
-                    benchkit.run_child([__file__, "--child", engine, str(path), column, str(lo), str(hi)])
+                    benchkit.run_child([__file__, "--child", engine, read_from[name], column, str(lo), str(hi)])
                     for _ in range(args.repeat)
                 ]
                 good = sorted((run for run in runs if "error" not in run), key=lambda run: run["seconds"])
@@ -162,6 +200,7 @@ def main() -> None:
                         "layout": name,
                         "row_groups": meta.num_row_groups,
                         "bytes": path.stat().st_size,
+                        "read_from": read_from[name],
                         "query": query,
                         "engine": engine,
                         "runs": len(good),

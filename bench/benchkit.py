@@ -6,6 +6,10 @@ needs no privilege but is honoured only by a filesystem whose pages the kernel o
 mount such as ntfs-3g the file's pages go and the block device's buffer cache keeps the bytes,
 so `mincore` reports the file evicted and the read is still warm. `cold_child` therefore
 refuses a FUSE mount outright, and elsewhere refuses a store `resident_fraction` finds resident.
+
+A store named by an `s3://` URI is cold by construction, since a fresh process holds no client
+cache. Its cell records the bytes the host received instead, which counts anything else the host
+fetched meanwhile, so a remote run wants a quiet machine.
 """
 
 from __future__ import annotations
@@ -27,6 +31,9 @@ from pathlib import Path
 #: Share of a store's pages allowed to stay resident after eviction.
 RESIDENT_LIMIT = 0.01
 
+#: URI schemes read through an object store rather than the page cache.
+REMOTE = ("s3://",)
+
 #: Packages whose versions a result records.
 VERSIONED = ("escapewheel-reader", "duckdb", "pyarrow", "polars", "numpy", "zarr", "pynwb", "hdmf-zarr", "lazynwb")
 
@@ -36,6 +43,39 @@ _libc.mmap.argtypes = (ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int, ctypes.c_
 _libc.munmap.argtypes = (ctypes.c_void_p, ctypes.c_size_t)
 _libc.mincore.argtypes = (ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_ubyte))
 _MAP_FAILED = ctypes.c_void_p(-1).value
+
+
+def is_remote(store: str | Path) -> bool:
+    """Whether a store is an object-store URI."""
+    return str(store).startswith(REMOTE)
+
+
+def required_store(value: str | None, variable: str, what: str) -> str:
+    """Resolve a local path or an object-store URI; a URI is checked by the first read of it."""
+    raw = value or os.environ.get(variable)
+    if raw and is_remote(raw):
+        return raw.rstrip("/")
+    return str(required_path(value, variable, what))
+
+
+def interface() -> str | None:
+    """The network interface of the default route, or `BENCH_INTERFACE`."""
+    if os.environ.get("BENCH_INTERFACE"):
+        return os.environ["BENCH_INTERFACE"]
+    for line in Path("/proc/net/route").read_text().splitlines()[1:]:
+        fields = line.split()
+        if fields[1] == "00000000":
+            return fields[0]
+    return None
+
+
+def received_bytes() -> int | None:
+    """Bytes the host has received on its default interface."""
+    name = interface()
+    try:
+        return int(Path(f"/sys/class/net/{name}/statistics/rx_bytes").read_text())
+    except (OSError, TypeError, ValueError):
+        return None
 
 
 def required_path(value: str | None, variable: str, what: str) -> Path:
@@ -61,9 +101,20 @@ def files_under(root: Path) -> Iterable[Path]:
                 yield path
 
 
-def tree_bytes(root: Path) -> int:
-    """Bytes held by a tree's regular files."""
-    return sum(path.stat().st_size for path in files_under(root))
+def store_objects(store: str) -> list[tuple[str, int]]:
+    """Every object under one known store prefix, with its size, by one listing of that prefix."""
+    from pyarrow import fs
+
+    filesystem, prefix = fs.FileSystem.from_uri(store)
+    found = filesystem.get_file_info(fs.FileSelector(prefix, recursive=True))
+    return [(info.path, info.size) for info in found if info.type == fs.FileType.File]
+
+
+def tree_bytes(root: str | Path) -> int:
+    """Bytes held by a tree's regular files, or by the objects under a store prefix."""
+    if is_remote(root):
+        return sum(size for _, size in store_objects(str(root)))
+    return sum(path.stat().st_size for path in files_under(Path(root)))
 
 
 def evict(root: Path) -> None:
@@ -122,9 +173,9 @@ def filesystem(path: Path) -> str:
     return found.stdout.strip() or "?"
 
 
-def cold_child(stores: Iterable[Path], operation: Callable[[], object]) -> None:
-    """Evict the stores, confirm it, time one operation, and print the result as JSON."""
-    stores = list(stores)
+def cold_child(stores: Iterable[str | Path], operation: Callable[[], object]) -> None:
+    """Evict the local stores, confirm it, time one operation, and print the result as JSON."""
+    stores = [Path(store) for store in stores if not is_remote(store)]
     for store in stores:
         if filesystem(store).startswith("fuse"):
             sys.exit(f"{store} is on a FUSE mount, where eviction leaves the bytes cached; copy it to a native one")
@@ -133,10 +184,13 @@ def cold_child(stores: Iterable[Path], operation: Callable[[], object]) -> None:
         left = resident_fraction(store)
         if left > RESIDENT_LIMIT:
             sys.exit(f"{store} is still {left:.1%} resident after eviction; this filesystem ignores it")
+    before = received_bytes()
     clock = time.perf_counter()
     value = operation()
     elapsed = time.perf_counter() - clock
-    print(json.dumps({"seconds": elapsed, "peak_mib": peak_mib(), "value": str(value)}))
+    after = received_bytes()
+    received = after - before if before is not None and after is not None else None
+    print(json.dumps({"seconds": elapsed, "peak_mib": peak_mib(), "received_bytes": received, "value": str(value)}))
 
 
 def run_child(arguments: list[str]) -> dict:
@@ -186,7 +240,24 @@ def _disk(path: Path) -> dict:
     }
 
 
-def environment(stores: Iterable[Path]) -> dict:
+def _remote(store: str) -> dict:
+    """An object store's URI and region, and the interface and link speed it is read over."""
+    import botocore.session
+
+    name = interface()
+    try:
+        speed = int(Path(f"/sys/class/net/{name}/speed").read_text())
+    except (OSError, TypeError, ValueError):
+        speed = None
+    return {
+        "path": store,
+        "region": os.environ.get("AWS_REGION") or botocore.session.Session().get_config_variable("region"),
+        "interface": name,
+        "link_mbps": speed,
+    }
+
+
+def environment(stores: Iterable[str | Path]) -> dict:
     """Date, commit, hardware and versions, for the head of a result."""
     versions = {}
     for name in VERSIONED:
@@ -201,15 +272,24 @@ def environment(stores: Iterable[Path]) -> dict:
         "cores": os.cpu_count(),
         "memory_gib": round(os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / 2**30),
         "kernel": platform.release(),
+        # Other work on the host slows every cell, so a result records how busy it was.
+        "load_average": [round(load, 2) for load in os.getloadavg()],
         "python": platform.python_version(),
-        "disks": [_disk(store) for store in stores],
+        "disks": [_remote(str(store)) if is_remote(store) else _disk(Path(store)) for store in stores],
         "versions": versions,
     }
 
 
-def core_version(packet: Path) -> str | None:
+def core_version(packet: str | Path) -> str | None:
     """The core registry version a packet's manifest binds."""
-    manifest = json.loads((packet / "packet.json").read_text())
+    if is_remote(packet):
+        from pyarrow import fs
+
+        filesystem, key = fs.FileSystem.from_uri(f"{packet}/packet.json")
+        with filesystem.open_input_stream(key) as handle:
+            manifest = json.loads(handle.read())
+    else:
+        manifest = json.loads((Path(packet) / "packet.json").read_text())
     return manifest.get("registries", {}).get("core", {}).get("version")
 
 
