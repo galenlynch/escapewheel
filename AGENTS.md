@@ -10,6 +10,8 @@ These instructions apply throughout the monorepo. A nested `AGENTS.md` may add n
 - For registry, generation, or tree-tool work, read `CONTRIBUTING.md`.
 - For package work, read that package's `README.md` and `CONTRIBUTING.md`.
 - For specification change work, read `revisions/CONTRIBUTING.md` in full.
+- For questions about the current registries, rules, spec sections or packets, use
+  `escapewheel-dev` (see its `README.md`) before writing a throwaway script.
 
 ## Agent-specific safeguards
 
