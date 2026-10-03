@@ -12,6 +12,88 @@ region operation were committed after they ran.
 does not reach the block device's buffer cache. "NVMe" is a WD SN850X under btrfs, where a cold
 read is checked by `mincore`.
 
+## Trial analyses, local and S3
+
+`trials.py` on 2026-10-03, against the core 0.18.0 packets and NWB-Zarr copies of the section
+below, at `fa060640` with the script uncommitted. Two analyses: lick latency, the first lick after
+each go cue and before the next; and go-cue spikes, every unit's spikes within [-1, +2] s of each
+go cue. Each cell is seconds, then peak RSS in MiB, then for S3 the megabytes received. A cell is
+the cold median of three, except the six S3 cells marked *, which are one run each
+(`--once-above 300`). The needed-columns arm was added after the local runs, so its local cells
+are a separate run, `*-r164-columns.json`. The local runs overlapped other work on the host, with
+the load average between 1 and 14 on 24 threads; the S3 runs were at 1 to 3.
+
+Lick latency:
+
+| arm | 776259, NVMe | 776259, S3 | 786867, NVMe | 786867, S3 |
+|---|---|---|---|---|
+| packet pandas | 0.014 (173) | 1.26 (203; 0.2) | 0.014 (174) | 1.44 (203; 0.2) |
+| packet pandas, needed columns | 0.013 (174) | 1.29 (203; 0.2) | 0.013 (173) | 1.24 (203; 0.2) |
+| pynwb pandas | 0.609 (197) | 53.09 (225; 4.1) | 0.841 (184) | 47.80 (212; 3.9) |
+| lazynwb pandas | 0.114 (205) | 4.45 (261; 0.8) | 0.225 (204) | 4.54 (261; 0.8) |
+| packet polars | 0.009 (182) | 0.42 (210; 0.1) | 0.009 (183) | 0.42 (209; 0.1) |
+| packet dataset | 0.006 (173) | 0.67 (203; 0.2) | 0.006 (174) | 0.64 (203; 0.2) |
+| packet dataset, read_pool | 0.006 (173) | 0.63 (203; 0.2) | 0.005 (174) | 0.59 (203; 0.2) |
+| lazynwb polars | 0.045 (211) | 0.61 (251; 0.3) | 0.047 (213) | 0.60 (251; 0.3) |
+| packet duckdb | 0.024 (173) | 0.91 (210; 0.2) | 0.025 (174) | 1.04 (210; 0.2) |
+| lazynwb sql | 0.123 (251) | 1.21 (292; 0.4) | 0.259 (264) | 1.39 (302; 0.4) |
+| pynwb duckdb | 0.380 (228) | 50.74 (258; 4.2) | 0.544 (218) | 47.50 (247; 4.0) |
+
+Go-cue spikes:
+
+| arm | 776259, NVMe | 776259, S3 | 786867, NVMe | 786867, S3 |
+|---|---|---|---|---|
+| packet pandas | 64.37 (32,170) | 54.17 (33,163; 708) | 20.45 (18,904) | 26.56 (19,415; 359) |
+| packet pandas, needed columns | 35.20 (24,883) | 50.21 (24,876; 485) | 15.74 (15,049) | 23.49 (15,058; 241) |
+| packet pandas-derived | 16.28 (25,475) | 29.35 (25,489; 516) | 6.53 (14,234) | 13.23 (14,244; 256) |
+| pynwb pandas | 24.73 (20,404) | 1,937.86* (20,402; 1,852) | 16.08 (9,599) | 1,326.58* (9,592; 951) |
+| lazynwb pandas | 65.31 (63,228) | 293.15 (63,476; 2,568) | 32.50 (35,142) | 158.96 (35,450; 827) |
+| packet polars | 10.27 (7,916) | 15.57 (7,961; 516) | 4.31 (3,741) | 7.89 (3,788; 257) |
+| packet dataset | 10.46 (7,265) | 11.67 (6,487; 519) | 4.51 (4,134) | 6.79 (3,282; 258) |
+| packet dataset, read_pool | 10.37 (6,055) | 13.99 (6,065; 515) | 4.49 (2,974) | 6.22 (2,937; 258) |
+| lazynwb polars | 32.79 (17,791) | 224.85 (20,808; 2,349) | 13.50 (8,338) | 112.55 (8,909; 622) |
+| packet duckdb | 51.81 (404) | 48.15 (853; 515) | 12.39 (326) | 15.07 (586; 257) |
+| lazynwb sql | 1,287.96 (65,127) | 1,350.36* (76,428; 2,362) | 249.29 (30,479) | 406.59* (31,430; 624) |
+| pynwb duckdb | 96.01 (13,563) | 1,977.85* (13,568; 1,851) | 29.94 (7,744) | 1,346.90* (7,737; 949) |
+| packet aligned_spikes | 8.72 (17,449) | 27.43 (18,048; 527) | 3.37 (8,222) | 16.94 (8,370; 263) |
+| lazynwb intervals | 62.14 (17,804) | 98.19 (17,887; 1,181) | 27.17 (8,566) | 58.55 (8,413; 562) |
+
+`aligned_spikes` chose the ASOF join in every cell. Stated as a range join with `join_where`, the
+Polars arms took 234 s and 29.8 GiB (packet) and 250 s and 30.8 GiB (lazynwb) in one cold run on
+786867 while the script was written; the arms above search the sorted cues instead. Polars SQL
+plans the same range join, which is why `lazynwb sql` is the slowest NWB arm on local disk.
+
+Every arm agreed on lick latency: 496 of 708 trials on 776259 had a lick, median 243.0 ms, and 424
+of 450 on 786867, median 154.3 ms. On go-cue spikes the arms fall into three groups:
+
+| session | packet in ticks | packet in float seconds | NWB |
+|---|---|---|---|
+| 776259 | 99,453,482 pairs | the same | 99,452,477 pairs, 518.5 s less summed offset |
+| 786867 | 45,723,853 pairs | 45,723,852 | 45,723,415 pairs, 134.3 s less summed offset |
+
+"Packet in ticks" is every packet arm that compares integer ticks: Polars, the datasets, DuckDB and
+`aligned_spikes`. "In float seconds" is the three pandas arms, which compare `seconds()` output.
+The NWB group is all six NWB arms, including lazynwb's half-open window. All three groups find the
+same units with spikes. A per-spike comparison of the two stores, run once and not kept as a
+script, accounts for both gaps:
+
+- **NWB against packet.** The two stores hold the same spikes per unit, 131,396,535 and 286,896,563,
+  and the same go cues: the NWB's `goCue_start_time` is exactly the packet's tick over 31,250 Hz.
+  The spike times differ. The packet maps each spike through its anchors to an integer tick on
+  the 31,250 Hz harp reference clock; the NWB stores continuous seconds from its own alignment.
+  The difference has a median under 0.1 µs, and 97.9% (786867) and 99.9% (776259) of spikes fall
+  within one 32 µs tick. The largest is 0.41 ms and 0.60 ms. With 4,500 and 6,800 units,
+  about one spike falls on each tick, so 899 and 2,029 spikes sit exactly on a window's edge tick.
+  The packet's closed window holds all of them. The NWB places about half just outside. Of the
+  packet-only pairs, 446 of 448 on 786867 and all 1,005 on 776259 are such edge spikes; on 786867,
+  10 pairs are NWB-only. The edge pairs account for 141.0 s and 507.0 s of the summed-offset gap,
+  since each adds -1 s or +2 s to it. Spikes inside the window but displaced add -6.7 s and
+  +11.5 s.
+- **Float seconds against ticks.** On 786867 one spike lies exactly 31,250 ticks before a cue.
+  `seconds()` computes `(t_tick - t_zero_tick) / rate` for each, and their difference is
+  -1.0000000000000568 s, so the float comparison drops a pair that the tick comparison keeps. The
+  missing 1.0 s of summed offset is that pair. None of the 2,029 edge spikes on 776259 rounds out.
+
 ## A core 0.18.0 packet against its NWB, local and S3
 
 Both sessions were rebuilt on 2026-10-02 at core 0.18.0 as `packet-r164` and read with the same
@@ -80,6 +162,14 @@ Locally, the packet's PyArrow path read every spike of 786867 in 0.32 s and of 7
 the whole-column slowdown does not scale with the table's size alone. On the core 0.14.0 packet
 of 786867, the same cell took 16.8 s and pynwb took 11.4 s, against 0.67 s now from the same NWB.
 That difference is not explained either.
+
+The PyArrow column was measured again on 2026-10-03 at `fa060640`, after `Packet.table` began
+reading through `read_pool()`, the reader's jemalloc pool, in place of PyArrow's default mimalloc
+pool (`*-r164-pyarrow.json` and `*-r164-s3-pyarrow.json`, cold medians of three). Every spike took
+0.72 s locally and 10.77 s from S3 on 776259, against 41.40 s and 43.39 s above, and 0.34 s and
+5.38 s on 786867, against 0.32 s and 44.57 s. Every other operation stayed within 0.8 s of
+its time above, and every returned value was unchanged. The whole-column slowdown was the
+allocator.
 
 ## A packet against its NWB
 
