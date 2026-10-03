@@ -84,7 +84,7 @@ class ProcessSemanticsTests(unittest.TestCase):
         text = (ROOT / "revisions/CONTRIBUTING.md").read_text()
         identifiers = process_rules.canonical_anchor_occurrences(text)
         self.assertEqual(len(identifiers), len(set(identifiers)))
-        self.assertEqual(len(identifiers), 7)
+        self.assertEqual(len(identifiers), 16)
 
     def test_anchor_bootstrap_is_metadata_only(self) -> None:
         before = "## 1. Subject\nBody\n"

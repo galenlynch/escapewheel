@@ -6,6 +6,7 @@ verifying a change to the Escapewheel specification. The repository-wide
 [specification style guide](../spec/CONTRIBUTING.md) governs prose; this guide
 governs the change lifecycle.
 
+<a id="ew-revision-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 Use this process when a change would alter any of the following:
@@ -80,6 +81,7 @@ roadmap label or depend on roadmap prose. State the actual problem, dependency, 
 directly; name an accepted revision when it is the dependency. This relationship is one-way so a
 lifecycle artifact remains intelligible if the roadmap is reorganized.
 
+<a id="ew-baseline" data-spec-anchor="canonical"></a>
 ## 3. Phase A — establish the baseline
 
 Every proposal and draft records a full `Based on` commit hash. Before evaluating it:
@@ -98,6 +100,7 @@ Every proposal and draft records a full `Based on` commit hash. Before evaluatin
 Recheck the baseline when another revision is incorporated. Counts and measurements are rerun
 against the new state rather than copied forward.
 
+<a id="ew-proposal-evaluation" data-spec-anchor="canonical"></a>
 ## 4. Phase B — evaluate a proposal
 
 A proposal is exploratory and non-normative. Use the proposal template and evaluate it in this
@@ -208,6 +211,7 @@ before changing its stage. Promotion authorization is not permission to discard 
 proposal state. The promotion change then carries the surviving facts into a draft and deletes the
 proposal. Its parent commit preserves the exact proposal that reviewers authorized for promotion.
 
+<a id="ew-draft-writing" data-spec-anchor="canonical"></a>
 ## 5. Phase C — write and appraise a revision draft
 
 A draft states one candidate decision. It uses the draft template, keeps the proposal's baseline or
@@ -284,6 +288,7 @@ meaning. Relocation alone never authorizes a semantic change: every changed rule
 enumerated Decision clause. The crosswalk is reviewed history, not a normative owner or a
 machine-readable paragraph inventory.
 
+<a id="ew-pre-acceptance-gates" data-spec-anchor="canonical"></a>
 ## 6. Draft pre-acceptance gates
 
 Appraise a draft in the following order. A later gate does not excuse an earlier failure.
@@ -388,6 +393,7 @@ created. Incorporation updates every affected live citation, ledger target, evid
 record, generated rendering, and human document atomically. An alias changes only through reviewed
 structural work.
 
+<a id="ew-acceptance" data-spec-anchor="canonical"></a>
 ## 7. Phase D — authorize acceptance and freeze the decision
 
 After explicit acceptance authorization:
@@ -601,6 +607,7 @@ Commit the accepted revision, normative owners, ledger, generated projections, c
 evidence, implementation, and documentation together. A partial commit can make the repository
 internally inconsistent even when the next commit repairs it.
 
+<a id="ew-mechanical-artifacts" data-spec-anchor="canonical"></a>
 ## 12. What each mechanical artifact establishes
 
 | artifact or check | establishes | does not establish |
@@ -622,6 +629,7 @@ internally inconsistent even when the next commit repairs it.
 The gaps in the third column are review responsibilities. Do not describe a checker as proving more
 than it observes.
 
+<a id="ew-failure-handling" data-spec-anchor="canonical"></a>
 ## 13. Failure handling
 
 A failed gate is a result. Stop advancing the lifecycle, record what it showed, and return to the
@@ -638,6 +646,7 @@ earliest affected phase:
 Do not weaken a check or add an exception solely to make a candidate pass.
 An exception records why the general rule does not apply and is checked to remain necessary.
 
+<a id="ew-length-and-focus" data-spec-anchor="canonical"></a>
 ## 14. Length and focus
 
 A revision is a decision record, not a transcript. Retain the evidence on which the decision
