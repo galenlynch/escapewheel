@@ -1273,4 +1273,5 @@ __all__ = [
     "reference_clock",
     "seconds",
     "seconds_expression",
+    "stored_intervals",
 ]

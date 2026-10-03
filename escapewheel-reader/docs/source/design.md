@@ -96,6 +96,26 @@ target raises `NotAligned`. `seconds` adds `<name>_second` beside each `<name>_t
 because a packet that keeps each table on its own clock should not make synchronising it the
 caller's work. `Packet.scanner` stays lazy and leaves the ticks as stored.
 
+A range on the output clock is tested on stored ticks, which needs the mapping inverted. Every map
+in a valid packet is monotone: `core.clock_anchors.monotonic` and
+`core.clocks.transform_slope_positive` are error-level rules, interpolation between increasing
+anchors increases, extrapolation continues at the terminal slope, and rounding and composition
+keep order. The stored ticks of one clock landing in `[lo, hi]` therefore form an interval within
+each stretch the bound reaches, and a gap wider than the bound splits it.
+`clocks.stored_intervals` finds those intervals by bisecting the forward map rather than
+evaluating an inverse formula, so they hold exactly the ticks `on_clock` would place in the range,
+with no rounding margin. `tick_range` turns them into an expression on `clock_id` and the stored
+tick, or on the referencing keys where the clock comes through a reference, as spikes reach theirs
+through `core.units`. The reader checks a clock's anchors increase as it builds the inverse.
+Rows on a clock whose anchors do not, or that cannot reach the target, are matched whatever their
+tick, so that mapping them refuses as it would with no range. Without `on_clock`, a constraint on
+a coordinate in `Packet.table` tests the stored value.
+
+`spike_times` on the reference clock reads `analysis.spike_events`, which the writer mapped with
+this kernel and stored by time, so a time range prunes its row groups; `core.spike_events` is
+stored by unit, and every row group spans the session. The two routes return the same rows in
+different orders, and no accessor promises one.
+
 ## Observation windows and rates
 
 A point process is a set of times *and* the span over which something was looking. Without the
@@ -210,6 +230,14 @@ their tables conflates them. `open_packets` gives every session a `session_key` 
 than a label, and presents each session-scoped table as the union of every packet's rows with that
 key alongside (Part 05 §13.1). The relation has the same shape for one packet or twenty, so an
 analysis written against one session runs unchanged against many.
+
+`PacketSet.scan` is that union as one Arrow dataset, each packet's files a fragment whose partition
+fields are its session's `session_key` and `session_name`, so a filter on either skips other
+packets' files without opening them. A packet holding several sessions cannot label its files with
+one key, so `scan` refuses a session-scoped resource there, and `scanner` and `table` project the
+key from `session_id` instead. A clock ID is unique only within its packet, so `tick_range` over a
+packet set tests each packet's terms under its `session_key` values, and the transforms resolve
+each row's clocks in the packet its `session_key` names.
 
 ## Locations and URIs
 

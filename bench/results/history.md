@@ -73,7 +73,13 @@ named below, read unsigned over the same 1 Gbit/s link at load average 6 to 10
 | `Packet.scanner(...).to_reader()`, each batch through `clocks.mapped`, summed per unit | 16.26 (963) | 16.32 (926) |
 
 The stream held 0.9 GiB where the eager table held 17 and DuckDB 30, in about the same time
-locally and the least time from S3. Neither engine pushed anything from the window into the
+locally and the least time from S3.
+
+Correction: the DuckDB arm's 30 GiB measures one unsliced ASOF join, not a lazy relation. It mapped
+stored ticks in SQL and then sorted every spike for the join, where `aligned_spikes` reads
+`analysis.spike_events`, already mapped. The same join over `analysis.spike_events` took 6.06 s at
+21 GiB (the section below), and over 16 time slices run one at a time 6.9 s at 2.0 GiB with the
+same counts (the reader's README, "Joining spikes to events in SQL"). Neither engine pushed anything from the window into the
 spike scan: DuckDB's plan projects `t_tick` and filters nothing, and Polars' scan carries no
 selection. The window is on the mapped tick, which the file does not hold.
 
@@ -119,7 +125,8 @@ relational mapping matches the kernel on every row, so exactness does not decide
   which is what accessor arguments are.
 - Materialised, the relational mapping took 2.4 to 3.6 times the kernel's 5.15 s, at 0.7 to 1.4
   times its memory. Its one advantage is aggregating without materialising, and the stream has it
-  too: 0.9 GiB for the go-cue analysis against 31 GiB in DuckDB.
+  too: 0.9 GiB for the go-cue analysis, against 31 GiB for DuckDB's unsliced join and 2.0 GiB
+  sliced.
 - It doubles every time operation and makes DuckDB or Polars part of reading.
 
 A `RecordBatchReader` keeps one implementation, needs no engine, bounds memory, and was fastest

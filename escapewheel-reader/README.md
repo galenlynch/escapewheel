@@ -94,6 +94,39 @@ every_unit = packets.table("core.units")  # rows of both, with session_key and s
 packets.duckdb(tables=["core.units"]).sql("SELECT session_key, count(*) FROM core_units GROUP BY 1")
 ```
 
+## Reading lazily
+
+The accessors return a `pyarrow.Table`. A read too large to hold, or one handed to another
+library, stays lazy as a `pyarrow.dataset` Dataset or Scanner, which the same predicates narrow
+and the same transforms convert:
+
+```python
+from escapewheel_reader import on_clock, seconds, tick_range, where
+
+scanner = packet.scanner(
+    "core.events",
+    filter=where(stream_id=3) & tick_range(packet, "core.events", (lo, hi)),
+)
+timed = seconds(packet, on_clock(packet, scanner, resource_id="core.events"))  # a RecordBatchReader
+```
+
+`tick_range` matches exactly the rows whose coordinate lands in `(lo, hi)` on the reference clock,
+or on the clock named, yet it tests the ticks as stored, so row-group statistics prune before
+anything is mapped. `tick_bounds` gives the same intervals as a table, for a filter written in SQL
+or Polars. `attach_clocks`, `on_clock` and `seconds` take a Table, RecordBatch, RecordBatchReader,
+Scanner or Dataset, and return a stream for any of the last three. A stream maps batch by batch and
+takes no further pushdown, so narrow it first. Rows already on the reference clock, as in
+`analysis.spike_events`, can take seconds inside the scan through `seconds_expression(packet)`.
+
+A packet set reads the same way. `PacketSet.scan` makes each packet's files fragments of one
+dataset with `session_key` and `session_name` as partition fields, so a filter on either opens no
+other packet's files. `tick_range` and the transforms take the packet set in place of a packet,
+and resolve each row's clocks in the packet its `session_key` names.
+
+No accessor promises an order. `spike_times` on the reference clock reads `analysis.spike_events`,
+stored by time, where `clock=STORED` reads `core.spike_events`, stored by unit. Sort or group the
+result as the analysis needs.
+
 ## Joining spikes to events in SQL
 
 `analysis.spike_events` holds every spike already on the reference clock, so a query comparing

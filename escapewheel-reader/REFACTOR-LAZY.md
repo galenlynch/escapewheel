@@ -181,5 +181,5 @@ Each step holds `spike_times` over every unit at 4.7 s and `on_clock` at 2.6 s.
 - [x] 4. Rebuild `Packet.table`, `spike_times`, `events`, `intervals` and `units` on these, with
   the reference-clock default and spike routing.
 - [x] 5. `PacketSet.scan`, `PacketSet.scanner` and `PacketSet.table`.
-- [ ] 6. The README's lazy-reading section; the inverse and its monotonicity in `design.md`; the
+- [x] 6. The README's lazy-reading section; the inverse and its monotonicity in `design.md`; the
   support tier in `api.rst`; the spike's entry in `bench/results/history.md` corrected per §1.

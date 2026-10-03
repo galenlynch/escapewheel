@@ -193,6 +193,7 @@ the module that defines it.
    clocks.declared_bound
    clocks.extrapolation_error
    clocks.mapped
+   clocks.stored_intervals
    optional.held
    optional.read_optional
    ordering.stored_order
