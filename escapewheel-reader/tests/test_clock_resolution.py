@@ -304,7 +304,9 @@ def test_the_resource_path_maps_events_as_the_accessor_does(resolved_packet):
 
 def test_the_resource_path_maps_spikes_as_the_accessor_does(resolved_packet):
     stored = resolved_packet.table("core.spike_events", columns=["unit_id", "t_tick"])
-    mapped = on_clock(resolved_packet, stored, resource_id="core.spike_events").select(["t_tick", "clock_id"])
+    mapped = on_clock(resolved_packet, stored, resource_id="core.spike_events").select(
+        ["unit_id", "t_tick", "clock_id"]
+    )
     assert mapped.equals(access.spike_times(resolved_packet, units=access.units(resolved_packet)))
 
 

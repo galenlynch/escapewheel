@@ -228,5 +228,5 @@ against 0.5 s, the time going to allocation rather than to I/O. The reader there
 each table read it makes, and leaves the process-wide default alone. A lazy read keeps the pool
 by going through `Packet.scanner`, whose scanner carries it. A dataset from `scan` is read by the
 caller, who can pass the same pool,
-`dataset.to_table(memory_pool=escapewheel_reader.resources.read_pool())`, or set
+`dataset.to_table(memory_pool=escapewheel_reader.read_pool())`, or set
 `ARROW_DEFAULT_MEMORY_POOL=jemalloc` for the whole process.

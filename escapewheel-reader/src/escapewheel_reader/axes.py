@@ -90,9 +90,9 @@ class LabelledAxis:
 
         Masked rather than filled, since every integer is a possible label and no fill can mean none.
         """
-        labels = self.rows.column(self.key).to_pylist()
-        values = np.array([0 if label is None else label for label in labels], dtype=np.int64)
-        mask = np.array([label is None for label in labels], dtype=bool)
+        labels = self.rows.column(self.key)
+        values = np.asarray(pc.fill_null(labels, 0).to_numpy(), dtype=np.int64)
+        mask = np.asarray(pc.is_null(labels).to_numpy(), dtype=bool)
         return np.ma.MaskedArray(values.reshape(self.shape), mask=mask.reshape(self.shape))
 
 
@@ -308,7 +308,7 @@ def _scaling(
             AxisFault.SCALING_AXIS, f"{resource_id} scales channels on axes {axes}, not on one of its axes"
         )
     axis = axes[0]
-    if per_channel.column("channel_index").to_pylist() != list(range(shape[axis])):
+    if not np.array_equal(np.asarray(per_channel.column("channel_index").to_numpy()), np.arange(shape[axis])):
         raise UnresolvableAxis(
             AxisFault.SCALING_COVERAGE,
             f"{resource_id} scales {per_channel.num_rows} of the {shape[axis]} channels on axis {axis}, "
@@ -329,7 +329,7 @@ def _scaling(
     return Scaling(
         channel_units,
         np.asarray(per_channel.column("conversion").to_numpy(), dtype=np.float64),
-        np.array([offset or 0.0 for offset in per_channel.column("offset").to_pylist()], dtype=np.float64),
+        np.asarray(pc.fill_null(per_channel.column("offset"), 0.0).to_numpy(), dtype=np.float64),
         axis,
     )
 

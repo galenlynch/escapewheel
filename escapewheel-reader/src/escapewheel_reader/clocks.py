@@ -190,14 +190,16 @@ def anchors(packet: PacketLike) -> dict[int, tuple[NDArray[np.int64], NDArray[np
     except ResourceNotFoundError:
         empty = pa.array([], pa.int64())
         table = pa.table({"clock_id": pa.array([], pa.int32()), "t_tick": empty, "parent_tick": empty})
-    clock = cast("list[int]", table.column("clock_id").to_pylist())
+    clock = np.asarray(_plain(table.column("clock_id")).to_numpy(zero_copy_only=False), dtype=np.int64)
     tick = np.asarray(table.column("t_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
     parent = np.asarray(table.column("parent_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
-    out: dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]] = {}
-    for name in dict.fromkeys(clock):
-        where = np.array([i for i, c in enumerate(clock) if c == name])
-        order = np.argsort(tick[where], kind="stable")
-        out[name] = (tick[where][order], parent[where][order])
+    # One sort groups the rows by clock and orders each group by tick.
+    order = np.lexsort((tick, clock))
+    names, starts = np.unique(clock[order], return_index=True)
+    groups = np.split(order, starts[1:]) if order.size else []
+    out: dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]] = {
+        int(name): (tick[rows], parent[rows]) for name, rows in zip(names, groups, strict=True)
+    }
     memo.anchors = out
     return out
 
@@ -708,7 +710,7 @@ def on_clock(
     out = out.set_column(
         names.index("clock_id"),
         "clock_id",
-        pa.array([target] * table.num_rows, type=clock_column.type),
+        pa.repeat(pa.scalar(target, _plain(clock_column).type), table.num_rows).cast(clock_column.type),
     )
     return out.filter(pa.array(keep))
 

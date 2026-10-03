@@ -210,10 +210,11 @@ def spike_times(
     Returns
     -------
     pyarrow.Table
-        Columns ``t_tick`` and ``clock_id``, in stored order. When one `unit_id` is named
-        and no `t_tick` range is given, the result carries the unit's observation window
-        in `schema.metadata`, so :func:`~escapewheel_reader.observation.rate_of` needs
-        no second lookup. A range-narrowed read carries none: the span is the caller's
+        The columns identifying the unit, then ``t_tick`` and ``clock_id``, in stored order,
+        so a read of several units can be grouped by unit. When one `unit_id` is named and
+        no `t_tick` range is given, the result carries the unit's observation window in
+        `schema.metadata`, so :func:`~escapewheel_reader.observation.rate_of` needs no
+        second lookup. A range-narrowed read carries none: the span is the caller's
         choice and is no denominator for it.
 
     Raises
@@ -235,7 +236,7 @@ def spike_times(
             session_id=session_id,
             t_tick=_span(packet, t_tick, clock),
         )
-        found = clocks.attach_clocks(packet, CORE_SPIKE_EVENTS, found).select(["t_tick", "clock_id"])
+        found = clocks.attach_clocks(packet, CORE_SPIKE_EVENTS, found).select(["unit_id", "t_tick", "clock_id"])
         found = _finish(packet, found, t_tick, clock, seconds, session_id)
         if t_tick is None:
             # Only for the unit's whole record. A range-narrowed read is a subset the
@@ -266,7 +267,7 @@ def spike_times(
         wanted = wanted & (pc.field("t_tick") >= pushed[0]) & (pc.field("t_tick") <= pushed[1])
     found = packet.scan(CORE_SPIKE_EVENTS).to_table(columns=["t_tick", *keys], filter=wanted, memory_pool=read_pool())
     found = clocks.attach_clocks(packet, CORE_SPIKE_EVENTS, found)
-    return _finish(packet, found.select(["t_tick", "clock_id"]), t_tick, clock, seconds, session_id)
+    return _finish(packet, found.select([*keys, "t_tick", "clock_id"]), t_tick, clock, seconds, session_id)
 
 
 def distinct(packet: PacketLike, resource_id: str, column: str) -> pa.ChunkedArray[Any]:

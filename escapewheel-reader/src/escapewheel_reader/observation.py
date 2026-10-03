@@ -99,9 +99,32 @@ def _resolve(own: pa.Table, inherited: pa.Table, key: tuple[str, ...]) -> pa.Tab
         return inherited
     if not inherited.num_rows:
         return own
-    refined = {tuple(row[k] for k in key) for row in own.to_pylist()}
-    keep = [i for i, row in enumerate(inherited.to_pylist()) if tuple(row[k] for k in key) not in refined]
-    return pa.concat_tables([own, inherited.take(pa.array(keep, type=pa.int64()))])
+    refined = own.select(list(key)).group_by(list(key)).aggregate([])
+    kept = _join(inherited, refined, list(key), "left anti")
+    return pa.concat_tables([own, kept.select(own.column_names)])
+
+
+def _join(left: pa.Table, right: pa.Table, keys: list[str], join_type: str = "inner") -> pa.Table:
+    """Join on `keys` cast to the left's types, since Arrow joins no dictionary or mixed width."""
+    left, right = _decoded(left), _decoded(right)
+    for key in keys:
+        at = right.column_names.index(key)
+        right = right.set_column(at, key, right.column(key).cast(left.schema.field(key).type))
+    return left.join(right, keys=keys, join_type=join_type)
+
+
+def _decoded(table: pa.Table) -> pa.Table:
+    """Decode dictionary columns, which Arrow will not join on."""
+    return table.cast(
+        pa.schema(pa.field(f.name, f.type.value_type) if pa.types.is_dictionary(f.type) else f for f in table.schema)
+    )
+
+
+def _windows(table: pa.Table, source: str, key: tuple[str, ...]) -> pa.Table:
+    """Shape joined rows into the result schema, every row from `source`."""
+    schema = _empty(key).schema
+    table = table.append_column("source", pa.repeat(pa.scalar(source), table.num_rows))
+    return table.select(schema.names).cast(schema)
 
 
 def unit_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.Table:
@@ -127,37 +150,19 @@ def unit_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.Tab
     if not _has(packet, CORE_UNITS):
         return _empty(_UNIT_KEY)
     units = packet.table(CORE_UNITS, columns=[*_UNIT_KEY, "clock_id"], session_id=session_id)
-    windows: dict[tuple[int | None, int | None], list[tuple[int, int]]] = {}
-    for row in clock_windows(packet, session_id=session_id).to_pylist():
-        windows.setdefault((row["session_id"], row["clock_id"]), []).append((row["start_tick"], row["stop_tick"]))
-
-    rows = []
-    for unit in units.to_pylist():
-        clock = unit["clock_id"]
-        keyed = {k: unit[k] for k in _UNIT_KEY}
-        for start, stop in windows.get((unit["session_id"], clock), []):
-            rows.append({**keyed, "clock_id": clock, "start_tick": start, "stop_tick": stop, "source": INHERITED})
-    inherited = pa.Table.from_pylist(rows, schema=_empty(_UNIT_KEY).schema) if rows else _empty(_UNIT_KEY)
+    clocks = clock_windows(packet, session_id=session_id)
+    inherited = _windows(_join(units, clocks, ["session_id", "clock_id"]), INHERITED, _UNIT_KEY)
 
     own = _empty(_UNIT_KEY)
     if _has(packet, CORE_UNIT_OBSERVATION_INTERVALS):
         # The interval row names only the unit, and its clock is the unit's.
-        by_unit = {u["unit_id"]: u["clock_id"] for u in units.to_pylist()}
-        declared = packet.table(CORE_UNIT_OBSERVATION_INTERVALS, session_id=session_id).to_pylist()
-        if declared:
-            own = pa.Table.from_pylist(
-                [
-                    {
-                        **{k: d[k] for k in _UNIT_KEY},
-                        "clock_id": by_unit.get(d["unit_id"]),
-                        "start_tick": d["start_tick"],
-                        "stop_tick": d["stop_tick"],
-                        "source": DECLARED,
-                    }
-                    for d in declared
-                ],
-                schema=_empty(_UNIT_KEY).schema,
+        declared = _decoded(
+            packet.table(
+                CORE_UNIT_OBSERVATION_INTERVALS, columns=[*_UNIT_KEY, "start_tick", "stop_tick"], session_id=session_id
             )
+        )
+        clock_of = units.select(["unit_id", "clock_id"])
+        own = _windows(_join(declared, clock_of, ["unit_id"], "left outer"), DECLARED, _UNIT_KEY)
     return _resolve(own, inherited, _UNIT_KEY)
 
 
@@ -180,48 +185,22 @@ def stream_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.T
     key = ("event_stream_id",)
     if not _has(packet, CORE_EVENT_STREAMS):
         return _empty(key)
-    streams = packet.table(
-        CORE_EVENT_STREAMS, columns=["event_stream_id", "session_id", "clock_id"], session_id=session_id
-    ).to_pylist()
-    windows: dict[tuple[int | None, int | None], list[tuple[int, int]]] = {}
-    for row in clock_windows(packet, session_id=session_id).to_pylist():
-        windows.setdefault((row["session_id"], row["clock_id"]), []).append((row["start_tick"], row["stop_tick"]))
-
-    rows = [
-        {
-            "event_stream_id": s["event_stream_id"],
-            "clock_id": s["clock_id"],
-            "start_tick": start,
-            "stop_tick": stop,
-            "source": INHERITED,
-        }
-        for s in streams
-        for start, stop in windows.get((s["session_id"], s["clock_id"]), [])
-    ]
-    inherited = pa.Table.from_pylist(rows, schema=_empty(key).schema) if rows else _empty(key)
+    streams = _decoded(
+        packet.table(CORE_EVENT_STREAMS, columns=["event_stream_id", "session_id", "clock_id"], session_id=session_id)
+    )
+    clocks = clock_windows(packet, session_id=session_id)
+    inherited = _windows(_join(streams, clocks, ["session_id", "clock_id"]), INHERITED, key)
 
     own = _empty(key)
     if _has(packet, CORE_EVENT_STREAM_OBSERVATION_INTERVALS):
-        clock_of = {s["event_stream_id"]: s["clock_id"] for s in streams}
-        declared = [
-            d
-            for d in packet.table(CORE_EVENT_STREAM_OBSERVATION_INTERVALS).to_pylist()
-            if d["event_stream_id"] in clock_of
-        ]
-        if declared:
-            own = pa.Table.from_pylist(
-                [
-                    {
-                        "event_stream_id": d["event_stream_id"],
-                        "clock_id": clock_of[d["event_stream_id"]],
-                        "start_tick": d["start_tick"],
-                        "stop_tick": d["stop_tick"],
-                        "source": DECLARED,
-                    }
-                    for d in declared
-                ],
-                schema=_empty(key).schema,
+        # Inner, so a window of a stream outside the selected session is left out.
+        declared = _decoded(
+            packet.table(
+                CORE_EVENT_STREAM_OBSERVATION_INTERVALS, columns=["event_stream_id", "start_tick", "stop_tick"]
             )
+        )
+        clock_of = streams.select(["event_stream_id", "clock_id"])
+        own = _windows(_join(declared, clock_of, ["event_stream_id"]), DECLARED, key)
     return _resolve(own, inherited, key)
 
 
@@ -272,21 +251,19 @@ def observed_seconds(packet: PacketLike, windows: pa.Table) -> float:
     """
     if not windows.num_rows:
         return 0.0
-    rates = {}
-    for clock in packet.table(
-        CORE_CLOCKS, columns=["clock_id", "tick_rate_hz", "tick_rate_num", "tick_rate_den"]
-    ).to_pylist():
-        if clock["tick_rate_num"] and clock["tick_rate_den"]:
-            rates[clock["clock_id"]] = clock["tick_rate_num"] / clock["tick_rate_den"]
-        elif clock["tick_rate_hz"]:
-            rates[clock["clock_id"]] = float(clock["tick_rate_hz"])
-    total = 0.0
-    for row in windows.to_pylist():
-        hz = rates.get(row["clock_id"])
-        if not hz:
-            raise NotDeclared(f"clock {row['clock_id']!r} declares no tick rate, so its windows have no duration")
-        total += (row["stop_tick"] - row["start_tick"] + 1) / hz
-    return total
+    clocks = _decoded(packet.table(CORE_CLOCKS, columns=["clock_id", "tick_rate_hz", "tick_rate_num", "tick_rate_den"]))
+    num, den = (pc.cast(clocks.column(c), pa.float64()) for c in ("tick_rate_num", "tick_rate_den"))
+    # The exact ratio where both terms are given and nonzero, the decimal rate otherwise.
+    exact = pc.fill_null(pc.and_(pc.not_equal(num, 0), pc.not_equal(den, 0)), False)
+    hz = pc.if_else(exact, pc.divide(num, den), pc.cast(clocks.column("tick_rate_hz"), pa.float64()))
+    rates = pa.table({"clock_id": clocks.column("clock_id"), "hz": hz})
+    timed = _join(windows.select(["clock_id", "start_tick", "stop_tick"]), rates, ["clock_id"], "left outer")
+    undeclared = timed.filter(pc.invert(pc.fill_null(pc.not_equal(timed.column("hz"), 0), False)))
+    if undeclared.num_rows:
+        clock = undeclared.column("clock_id")[0].as_py()
+        raise NotDeclared(f"clock {clock!r} declares no tick rate, so its windows have no duration")
+    ticks = pc.add(pc.subtract(timed.column("stop_tick"), timed.column("start_tick")), 1)
+    return float(pc.sum(pc.divide(pc.cast(ticks, pa.float64()), timed.column("hz"))).as_py())
 
 
 #: Schema-metadata keys carrying an attached support and the row count it describes.

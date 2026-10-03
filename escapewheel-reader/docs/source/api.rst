@@ -126,6 +126,7 @@ Manifest, resources and locations
    RegistryBinding
    TableResource
    ArrayResource
+   read_pool
    Location
    read_sources
    check_sources

@@ -114,7 +114,7 @@ from .observation import (
     unit_windows,
 )
 from .packet import Packet, open_packet
-from .resources import ArrayResource, TableResource
+from .resources import ArrayResource, TableResource, read_pool
 from .runs import Ambiguity, ambiguities, preferred_run
 from .sql import quote, sql_name
 
@@ -193,6 +193,7 @@ __all__ = [
     "quote",
     "rate",
     "rate_of",
+    "read_pool",
     "read_sources",
     "reference_clock",
     "resolved",

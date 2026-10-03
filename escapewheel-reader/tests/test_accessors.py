@@ -73,7 +73,7 @@ def test_unrecognised_event_type_is_empty_not_an_error(packet_root):
 def test_spike_times_returns_ticks_with_their_clock(packet_root):
     """A tick has no meaning without the clock it was counted on."""
     result = access.spike_times(open_packet(packet_root), UNITS[0])
-    assert result.column_names == ["t_tick", "clock_id"]
+    assert result.column_names == ["unit_id", "t_tick", "clock_id"]
     assert result.to_pydict()["t_tick"] == [30000, 39000, 48000]
     assert set(result.to_pydict()["clock_id"]) == {CLOCK_PROBE}
 

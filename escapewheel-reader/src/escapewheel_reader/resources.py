@@ -570,4 +570,4 @@ class ArrayResource:
         return array[...] if selection is ... else array[selection]
 
 
-__all__ = ["ZARR_METADATA_FILENAMES", "ArrayResource", "TableResource"]
+__all__ = ["ZARR_METADATA_FILENAMES", "ArrayResource", "TableResource", "read_pool"]

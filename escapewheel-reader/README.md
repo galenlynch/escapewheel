@@ -19,7 +19,7 @@ from escapewheel_reader import open_packet, spike_times, units
 
 packet = open_packet("session_packet/")  # or "s3://bucket/prefix"
 good = units(packet, quality_label="sua")
-spikes = spike_times(packet, units=good)  # pyarrow.Table of t_tick and clock_id
+spikes = spike_times(packet, units=good)  # pyarrow.Table of unit_id, t_tick and clock_id
 ```
 
 `Packet` itself only resolves, reads and registers, and has no method doing what one of those
