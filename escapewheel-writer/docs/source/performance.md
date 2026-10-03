@@ -108,17 +108,23 @@ supported. Measured identically with and without.
 **One batch is exactly one row group.** `ParquetWriter.write_batch` defaults to cutting at 2²⁰
 rows, so a group that ends at a bucket boundary (Part 03 §5.4) must be asked for explicitly.
 
-## Where an import spends 105.1 s
+## Where an import spends 449 s
 
-A complete 23-resource packet, `--memory-budget 20GB`, one command:
+A complete 57-resource 776259 packet, core 0.18.0, scratch on a rotational disk under ntfs-3g,
+`--source-workers 4`, timed by `bench/build.py` on 2026-10-02:
 
 ```text
-sources                    9.5 s
-stage core                50.5 s   core.spike_events is 99.9% of the rows
-derive and stage analysis 32.7 s
-validate                  12.5 s   Tier 1 and Tier 2 over two 287 M-row tables
-promote                    0.0 s
+sources                   236.7 s   the sorter 188 s, then the sources that consume it, at once
+stage                     156.5 s   core.spike_events is 99.9% of the rows
+derive and stage analysis  44.0 s
+validate                   10.2 s
+promote                     0.0 s
 ```
+
+Six such builds took 377 to 795 s, with staging alone varying from 131 to 349 s, so compare cells
+taken together rather than against this one. Every source that does work consumes the sorter, so
+more workers shorten only what follows it; a one-worker build's sources took 239 and 258 s
+against 237 and 232 s here.
 
 Physical order is established while staging, so validation does not re-read 467 MB of sort
 columns. The comparison runs on the batches in its own pipeline stage, and `commit` passes the

@@ -191,24 +191,36 @@ Left open and outside R160:
 `bench/` holds the cold-read, row-group and containment benchmarks against the current packet
 shape, and `bench/results/history.md` dates every reading the repository quotes, the validator's
 removed figures among them. Still to do: move the 2026-10-02 readings into Part 10 §§3 and 6 and
-into `escapewheel-writer/docs/source/performance.md`, whose row-group and import figures are
-stale, and port an S3 arm once a current packet is staged there. Nothing re-measures the
-validator's figures or an import.
+into `escapewheel-writer/docs/source/performance.md`, whose row-group figures are stale, and
+port an S3 arm once a current packet is staged there. Nothing re-measures the validator's
+figures; `build.py` times an import (§3d).
 
-## 3d. A build runs its sources one after another
+## 3d. A build's critical path is the sorter, then staging
 
-A 776259 build takes 630 s (`build-r153.log`, 2026-09-30, sources and scratch on a rotational disk
-under ntfs-3g): sorter 149 s for 286,896,563 spikes, waveforms 218 s for two 6,781 × 26 × 150
-arrays and `core.unit_electrodes`, unit QC 63 s, staging 147 s, deriving `analysis.spike_events`
-41 s, and under 12 s for everything else. The log's timestamps show each source starting where
-the previous one ended, and the only concurrency in the writer is the sorter reading
-`STREAM_WORKERS` (4) streams at once. Still to do:
+A build opens up to `--source-workers` (4) sources at once, each as soon as every earlier source
+it consumes or takes units or clocks from has been harvested, and handles them in recipe order, so
+the packet and its log match a one-worker build. The waveforms source reads each slab's Zarr
+chunks on `CHUNK_WORKERS` (8) threads without a separate existence check; it was 216 s of the
+pre-change build and is now about 20 s. Every 776259 packet built this way matches `packet-r164`
+resource for resource but `core.processing_runs`, which records the run's start time.
 
-- run independent sources concurrently, and stage independent resources in parallel;
-- profile each step's split between I/O and compute, the waveforms step first, since 218 s for
-  107 MB of arrays is more than its I/O explains;
-- time one build with sources and scratch on the NVMe, to separate the disk from the work;
-- add a build benchmark to `bench/`, so the import figure in `performance.md` has a script.
+`bench/build.py` times one recipe at several worker counts (`bench/results/2026-10-02-build-*`).
+On 776259, one worker against four: 426 and 506 s against 449 and 479 s with scratch on the
+rotational disk, 795 against 377 s with it on the NVMe, peak RSS 3.5 to 3.9 GiB either way.
+The sources take 239 to 258 s at one worker and 232 to 237 s at four (397 against 190 s on
+the NVMe pair, where the one-worker cell's S3-bound waveforms and unit QC ran two to three times
+slower than in any other cell). Four workers cut the work after
+the sorter from about 72 s to 48 s, but nothing else of substance runs alongside the sorter's 144
+to 188 s, because every source that does work consumes it. Staging varied from 131 to 349 s
+between cells, which hides the difference in the totals. Still to do:
+
+- find why staging varies so much, and log what each resource takes to stage, before deciding
+  whether to stage resources in parallel;
+- profile the sorter, the critical path, splitting its 287 M-spike read between store round trips,
+  the rotational disk and compute, as the waveforms profile did;
+- repeat each cell enough times to report a spread, with the source cache on the NVMe too;
+- dispatch ready sources in recipe order rather than in the order they became ready, which
+  matters only when more are ready than there are workers.
 
 ## 4. The repository directory is still `nwb-lake/`
 
