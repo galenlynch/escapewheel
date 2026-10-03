@@ -233,6 +233,10 @@ natural.
 
 ## 6. Smaller open items
 
+- **The dev library answers nothing about provenance or open changes.** Once the change-document
+  revision lands, `escapewheel-dev` gains two read-only queries: the accepted clauses whose ledger
+  entry points at a section, and the open change documents that cite one. Nothing else about
+  revision records, the ledger or registry history goes in.
 - **Trial-in-block containment has no consumer.** The containment measurement in `bench/` concluded
   that a trial needs no stored parent, and `dynamic_foraging` ships one anyway: `blocks` carries
   `start_tick` and `stop_tick` over 19 rows, and `trials.block_id` is populated in **450 of 450 and 708 of 708**
