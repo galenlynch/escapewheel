@@ -12,6 +12,29 @@ region operation were committed after they ran.
 does not reach the block device's buffer cache. "NVMe" is a WD SN850X under btrfs, where a cold
 read is checked by `mincore`.
 
+## Packet spike arms from `analysis.spike_events`
+
+`trials.py` on 2026-10-03, go-cue spikes on 776259 from the NVMe, one cold run per cell, at a
+dirty `d4b230ed` whose uncommitted change is these arms; load average 4 to 8 on 24 threads
+(`2026-10-03-trials-776259-r164-analysis.json`). The packet's pandas arms now read
+`analysis.spike_events`, already on the reference clock, in place of mapping `core.spike_events`
+themselves, and its DuckDB arm states the ASOF join. Seconds, then peak RSS in MiB:
+
+| arm | 776259, NVMe |
+|---|---|
+| packet pandas | 14.91 (25,479) |
+| packet pandas, needed columns | 14.30 (18,899) |
+| packet duckdb, ASOF join | 6.06 (21,376) |
+| packet aligned_spikes | 7.94 (17,459) |
+| pynwb pandas | 24.23 (20,403) |
+
+Every packet arm found 99,453,482 pairs and pynwb 99,452,477, the edge-tick gap explained below.
+DuckDB's range join, the arm's form in the section below, took 46.2 s in a separate run, nearly
+all of it in a piecewise merge join; the ASOF join answers the same question in one sorted pass but
+holds 21 GiB where the range join held 0.4. Of the pandas arms' time, 8.5 s is the shared analysis's
+`window_sums` and 2.4 s its `np.unique` over unit IDs, which `analysis.spike_events` stores by
+time bucket and then unit (Part 03 §5.4); NWB's spikes, flattened unit by unit, sort in 0.9 s.
+
 ## Trial analyses, local and S3
 
 `trials.py` on 2026-10-03, against the core 0.18.0 packets and NWB-Zarr copies of the section

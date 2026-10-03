@@ -11,16 +11,17 @@ and the summed time from cue.
 The arms are three patterns of analysis and the helpers that do it for the caller:
 
 - `pandas`: each needed table read whole into pandas, then one shared NumPy analysis. The packet's
-  arm maps `core.spike_events` onto the reference clock and to seconds with the reader's
-  `on_clock` and `seconds`; `needed columns` does the same reading only the columns used, and
-  `pandas-derived` reads `analysis.spike_events` whole, already mapped.
+  arm reads `analysis.spike_events`, every spike already on the reference clock, and adds seconds
+  with the reader's `seconds`; `needed columns` does the same reading only the columns used.
 - Out of core: the packet through `TableResource.scan_polars`, and through `Packet.scan` with
   PyArrow's default memory pool and with the reader's `read_pool()`; the NWB through lazynwb's
   `scan_nwb`. The packet's work in ticks on its reference clock, as a reader of the format would,
   and convert only the result. The Polars arms search the sorted cues from each spike in a
   streaming plan rather than state a range join, which Polars builds pair by pair in memory.
 - SQL: the packet through DuckDB, the NWB through lazynwb's Polars `SQLContext`, and pynwb's
-  `to_dataframe` frames through DuckDB. Each states the range join.
+  `to_dataframe` frames through DuckDB. The NWB arms state the range join; the packet's states the
+  ASOF join its reader's documentation recommends, falling back to the range join when two cues'
+  windows overlap, and reports which it used.
 - Helpers, for spikes only: the reader's `aligned_spikes`, whose window is symmetric, so it is
   asked for +-2 s and the result narrowed to -1 s; and lazynwb's `get_spike_times_in_intervals`,
   whose window excludes its end.
@@ -129,7 +130,7 @@ def open_packet(plan: dict):
     return opened(plan["packet"])
 
 
-def run_packet_pandas(plan: dict, analysis: str, derived: bool = False, pruned: bool = False) -> object:
+def run_packet_pandas(plan: dict, analysis: str, pruned: bool = False) -> object:
     """Tables into pandas, ticks through the reader's `on_clock` and `seconds`.
 
     Whole tables by default; `pruned` names the columns the analysis uses and converts only those.
@@ -152,18 +153,8 @@ def run_packet_pandas(plan: dict, analysis: str, derived: bool = False, pruned: 
         streams = read("core.event_streams", ["event_stream_id", "event_type"]).to_pandas()
         lick_streams = streams.loc[streams["event_type"].isin(LICKS), "event_stream_id"]
         return lick_summary(latencies(go, events.loc[events["stream_id"].isin(lick_streams), "t_second"]))
-    if derived:
-        spikes = seconds(packet, packet.table("analysis.spike_events")).to_pandas()
-    elif pruned:
-        # A unit is identified by `unit_id` alone within a packet, so the clock join needs no session.
-        unit_clocks = packet.table("core.units", columns=["unit_id", "clock_id"])
-        mapped = on_clock(packet, read("core.spike_events", ["unit_id", "t_tick"]).join(unit_clocks, "unit_id"))
-        spikes = seconds(packet, mapped).select(["unit_id", "t_second"]).to_pandas()
-        del mapped
-    else:
-        unit_clocks = packet.table("core.units").select(["session_id", "unit_id", "clock_id"])
-        spikes = on_clock(packet, packet.table("core.spike_events").join(unit_clocks, ["session_id", "unit_id"]))
-        spikes = seconds(packet, spikes).to_pandas()
+    spikes = seconds(packet, read("analysis.spike_events", ["unit_id", "t_tick", "clock_id"]))
+    spikes = (spikes.select(["unit_id", "t_second"]) if pruned else spikes).to_pandas()
     return spike_summary(*per_unit(spikes["unit_id"], go, spikes["t_second"].to_numpy(), BEFORE, AFTER))
 
 
@@ -284,6 +275,22 @@ FROM analysis_spike_events s JOIN {trials} t
 GROUP BY s.unit_id
 """
 
+# The same pairs while no spike lies in two windows: each spike meets the latest cue whose window
+# has opened, and is dropped if that window has closed.
+SPIKE_ASOF_SQL = """
+SELECT s.unit_id, count(*) AS pairs, sum(s.t_tick - t.go_cue_start_tick) AS offset
+FROM analysis_spike_events s
+ASOF JOIN (SELECT go_cue_start_tick FROM {trials} WHERE go_cue_start_tick IS NOT NULL) t
+  ON s.t_tick + {before} >= t.go_cue_start_tick
+WHERE s.t_tick <= t.go_cue_start_tick + {after}
+GROUP BY s.unit_id
+"""
+
+CUE_GAP_SQL = """
+SELECT min(d) FROM (
+  SELECT go_cue_start_tick - lag(go_cue_start_tick) OVER (ORDER BY go_cue_start_tick) AS d FROM {trials})
+"""
+
 
 def connection(plan: dict):
     """A DuckDB connection, holding the environment's credentials when the packet is remote."""
@@ -302,14 +309,19 @@ def run_packet_duckdb(plan: dict, analysis: str) -> object:
     """DuckDB over the packet's tables."""
     packet = open_packet(plan)
     trials, rate = plan["trials"].replace(".", "_"), plan["rate"]
+    con = connection(plan)
     if analysis == "lick latency":
         query = LICK_SQL.format(trials=trials)
-    else:
-        query = SPIKE_SQL.format(trials=trials, before=BEFORE * rate, after=AFTER * rate)
-    found = packet.duckdb(connection=connection(plan), for_query=query).sql(query).to_arrow_table()
-    if analysis == "lick latency":
+        found = packet.duckdb(connection=con, for_query=query).sql(query).to_arrow_table()
         return lick_summary(found["latency"].to_numpy(), rate)
-    return spike_summary(found["pairs"].to_numpy(), found["offset"].to_numpy(), rate)
+    before, after = BEFORE * rate, AFTER * rate
+    packet.duckdb(connection=con, tables=("analysis.spike_events", plan["trials"]))
+    gap = con.sql(CUE_GAP_SQL.format(trials=trials)).fetchone()[0]
+    # Two cues closer than the window's width put a spike in both windows, which ASOF cannot pair.
+    join = "asof" if gap is None or gap > before + after else "range"
+    query = (SPIKE_ASOF_SQL if join == "asof" else SPIKE_SQL).format(trials=trials, before=before, after=after)
+    found = con.sql(query).to_arrow_table()
+    return {**spike_summary(found["pairs"].to_numpy(), found["offset"].to_numpy(), rate), "join": join}
 
 
 def run_packet_aligned(plan: dict, analysis: str) -> object:
@@ -513,11 +525,6 @@ ARMS: dict[str, tuple[Callable[[dict, str], object], tuple[str, ...], tuple[str,
     "packet pandas, needed columns": (
         lambda plan, analysis: run_packet_pandas(plan, analysis, pruned=True),
         ANALYSES,
-        ("escapewheel_reader", "pandas", "numpy"),
-    ),
-    "packet pandas-derived": (
-        lambda plan, analysis: run_packet_pandas(plan, analysis, derived=True),
-        ("go-cue spikes",),
         ("escapewheel_reader", "pandas", "numpy"),
     ),
     "pynwb pandas": (run_pynwb_pandas, ANALYSES, ("hdmf_zarr.nwb_zarrv2", "numpy", "pandas")),
