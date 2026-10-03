@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "escapewheel-dev"
+description = "Read-only queries over this repository's current specification, registries and packets"
+requires-python = ">=3.12"
+readme = "README.md"
+version = "0"
+# A development tool for this repository, never released, so it depends on the sibling packages
+# by path below rather than on released versions.
+dependencies = [
+    "escapewheel-validator",
+    "jsonschema>=4.26.0",
+    "pyarrow>=25.0.1",
+    "sqlglot>=30.21",
+]
+
+[dependency-groups]
+dev = [
+    "codespell",
+    "mypy",
+    "pyarrow-stubs>=20.0.0.20260819",
+    "pytest",
+    "ruff",
+    "types-jsonschema>=4.26.0.20260518",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/escapewheel_dev"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+extend-select = ["Q", "RUF100", "C90", "I", "F", "E", "W", "D", "UP", "ANN", "PYI"]
+extend-ignore = ["ANN401"]
+per-file-ignores = { "tests/*.py" = ["ANN", "D"] }
+mccabe = { max-complexity = 14 }
+pydocstyle = { convention = "numpy" }
+
+[tool.codespell]
+skip = ".git,uv.lock"
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --tb=short"
+testpaths = ["tests"]
+# The conformance corpus's packet declarations, which the packet tests build.
+pythonpath = ["../fixtures"]
+
+[tool.mypy]
+files = ["src/escapewheel_dev"]
+strict = true
+show_error_codes = true
+
+[tool.uv.sources]
+# Sibling packages of this repository; nothing is published yet.
+escapewheel-validator = { path = "../escapewheel-validator", editable = true }
+escapewheel-reader = { path = "../escapewheel-reader", editable = true }
