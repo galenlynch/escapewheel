@@ -87,6 +87,7 @@ STAGES: list[Stage] = [
     _python("revisions: open stages are structurally complete", ROOT, WRITER, "revisions/stages.py"),
     _python("revisions: process tooling tests", ROOT, WRITER, "-m", "unittest", "revisions.test_evidence"),
     _python("root: verifier control-flow tests", ROOT, WRITER, "-m", "unittest", "tools.test_verify"),
+    _python("root: gate suite-selection tests", ROOT, WRITER, "-m", "unittest", "tools.test_gate"),
     _python("revisions: process semantics tests", ROOT, WRITER, "revisions/test_process.py"),
     _python("revisions: accepted evidence manifests resolve", ROOT, WRITER, "revisions/evidence.py"),
     _python("spec: structural checks", TREE, TREE, "check.py"),

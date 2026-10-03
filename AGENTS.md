@@ -23,8 +23,8 @@ These instructions apply throughout the monorepo. A nested `AGENTS.md` may add n
   `CONTRIBUTING.md` or the applicable package guide.
 - Preserve unrelated working-tree changes and run repository commands from the monorepo root unless
   a documented command says otherwise.
-- In a restricted agent sandbox, use `verify.py --quick` for the in-sandbox gate. It runs no
-  package suite, so run each changed package's suite beside it. A full run needs
+- In a restricted agent sandbox, use `tools/gate.py --changed` for the in-sandbox gate: it runs
+  `verify.py --quick` and the suite of each changed package and its dependents. A full run needs
   the thread wakeups, Zarr round trip, and Unix-domain socket checked by
   `tools/runtime_capabilities.py`; if that preflight rejects the sandbox, rerun the unchanged full
   verifier with an unrestricted execution permission. Do not retry it in the same sandbox, skip

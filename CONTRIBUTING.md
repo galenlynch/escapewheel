@@ -130,6 +130,23 @@ same command and therefore exercises the same preflight.
 integration tests. It runs no package suite at all, so after changing a package run that package's
 suite, and those of the packages depending on it, beside it.
 
+`tools/gate.py` wraps that routine and prints one line per step, with the full output in a log
+whose path it prints last:
+
+```bash
+uv run --project escapewheel-writer python tools/gate.py             # quick
+uv run --project escapewheel-writer python tools/gate.py --changed   # quick, plus the touched suites
+uv run --project escapewheel-writer python tools/gate.py --full      # preflight, then the full run
+```
+
+Quick regenerates the heading record and the single-file rendering, checks citations, the ledger
+and the open revision stages, and runs `verify.py --quick`. `--changed [BASE]` adds the suite of
+every package differing from BASE (by default the merge-base with `main`, plus uncommitted files)
+and of every package depending on one, read from the projects' uv path sources. `--full` stops
+with a non-zero exit if the runtime preflight rejects the environment; rerun it unchanged with
+unrestricted execution rather than retrying in the same sandbox. `GATE_TMPDIR` or `--tmpdir` sets
+`TMPDIR` for every step and holds the log; the caller's `UV_CACHE_DIR` carries through.
+
 ## 4.1 Working with large packets
 
 Cap memory for commands that read a real packet so a runaway decode fails visibly instead of
