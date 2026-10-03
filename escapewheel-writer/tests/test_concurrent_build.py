@@ -61,11 +61,31 @@ def _spec(kind: str) -> SimpleNamespace:
     return SimpleNamespace(kind=kind)
 
 
-def _opening(monkeypatch, specs, waits, opened):
+def _opening(monkeypatch, specs, waits, opened, workers=4):
     """An `_Opening` over stand-in specs, `waits` naming which kind waits for which."""
     monkeypatch.setattr(session, "waits_for", lambda earlier, later: earlier.kind in waits.get(later.kind, ()))
     monkeypatch.setattr(session, "_open", opened)
-    return session._Opening(specs, None, None, workers=4)
+    return session._Opening(specs, None, None, workers=workers)
+
+
+def test_one_worker_opens_each_source_at_its_turn_on_the_build_thread(monkeypatch):
+    """So a one-worker build is the serial build, and its log times each source alone."""
+    started: list[tuple[str, bool]] = []
+
+    def opened(spec, recipe, context):
+        started.append((spec.kind, threading.current_thread() is threading.main_thread()))
+        return spec.kind
+
+    opening = _opening(monkeypatch, [_spec("a"), _spec("b")], {}, opened, workers=1)
+    try:
+        assert started == []
+        assert opening.take(0) == "a"
+        assert started == [("a", True)]
+        opening.harvested(0)
+        assert opening.take(1) == "b"
+        assert started == [("a", True), ("b", True)]
+    finally:
+        opening.close()
 
 
 def test_sources_waiting_for_nothing_open_together(monkeypatch):

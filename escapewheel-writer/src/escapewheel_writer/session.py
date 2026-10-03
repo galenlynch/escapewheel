@@ -306,7 +306,8 @@ class _Opening:
     The build still handles each source in `order`, so every row, note and identifier lands as a
     serial build would put it; only the opening and reading overlap. A source is submitted once
     every earlier source it `waits_for` has been harvested, which is what makes what it is supplied
-    the same as at its turn.
+    the same as at its turn. With one worker there is no pool: each source is opened at its turn,
+    so the log times each source alone.
     """
 
     def __init__(self, specs: Sequence[SourceSpec], recipe: Recipe, context: Context, workers: int) -> None:
@@ -317,10 +318,12 @@ class _Opening:
         self._harvested: set[int] = set()
         self._pending: dict[int, Future[_Opened]] = {}
         self._submitted: set[int] = set()
-        self._pool = ThreadPoolExecutor(max_workers=max(workers, 1), thread_name_prefix="source")
+        self._pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="source") if workers > 1 else None
         self._submit()
 
     def _submit(self) -> None:
+        if self._pool is None:
+            return
         for k in range(len(self._specs)):
             if k not in self._submitted and self._awaits[k] <= self._harvested:
                 self._submitted.add(k)
@@ -328,6 +331,8 @@ class _Opening:
 
     def take(self, index: int) -> _Opened:
         """Return source `index` opened, raising whatever opening it raised."""
+        if self._pool is None:
+            return _open(self._specs[index], self._recipe, self._context)
         return self._pending.pop(index).result()
 
     def harvested(self, index: int) -> None:
@@ -337,7 +342,8 @@ class _Opening:
 
     def close(self) -> None:
         """Drop what has not started, and wait for what has, so no source outlives the build."""
-        self._pool.shutdown(wait=True, cancel_futures=True)
+        if self._pool is not None:
+            self._pool.shutdown(wait=True, cancel_futures=True)
 
 
 def _derive(options: Mapping[str, Any], packet: Any, writer: Any) -> None:
@@ -594,7 +600,7 @@ def build(  # noqa: C901
         Its registries are the ones written against. Prepared here where absent.
     workers : int, default SOURCE_WORKERS
         Sources opened at once. Each is still handled in `order`, so the packet is the same at
-        any count; 1 opens one at a time.
+        any count; 1 opens each at its turn.
 
     Returns
     -------

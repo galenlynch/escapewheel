@@ -672,7 +672,7 @@ def _import_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentPars
         default=SOURCE_WORKERS,
         metavar="N",
         help=f"sources opened at once (default: {SOURCE_WORKERS}); each is still handled in recipe "
-        "order, so the packet is the same at any count, and 1 opens one at a time",
+        "order, so the packet is the same at any count, and 1 opens each at its turn",
     )
     importer.add_argument(
         "--sample",
