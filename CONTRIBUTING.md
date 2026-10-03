@@ -145,7 +145,9 @@ every package differing from BASE (by default the merge-base with `main`, plus u
 and of every package depending on one, read from the projects' uv path sources. `--full` stops
 with a non-zero exit if the runtime preflight rejects the environment; rerun it unchanged with
 unrestricted execution rather than retrying in the same sandbox. `GATE_TMPDIR` or `--tmpdir` sets
-`TMPDIR` for every step and holds the log; the caller's `UV_CACHE_DIR` carries through.
+`TMPDIR` for every step and holds the log; the caller's `UV_CACHE_DIR` carries through. The
+directory must be owned by the user running the gate, since pytest refuses a temporary root it does
+not own, which rules out a FUSE mount that reports every file as root's.
 
 ## 4.1 Working with large packets
 
