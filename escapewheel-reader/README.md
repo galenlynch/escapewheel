@@ -52,6 +52,20 @@ aligned = on_clock(packet, stored)  # the same rows on the packet's reference cl
 timed = seconds(packet, aligned)  # with t_second from the session's time origin
 ```
 
+Any table resource, an extension's included, gets the same treatment from its declaration.
+`attach_clocks(packet, resource_id, table)` adds the clock each coordinate column is counted on,
+following `clock_from` through the reference the table declares. `on_clock` and `seconds` take the
+same `resource_id` and then convert every coordinate. `Packet.table` does all three in one read:
+
+```python
+trials = packet.table("dynamic_foraging.trials", on_clock=True, seconds=True)
+trials["go_cue_start_second"]  # one seconds column per *_tick coordinate, on the reference clock
+```
+
+Where a table has several coordinates, a tick the anchors cannot place becomes a null cell and the
+row stays. Where it has one, as spikes and events do, the row is dropped. The
+[design notes](docs/source/design.md#clocks) give the naming rule for the added clock columns.
+
 The functions are free rather than methods because the table belongs to PyArrow and cannot carry
 methods of ours. `rate_of(packet, table)` is the one that returns a number: the rows' rate over
 the span they were observed for.

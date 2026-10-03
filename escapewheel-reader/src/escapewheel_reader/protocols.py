@@ -105,8 +105,16 @@ class PacketLike(Protocol):
     def array_resource(self, resource_id: str) -> ArrayResource:
         """Get a readable handle for a dense array resource."""
 
-    def table(self, resource_id: str, *, columns: list[str] | None = None, **where: Predicate) -> pa.Table:
-        """Read a table resource into memory, optionally narrowed."""
+    def table(
+        self,
+        resource_id: str,
+        *,
+        columns: list[str] | None = None,
+        on_clock: bool | int = False,
+        seconds: bool = False,
+        **where: Predicate,
+    ) -> pa.Table:
+        """Read a table resource into memory, optionally narrowed and put on one clock."""
 
     def scan(self, resource_id: str) -> pads.Dataset:
         """Open a table resource lazily."""

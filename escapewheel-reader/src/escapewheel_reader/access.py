@@ -13,7 +13,6 @@ from two clocks are not comparable.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import Any, Literal
 
 import pyarrow as pa
@@ -148,21 +147,9 @@ def events(
         found = packet.table(CORE_EVENTS, session_id=session_id, t_tick=span)
     else:
         found = packet.table(CORE_EVENTS, session_id=session_id, t_tick=span, stream_id=streams)
-    # A tick has no meaning without its clock, and the clock is the stream's, so
-    # the accessor attaches it: `core.event_streams` is tens of rows against an event table's
-    # thousands, and every caller of this needs it either to convert or to report.
-    stream_clocks = dict(
-        zip(
-            *(
-                packet.table(CORE_EVENT_STREAMS, columns=["event_stream_id", "clock_id"]).column(c).to_pylist()
-                for c in ("event_stream_id", "clock_id")
-            ),
-            strict=True,
-        )
-    )
-    found = found.append_column(
-        "clock_id", pa.array([stream_clocks.get(s) for s in found.column("stream_id").to_pylist()])
-    )
+    # A tick has no meaning without its clock, and every caller needs it either to convert or to
+    # report, so the stream's clock comes back with each event.
+    found = clocks.attach_clocks(packet, CORE_EVENTS, found)
     return _finish(packet, found, t_tick, clock, seconds, session_id)
 
 
@@ -243,13 +230,12 @@ def spike_times(
     if unit_id is not None:
         found = packet.table(
             CORE_SPIKE_EVENTS,
-            columns=["t_tick"],
+            columns=["t_tick", "unit_id"],
             unit_id=unit_id,
             session_id=session_id,
             t_tick=_span(packet, t_tick, clock),
         )
-        unit_clocks = _unit_clocks(packet, ["unit_id"], unit_id=unit_id, session_id=session_id)
-        found = found.append_column("clock_id", pa.array([unit_clocks.get((unit_id,))] * found.num_rows))
+        found = clocks.attach_clocks(packet, CORE_SPIKE_EVENTS, found).select(["t_tick", "clock_id"])
         found = _finish(packet, found, t_tick, clock, seconds, session_id)
         if t_tick is None:
             # Only for the unit's whole record. A range-narrowed read is a subset the
@@ -278,14 +264,8 @@ def spike_times(
         wanted = wanted & (pc.field("session_id") == session_id)
     if (pushed := _span(packet, t_tick, clock)) is not None:
         wanted = wanted & (pc.field("t_tick") >= pushed[0]) & (pc.field("t_tick") <= pushed[1])
-    # `core.spike_events` carries no `clock_id`: a tick reaches its clock through its unit, so
-    # the column comes from `core.units` rather than from the scan. A tick still travels with
-    # its clock, which is what this accessor exists to guarantee.
     found = packet.scan(CORE_SPIKE_EVENTS).to_table(columns=["t_tick", *keys], filter=wanted, memory_pool=read_pool())
-    unit_clocks = _unit_clocks(packet, keys, session_id=session_id)
-    found = found.append_column(
-        "clock_id", pa.array([unit_clocks.get(tuple(r[k] for k in keys)) for r in found.select(keys).to_pylist()])
-    )
+    found = clocks.attach_clocks(packet, CORE_SPIKE_EVENTS, found)
     return _finish(packet, found.select(["t_tick", "clock_id"]), t_tick, clock, seconds, session_id)
 
 
@@ -338,16 +318,6 @@ def _reference_columns(packet: PacketLike, resource_id: str, parent: str) -> lis
         if reference["resource"] == parent:
             return list(reference["columns"])
     raise NotDeclared(f"the registry declares no reference from {resource_id} to {parent}")
-
-
-def _unit_clocks(packet: PacketLike, keys: Sequence[str], **narrow: Any) -> dict[tuple[Any, ...], Any]:
-    """Map a unit's key to the clock its ticks are counted on (Part 02 §12.1).
-
-    The clock is the unit's fact, reached by a spike through the reference it already declares,
-    and a tick still travels with its clock out of an accessor.
-    """
-    rows = packet.table(CORE_UNITS, columns=[*keys, "clock_id"], **narrow).to_pylist()
-    return {tuple(r[k] for k in keys): r["clock_id"] for r in rows}
 
 
 def _unit_support(packet: PacketLike, unit_id: int, session_id: int | None) -> pa.Table:

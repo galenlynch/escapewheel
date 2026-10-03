@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import pyarrow as pa
 import pyarrow.dataset as pads
 
-from . import duck
+from . import clocks, duck
 from .errors import RegistryFault, RegistryUnavailable, ResourceNotFoundError
 from .location import Location, Rewrite, Sources, resolve_sources
 from .manifest import Manifest, Resource
@@ -356,9 +356,11 @@ class Packet:
         resource_id: str,
         *,
         columns: list[str] | None = None,
+        on_clock: bool | int = False,
+        seconds: bool = False,
         **where: Predicate,
     ) -> pa.Table:
-        """Read a table resource into memory, optionally narrowed.
+        """Read a table resource into memory, optionally narrowed and put on one clock.
 
         Constraints are pushed into the Parquet reader rather than applied afterwards, so
         row groups that cannot match are never decompressed. Selecting one unit from nine
@@ -372,10 +374,17 @@ class Packet:
         resource_id : str
             Dotted resource ID.
         columns : list of str, optional
-            Read only these columns. Reading every column is the default.
+            Read only these columns. Reading every column is the default. With `on_clock` or
+            `seconds`, include the columns each coordinate's clock is reached through.
+        on_clock : bool or int, default False
+            Map every coordinate onto the reference clock, or onto the clock given, by
+            :func:`~escapewheel_reader.clocks.on_clock` with this `resource_id`.
+        seconds : bool, default False
+            Add a seconds column per coordinate, by :func:`~escapewheel_reader.clocks.seconds`.
+            The coordinates must be on the reference clock, as `on_clock=True` leaves them.
         **where : str, int, float, bool, tuple, or None
-            Column constraints. A scalar means equality, a two-item tuple means a closed
-            range, and ``None`` leaves the column unconstrained.
+            Column constraints, on the values as stored. A scalar means equality, a two-item
+            tuple means a closed range, and ``None`` leaves the column unconstrained.
 
         Returns
         -------
@@ -386,8 +395,14 @@ class Packet:
         --------
         >>> packet.table("core.events", event_type="reward")           # doctest: +SKIP
         >>> packet.table("core.spike_events", t_tick=(30_000, 60_000))  # doctest: +SKIP
+        >>> packet.table("dynamic_foraging.trials", on_clock=True, seconds=True)  # doctest: +SKIP
         """
-        return self.scanner(resource_id, columns=columns, **where).to_table()
+        table = self.scanner(resource_id, columns=columns, **where).to_table()
+        if on_clock is not False:
+            table = clocks.on_clock(self, table, None if on_clock is True else int(on_clock), resource_id=resource_id)
+        if seconds:
+            table = clocks.seconds(self, table, resource_id=resource_id)
+        return table
 
     def scanner(
         self,

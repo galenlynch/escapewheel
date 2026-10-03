@@ -2,8 +2,10 @@
 
 Over a packet:
 
+- :func:`attach_clocks` -- a table with the clock each of its coordinates is counted on.
 - :func:`on_clock` -- a table with its ticks on one clock, without what no anchor places.
 - :func:`seconds` -- a table with `t_second` added, from the session's declared origin.
+- :func:`clock_columns` -- the column that holds each coordinate's clock.
 - :func:`reference_clock` -- the clock a packet reports times on.
 - :func:`origin` -- a session's time origin and the reference clock's rational rate.
 - :func:`anchors`, :func:`declared_bound`, :func:`tick_rate` -- what those are computed from.
@@ -21,6 +23,7 @@ The writer maps with these functions too, so ticks mapped at write time and at r
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, cast
 
 import numpy as np
@@ -29,7 +32,7 @@ import pyarrow.compute as pc
 from numpy.typing import NDArray
 
 from .dictionaries import values, where
-from .errors import NotAligned, NoTimeOrigin, ResourceNotFoundError, Unanchored
+from .errors import NotAligned, NotDeclared, NoTimeOrigin, Refused, ResourceNotFoundError, Unanchored
 from .protocols import Memo, PacketLike
 from .resource_ids import CORE_CLOCK_ANCHORS, CORE_CLOCKS, CORE_SESSIONS
 
@@ -432,7 +435,218 @@ def origin(packet: PacketLike, session_id: int | None = None) -> tuple[int, int,
     return origins[session_id]
 
 
-def on_clock(packet: PacketLike, table: pa.Table, clock: int | None = None, *, bound: float | None = None) -> pa.Table:
+def _declared_table(packet: PacketLike, resource_id: str) -> Mapping[str, Any]:
+    """Return the table a resource's declaration describes, from whichever bound registry holds it."""
+    declaration = packet.resource(resource_id).declaration
+    table = declaration.get("table") if isinstance(declaration, Mapping) else None
+    if not isinstance(table, Mapping):
+        raise NotDeclared(f"no bound registry declares {resource_id} as a table")
+    return table
+
+
+def _clock_sources(declared: Mapping[str, Any]) -> dict[str, str]:
+    """Map each coordinate column to the `clock_from` naming its clock (Part 02 §8.4)."""
+    return {
+        column["name"]: column.get("clock_from", "clock_id")
+        for column in declared.get("columns", [])
+        if column.get("role") == "coordinate"
+    }
+
+
+def clock_columns(packet: PacketLike, resource_id: str) -> dict[str, str]:
+    """Name the column that holds each coordinate's clock once :func:`attach_clocks` has run.
+
+    A coordinate on the table's own `clock_id` keeps it. Where the table declares no `clock_id`
+    and every coordinate takes its clock from one place, that clock is `clock_id`; otherwise a
+    coordinate reaching its clock elsewhere gets `<coordinate>_clock_id`. Derived from the
+    declaration alone, so the names do not depend on which columns a read selected.
+
+    Parameters
+    ----------
+    packet : PacketLike
+        The packet whose bound registries declare the resource.
+    resource_id : str
+        The table resource, core or extension.
+
+    Returns
+    -------
+    dict
+        Coordinate column to clock column, in declaration order.
+
+    Raises
+    ------
+    NotDeclared
+        If no bound registry declares the table, or a coordinate without `clock_from` sits in a
+        table with no `clock_id`.
+    Refused
+        If the name a clock would take is already a declared column, which it would overwrite.
+    """
+    declared = _declared_table(packet, resource_id)
+    names = {column["name"] for column in declared.get("columns", [])}
+    sources = _clock_sources(declared)
+    shared = "clock_id" not in names and len(set(sources.values())) == 1
+    out = {}
+    for coordinate, source in sources.items():
+        if source == "clock_id":
+            if "clock_id" not in names:
+                raise NotDeclared(f"{resource_id}.{coordinate} names no clock_from and the table declares no clock_id")
+            out[coordinate] = "clock_id"
+            continue
+        name = "clock_id" if shared else f"{coordinate}_clock_id"
+        if name in names:
+            raise Refused(f"{resource_id} declares {name}, so the clock of {coordinate} has no column to go in")
+        out[coordinate] = name
+    return out
+
+
+def attach_clocks(packet: PacketLike, resource_id: str, table: pa.Table) -> pa.Table:
+    """Add the clock each coordinate column's ticks are counted on, as the declaration says.
+
+    A coordinate's clock is its `clock_from` target where declared, else the row's `clock_id`
+    (Part 02 §8.4). A target in another table is read through the one reference this table
+    declares to it, taking only that table's key and clock columns for the keys present. A row
+    whose key finds no target row gets a null clock. :func:`clock_columns` names the added
+    columns; one already in `table` is kept, so attaching twice is attaching once.
+
+    Parameters
+    ----------
+    packet : PacketLike
+        The packet the table came from.
+    resource_id : str
+        The table's resource, whose declaration says where each clock is.
+    table : pyarrow.Table
+        Rows of that resource. Only coordinates it carries get a clock, and each needs the
+        columns its clock is reached through.
+
+    Returns
+    -------
+    pyarrow.Table
+        `table` with the clock columns appended.
+
+    Raises
+    ------
+    NotDeclared
+        If `clock_from` names a table this one does not reference exactly once.
+    ValueError
+        If `table` lacks a column a clock is reached through.
+    """
+    declared = _declared_table(packet, resource_id)
+    named = clock_columns(packet, resource_id)
+    for coordinate, source in _clock_sources(declared).items():
+        if coordinate in table.column_names and named[coordinate] not in table.column_names:
+            table = table.append_column(named[coordinate], _clock_of(packet, resource_id, declared, source, table))
+    return table
+
+
+def _clock_of(packet: PacketLike, resource_id: str, declared: Mapping[str, Any], source: str, table: pa.Table) -> Any:
+    """Read the clock `source` names for each row of `table`, null where the hop finds no row."""
+    target_resource, _, target = source.rpartition(".")
+    if not target_resource:
+        if source not in table.column_names:
+            raise ValueError(f"the clock of {resource_id} is its {source}, which the table does not carry")
+        return table.column(source)
+    references = [r for r in declared.get("references", []) if r["resource"] == target_resource]
+    if len(references) != 1:
+        raise NotDeclared(
+            f"{resource_id} declares {len(references)} references to {target_resource}, "
+            f"so clock_from {source} names no single row"
+        )
+    keys, target_keys = references[0]["columns"], references[0]["resource_columns"]
+    missing = [key for key in keys if key not in table.column_names]
+    if missing:
+        raise ValueError(f"the clock of {resource_id} is reached through {missing}, which the table does not carry")
+    local = [_plain(table.column(key)) for key in keys]
+    # Narrowed to the keys present: a parent such as `core.units` is small, but reading it whole
+    # per call is what an accessor called per unit cannot afford.
+    narrow: dict[str, Any] = {
+        name: [v for v in pc.unique(column).to_pylist() if v is not None]
+        for name, column in zip(target_keys, local, strict=True)
+    }
+    found = packet.table(target_resource, columns=list(dict.fromkeys([*target_keys, target])), **narrow)
+    local = [column.cast(found.column(name).type) for column, name in zip(local, target_keys, strict=True)]
+    if len(keys) == 1:
+        position = pc.index_in(local[0], value_set=_flat(found.column(target_keys[0])))
+        return pc.take(found.column(target), position)
+    # Composite keys: a left join keeps every row and an unmatched one null, and the row number
+    # restores the order the join does not keep.
+    joined_on = [f"k{i}" for i in range(len(keys))]
+    left = pa.table({**dict(zip(joined_on, local, strict=True)), "row": pa.array(np.arange(table.num_rows))})
+    parent = {k: found.column(name) for k, name in zip(joined_on, target_keys, strict=True)}
+    right = pa.table({**parent, "clock": found.column(target)})
+    joined = left.join(right, keys=joined_on, join_type="left outer").sort_by("row")
+    if joined.num_rows != table.num_rows:
+        raise Refused(f"{target_resource} holds a key {resource_id} references more than once")
+    return joined.column("clock")
+
+
+def _plain(column: Any) -> Any:
+    """Decode a dictionary column, so it compares against the parent's plain key."""
+    return column.cast(column.type.value_type) if pa.types.is_dictionary(column.type) else column
+
+
+def _placed(
+    ticks: Any, clock: Any, target: int, by_clock: Any, bound: float
+) -> tuple[pa.Array[Any], NDArray[np.bool_]]:
+    """Map one coordinate onto `target`, nulling what cannot be placed.
+
+    Returns the mapped column and which rows to keep: a null tick has nothing to place and is
+    kept, and a tick on a null clock cannot be placed.
+    """
+    ticks, clock = _flat(ticks), _flat(clock)
+    known = pc.and_(pc.is_valid(ticks), pc.is_valid(clock)).to_numpy(zero_copy_only=False)
+    parent = np.zeros(len(ticks), dtype=np.int64)
+    placed = np.zeros(len(ticks), dtype=bool)
+    rows = np.flatnonzero(known)
+    if rows.size:
+        batch = pa.record_batch({"t_tick": ticks.take(rows), "clock_id": clock.take(rows)})
+        parent[rows], placed[rows] = mapped(batch, target, by_clock, bound)
+    absent = pc.is_null(ticks).to_numpy(zero_copy_only=False)
+    return pa.array(parent, mask=~placed).cast(ticks.type), placed | absent
+
+
+def _resource_on_clock(
+    packet: PacketLike, table: pa.Table, clock: int | None, resource_id: str, bound: float | None
+) -> pa.Table:
+    """:func:`on_clock` over every coordinate the resource declares."""
+    table = attach_clocks(packet, resource_id, table)
+    declared = clock_columns(packet, resource_id)
+    by_column: dict[str, list[str]] = {}
+    for coordinate, column in declared.items():
+        if coordinate in table.column_names:
+            by_column.setdefault(column, []).append(coordinate)
+    if not by_column or table.num_rows == 0:
+        return table
+    present = sorted({value for column in by_column for value in _present(_flat(table.column(column)))})
+    target = default_clock(packet, present) if clock is None else clock
+    # One coordinate is a row's whole content, so a row it cannot place goes, as `on_clock` drops
+    # it and `analysis.spike_events` omits it. Among several, the others stay worth having.
+    drop = len(declared) == 1
+    keep = np.ones(table.num_rows, dtype=bool)
+    limit = declared_bound(packet) if bound is None else bound
+    for column, coordinates in by_column.items():
+        clock_column = _flat(table.column(column))
+        if _present(clock_column) == [target] and not clock_column.null_count:
+            continue
+        by_clock = anchors(packet)
+        for coordinate in coordinates:
+            ticks, placed = _placed(table.column(coordinate), clock_column, target, by_clock, limit)
+            if drop:
+                keep &= placed
+            table = table.set_column(table.column_names.index(coordinate), coordinate, ticks)
+        kind = _plain(clock_column).type
+        on_target = pc.if_else(pc.is_valid(clock_column), pa.scalar(target, kind), pa.scalar(None, kind))
+        table = table.set_column(table.column_names.index(column), column, on_target)
+    return table if keep.all() else table.filter(pa.array(keep))
+
+
+def on_clock(
+    packet: PacketLike,
+    table: pa.Table,
+    clock: int | None = None,
+    *,
+    resource_id: str | None = None,
+    bound: float | None = None,
+) -> pa.Table:
     """Return `table` with its ticks on one clock.
 
     A row whose tick the anchors cannot place is **dropped**: the mapping is undefined there
@@ -442,14 +656,22 @@ def on_clock(packet: PacketLike, table: pa.Table, clock: int | None = None, *, b
     narrower bound than the writer used drops rows the packet's own derived table kept, and the
     two disagree about which spikes exist.
 
+    With `resource_id`, every coordinate the resource declares is mapped, each through the clock
+    :func:`attach_clocks` gives it, and that clock column then names `clock`. A resource with one
+    coordinate drops a row it cannot place, as above. A resource with several nulls the one cell
+    and keeps the row, whose other coordinates may still place.
+
     Parameters
     ----------
     packet : PacketLike
         The packet the table came from, for its anchors and its declared bound.
     table : pyarrow.Table
-        Any table carrying `t_tick` and `clock_id`.
+        Any table carrying `t_tick` and `clock_id`, or with `resource_id` rows of that resource.
     clock : int, optional
         The clock to map onto. Defaults to the packet's reference clock.
+    resource_id : str, optional
+        The resource the rows are of, whose declaration says which columns are coordinates and
+        where each one's clock is.
     bound : float, optional
         How far from an anchor the mapping stays defined, in median anchor intervals. Defaults
         to :func:`declared_bound`.
@@ -458,8 +680,15 @@ def on_clock(packet: PacketLike, table: pa.Table, clock: int | None = None, *, b
     -------
     pyarrow.Table
         The same columns, `t_tick` on `clock` and `clock_id` naming it, minus the rows where the
-        mapping is undefined.
+        mapping is undefined. With `resource_id`, plus any clock column attached.
+
+    Raises
+    ------
+    NotAligned
+        If a clock the rows are on has no anchors, so no path reaches `clock`.
     """
+    if resource_id is not None:
+        return _resource_on_clock(packet, table, clock, resource_id, bound)
     if table.num_rows == 0:
         return table
     columns = {name: _flat(table.column(name)) for name in ("t_tick", "clock_id")}
@@ -484,7 +713,9 @@ def on_clock(packet: PacketLike, table: pa.Table, clock: int | None = None, *, b
     return out.filter(pa.array(keep))
 
 
-def seconds(packet: PacketLike, table: pa.Table, *, session_id: int | None = None) -> pa.Table:
+def seconds(
+    packet: PacketLike, table: pa.Table, *, resource_id: str | None = None, session_id: int | None = None
+) -> pa.Table:
     """Add a `t_second` column to a table whose ticks are on the reference clock.
 
     Part 01 §2.2: `(t_tick - t_zero_tick) / reference_tick_rate`, taking the rate as the declared
@@ -496,19 +727,26 @@ def seconds(packet: PacketLike, table: pa.Table, *, session_id: int | None = Non
     Seconds may be negative. A tick before the origin is a real condition, which the registry's
     `within_observation` rules report, and the origin is not clamped to hide it.
 
+    With `resource_id`, each coordinate the resource declares gets its own column, `<name>_tick`
+    becoming `<name>_second`, and each is checked against the clock :func:`attach_clocks` gives
+    it. A null tick is a null second.
+
     Parameters
     ----------
     packet : PacketLike
         The packet the table came from, for its origin and reference rate.
     table : pyarrow.Table
-        A table carrying `t_tick` and `clock_id`.
+        A table carrying `t_tick` and `clock_id`, or with `resource_id` rows of that resource.
+    resource_id : str, optional
+        The resource the rows are of, whose declaration says which columns are coordinates.
     session_id : int, optional
         Which session's origin to use.
 
     Returns
     -------
     pyarrow.Table
-        The same columns plus `t_second`.
+        The same columns plus `t_second`, or with `resource_id` any clock column attached and a
+        seconds column per coordinate.
 
     Raises
     ------
@@ -517,22 +755,37 @@ def seconds(packet: PacketLike, table: pa.Table, *, session_id: int | None = Non
     NotAligned
         If the table's ticks are not on the reference clock, since seconds from any other
         clock's ticks would be a different quantity wearing the same name.
+    Refused
+        If a seconds column's name is already taken.
     """
     start, num, den = origin(packet, session_id)
     reference = reference_clock(packet, session_id=session_id)
-    present = _present(_flat(table.column("clock_id"))) if table.num_rows else [reference]
-    if present != [reference]:
-        raise NotAligned(
-            f"seconds are defined on {reference!r}, but these ticks are on {present}; map them with on_clock first"
-        )
-    offset = pc.subtract(table.column("t_tick"), pa.scalar(start, pa.int64()))
-    return table.append_column("t_second", pc.divide(pc.cast(offset, pa.float64()), float(num) / float(den)))
+    if resource_id is None:
+        pairs = {"t_tick": "clock_id"}
+    else:
+        table = attach_clocks(packet, resource_id, table)
+        pairs = {c: k for c, k in clock_columns(packet, resource_id).items() if c in table.column_names}
+    for clock_column in dict.fromkeys(pairs.values()):
+        present = _present(_flat(table.column(clock_column))) if table.num_rows else []
+        if present not in ([], [reference]):
+            raise NotAligned(
+                f"seconds are defined on {reference!r}, but these ticks are on {present}; map them with on_clock first"
+            )
+    for coordinate in pairs:
+        name = f"{coordinate.removesuffix('_tick')}_second"
+        if name in table.column_names:
+            raise Refused(f"the table already carries {name}")
+        offset = pc.subtract(table.column(coordinate), pa.scalar(start, pa.int64()))
+        table = table.append_column(name, pc.divide(pc.cast(offset, pa.float64()), float(num) / float(den)))
+    return table
 
 
 __all__ = [
     "BOUND",
     "align",
     "anchors",
+    "attach_clocks",
+    "clock_columns",
     "declared_bound",
     "extrapolation_error",
     "mapped",

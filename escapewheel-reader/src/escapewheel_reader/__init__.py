@@ -64,7 +64,7 @@ from .axes import (
     describe,
 )
 from .channels import ChannelsUndeclared, electrode_at, kept_channels, runs_without_channels
-from .clocks import BOUND, align, on_clock, origin, reference_clock, seconds
+from .clocks import BOUND, align, attach_clocks, on_clock, origin, reference_clock, seconds
 from .dataset import Dataset, Session, open_dataset
 from .discriminators import (
     Discriminator,
@@ -172,6 +172,7 @@ __all__ = [
     "aligned_spikes",
     "ambiguities",
     "assigned_spikes",
+    "attach_clocks",
     "check_sources",
     "clock_windows",
     "declared",

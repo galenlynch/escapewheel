@@ -39,6 +39,7 @@ Clocks and seconds
 .. autosummary::
    :toctree: generated
 
+   attach_clocks
    on_clock
    seconds
    reference_clock
@@ -181,6 +182,7 @@ the module that defines it.
    protocols.PacketLike
    protocols.Memo
    clocks.anchors
+   clocks.clock_columns
    clocks.declared_bound
    clocks.extrapolation_error
    clocks.mapped

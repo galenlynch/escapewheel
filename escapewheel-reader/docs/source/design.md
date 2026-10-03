@@ -23,7 +23,9 @@ Polars, pandas or DuckDB unchanged.
 
 `Packet` resolves resources, reads them, acquires the registries the packet binds and registers
 tables with DuckDB. It has no method doing what a free function does: `spike_times(packet, 17)` is
-the only spelling of that read.
+the only spelling of that read. `Packet.table`'s `on_clock` and `seconds` options are the
+exception. They apply the semantics functions to the read rather than adding methods that mirror
+them, so a table is never one call away from being on its own clock (see [Clocks](#clocks)).
 
 `open_dataset` is the second entry point, for many packets at once (see
 [Datasets of many packets](#datasets-of-many-packets)).
@@ -56,6 +58,34 @@ would otherwise misplace.
 `spike_times` and `events` return ticks on the packet's reference clock by default, with
 `clock_id` alongside, because a stored tick from one probe compared with another's is the easy
 wrong answer. `clock=STORED` asks for the ticks as stored.
+
+Any other table reaches the same answer through its declaration. Part 02 §8.4 says which clock
+each coordinate column is on. It is the column's `clock_from` target where one is declared, and
+otherwise the row's own `clock_id`. A target such as `core.intervals.clock_id` is reached through
+the one reference the table declares to `core.intervals`. `attach_clocks(packet, resource_id,
+table)` follows that rule for any resource in a bound registry, core or extension. It reads only
+the referenced table's key and clock columns, for the keys present, and needs no per-table code.
+A row whose key finds no target row gets a null clock. `clocks.clock_columns` names the added
+columns, from the declaration alone:
+
+- A coordinate on the table's own `clock_id` keeps it.
+- Where the table declares no `clock_id` and every coordinate takes its clock from one place, that
+  clock is added as `clock_id`. This covers `core.spike_events`, `core.events`,
+  `core.sessions.t_zero_tick` and an extension's trial table.
+- Otherwise each coordinate reaching its clock elsewhere gets `<coordinate>_clock_id`, as
+  `core.clock_anchors.parent_tick` gets `parent_tick_clock_id`.
+- A name that is already declared is refused rather than overwritten.
+
+`on_clock` and `seconds` take a `resource_id` and then work on every coordinate, attaching clocks
+first. `on_clock` maps each coordinate through its own clock column and leaves that column naming
+the target. A tick the anchors cannot place, or one whose clock is null, is handled by how many
+coordinates the resource has. With one coordinate the tick is the row's whole content, so the row
+is dropped, as `analysis.spike_events` drops it. With several, as for intervals, trials and sites,
+only that cell becomes null and the row's other times are kept. A clock with no anchors still
+raises `NotAligned`. `seconds` adds `<name>_second` beside each `<name>_tick`. `Packet.table` takes
+`on_clock=True` (or a clock ID) and `seconds=True` to do the three steps eagerly in one read,
+because a packet that keeps each table on its own clock should not make synchronising it the
+caller's work. `Packet.scanner` stays lazy and leaves the ticks as stored.
 
 ## Observation windows and rates
 
