@@ -99,7 +99,7 @@ def dense_packet(two_clock_packet):
 
 def _in_span(packet, resource_id, column, clock_column, span):
     """The rows whose `column` mapping places in `span`, found by mapping every row."""
-    table = attach_clocks(packet, resource_id, packet.table(resource_id)).combine_chunks()
+    table = attach_clocks(packet, packet.table(resource_id), resource_id).combine_chunks()
     batch = pa.record_batch({"t_tick": table.column(column).chunk(0), "clock_id": table.column(clock_column).chunk(0)})
     parent, placed = mapped(batch, CLOCK_BEHAVIOUR, clock_graph(packet), declared_bound(packet))
     return table.filter(pa.array(placed & (parent >= span[0]) & (parent <= span[1])))

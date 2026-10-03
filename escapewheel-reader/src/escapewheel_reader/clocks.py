@@ -5,6 +5,7 @@ Over a packet:
 - :func:`attach_clocks` -- a table with the clock each of its coordinates is counted on.
 - :func:`on_clock` -- a table with its ticks on one clock, without what no anchor places.
 - :func:`seconds` -- a table with `t_second` added, from the session's declared origin.
+- :func:`seconds_expression` -- the same seconds as an expression a scan can project.
 - :func:`clock_columns` -- the column that holds each coordinate's clock.
 - :func:`reference_clock` -- the clock a packet reports times on.
 - :func:`origin` -- a session's time origin and the reference clock's rational rate.
@@ -25,14 +26,15 @@ The writer maps with these functions too, so ticks mapped at write time and at r
 from __future__ import annotations
 
 import os
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, cast, overload
 
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.dataset as pads
 from numpy.typing import NDArray
 
 from .dictionaries import lookup, values
@@ -738,7 +740,13 @@ def clock_columns(packet: PacketLike, resource_id: str) -> dict[str, str]:
     return out
 
 
-def attach_clocks(packet: PacketLike, resource_id: str, table: pa.Table) -> pa.Table:
+@overload
+def attach_clocks(packet: PacketLike, data: pa.Table, resource_id: str) -> pa.Table: ...
+@overload
+def attach_clocks(packet: PacketLike, data: pa.RecordBatch, resource_id: str) -> pa.RecordBatch: ...
+@overload
+def attach_clocks(packet: PacketLike, data: Stream, resource_id: str) -> pa.RecordBatchReader: ...
+def attach_clocks(packet: PacketLike, data: Arrow, resource_id: str) -> Arrow:
     """Add the clock each coordinate column's ticks are counted on, as the declaration says.
 
     A coordinate's clock is its `clock_from` target where declared, else the row's `clock_id`
@@ -750,17 +758,18 @@ def attach_clocks(packet: PacketLike, resource_id: str, table: pa.Table) -> pa.T
     Parameters
     ----------
     packet : PacketLike
-        The packet the table came from.
+        The packet the rows came from.
+    data : pyarrow.Table, RecordBatch, RecordBatchReader, or pyarrow.dataset Scanner or Dataset
+        Rows of `resource_id`. Only coordinates they carry get a clock, and each needs the
+        columns its clock is reached through.
     resource_id : str
         The table's resource, whose declaration says where each clock is.
-    table : pyarrow.Table
-        Rows of that resource. Only coordinates it carries get a clock, and each needs the
-        columns its clock is reached through.
 
     Returns
     -------
-    pyarrow.Table
-        `table` with the clock columns appended.
+    pyarrow.Table, RecordBatch or RecordBatchReader
+        `data` with the clock columns appended: a Table or RecordBatch as its own type, anything
+        else as a stream, which reads each referenced table once rather than per batch.
 
     Raises
     ------
@@ -769,16 +778,33 @@ def attach_clocks(packet: PacketLike, resource_id: str, table: pa.Table) -> pa.T
     ValueError
         If `table` lacks a column a clock is reached through.
     """
+    parents: dict[str, pa.Table] | None = None if isinstance(data, (pa.Table, pa.RecordBatch)) else {}
+    return _each(data, lambda table: _attach(packet, resource_id, table, parents))
+
+
+def _attach(packet: PacketLike, resource_id: str, table: pa.Table, parents: dict[str, pa.Table] | None) -> pa.Table:
     declared = _declared_table(packet, resource_id)
     named = clock_columns(packet, resource_id)
     for coordinate, source in _clock_sources(declared).items():
         if coordinate in table.column_names and named[coordinate] not in table.column_names:
-            table = table.append_column(named[coordinate], _clock_of(packet, resource_id, declared, source, table))
+            clock = _clock_of(packet, resource_id, declared, source, table, parents)
+            table = table.append_column(named[coordinate], clock)
     return table
 
 
-def _clock_of(packet: PacketLike, resource_id: str, declared: Mapping[str, Any], source: str, table: pa.Table) -> Any:
-    """Read the clock `source` names for each row of `table`, null where the hop finds no row."""
+def _clock_of(
+    packet: PacketLike,
+    resource_id: str,
+    declared: Mapping[str, Any],
+    source: str,
+    table: pa.Table,
+    parents: dict[str, pa.Table] | None,
+) -> Any:
+    """Read the clock `source` names for each row of `table`, null where the hop finds no row.
+
+    With `parents`, the referenced table is read whole once and kept there, for a stream whose
+    batches would otherwise each read it.
+    """
     target_resource, _, target = source.rpartition(".")
     if not target_resource:
         if source not in table.column_names:
@@ -795,13 +821,19 @@ def _clock_of(packet: PacketLike, resource_id: str, declared: Mapping[str, Any],
     if missing:
         raise ValueError(f"the clock of {resource_id} is reached through {missing}, which the table does not carry")
     local = [_plain(table.column(key)) for key in keys]
-    # Narrowed to the keys present: a parent such as `core.units` is small, but reading it whole
-    # per call is what an accessor called per unit cannot afford.
-    narrow: dict[str, Any] = {
-        name: [v for v in pc.unique(column).to_pylist() if v is not None]
-        for name, column in zip(target_keys, local, strict=True)
-    }
-    found = packet.table(target_resource, columns=list(dict.fromkeys([*target_keys, target])), **narrow)
+    columns = list(dict.fromkeys([*target_keys, target]))
+    if parents is not None:
+        if target_resource not in parents:
+            parents[target_resource] = packet.table(target_resource, columns=columns)
+        found = parents[target_resource]
+    else:
+        # Narrowed to the keys present: a parent such as `core.units` is small, but reading it
+        # whole per call is what an accessor called per unit cannot afford.
+        narrow: dict[str, Any] = {
+            name: [v for v in pc.unique(column).to_pylist() if v is not None]
+            for name, column in zip(target_keys, local, strict=True)
+        }
+        found = packet.table(target_resource, columns=columns, **narrow)
     try:
         return lookup(local, found, target_keys, target)
     except ValueError:
@@ -888,15 +920,42 @@ def _on_target(
     return table if keep is None or keep.all() else table.filter(pa.array(keep))
 
 
+@overload
 def on_clock(
     packet: PacketLike,
-    table: pa.Table,
+    data: pa.Table,
+    clock: int | None = ...,
+    *,
+    resource_id: str | None = ...,
+    bound: float | None = ...,
+) -> pa.Table: ...
+@overload
+def on_clock(
+    packet: PacketLike,
+    data: pa.RecordBatch,
+    clock: int | None = ...,
+    *,
+    resource_id: str | None = ...,
+    bound: float | None = ...,
+) -> pa.RecordBatch: ...
+@overload
+def on_clock(
+    packet: PacketLike,
+    data: Stream,
+    clock: int | None = ...,
+    *,
+    resource_id: str | None = ...,
+    bound: float | None = ...,
+) -> pa.RecordBatchReader: ...
+def on_clock(
+    packet: PacketLike,
+    data: Arrow,
     clock: int | None = None,
     *,
     resource_id: str | None = None,
     bound: float | None = None,
-) -> pa.Table:
-    """Return `table` with its ticks on one clock.
+) -> Arrow:
+    """Return `data` with its ticks on one clock.
 
     A row whose tick the anchors cannot place is **dropped**: the mapping is undefined there
     (Part 01 §3.9), and `analysis.spike_events` omits the same rows. Reading `core` through this
@@ -913,11 +972,13 @@ def on_clock(
     Parameters
     ----------
     packet : PacketLike
-        The packet the table came from, for its anchors and its declared bound.
-    table : pyarrow.Table
-        Any table carrying `t_tick` and `clock_id`, or with `resource_id` rows of that resource.
+        The packet the rows came from, for its anchors and its declared bound.
+    data : pyarrow.Table, RecordBatch, RecordBatchReader, or pyarrow.dataset Scanner or Dataset
+        Rows carrying `t_tick` and `clock_id`, or with `resource_id` rows of that resource. A
+        stream is mapped batch by batch, so narrow it first: what comes back takes no pushdown.
     clock : int, optional
-        The clock to map onto. Defaults to the packet's reference clock.
+        The clock to map onto. Defaults to the packet's reference clock; where it declares none,
+        to the one clock a table's rows reach, which a stream cannot know in advance and refuses.
     resource_id : str, optional
         The resource the rows are of, whose declaration says which columns are coordinates and
         where each one's clock is.
@@ -936,10 +997,31 @@ def on_clock(
     NotAligned
         If a clock the rows are on has no anchors, so no path reaches `clock`.
     """
+    parents: dict[str, pa.Table] | None = None
+    if not isinstance(data, (pa.Table, pa.RecordBatch)):
+        parents = {}
+        if clock is None:
+            try:
+                clock = reference_clock(packet)
+            except NotAligned as undeclared:
+                raise NotAligned(
+                    f"{undeclared}; name the clock, since a stream's clocks are not known in advance"
+                ) from None
+    return _each(data, lambda table: _mapped_table(packet, table, clock, resource_id, bound, parents))
+
+
+def _mapped_table(
+    packet: PacketLike,
+    table: pa.Table,
+    clock: int | None,
+    resource_id: str | None,
+    bound: float | None,
+    parents: dict[str, pa.Table] | None,
+) -> pa.Table:
     if resource_id is None:
         # A bare table is one coordinate, `t_tick`, on its own `clock_id`.
         return _on_target(packet, table, {"clock_id": ["t_tick"]}, True, clock, bound)
-    table = attach_clocks(packet, resource_id, table)
+    table = _attach(packet, resource_id, table, parents)
     declared = clock_columns(packet, resource_id)
     by_column: dict[str, list[str]] = {}
     for coordinate, column in declared.items():
@@ -948,10 +1030,20 @@ def on_clock(
     return _on_target(packet, table, by_column, len(declared) == 1, clock, bound)
 
 
+@overload
 def seconds(
-    packet: PacketLike, table: pa.Table, *, resource_id: str | None = None, session_id: int | None = None
-) -> pa.Table:
-    """Add a `t_second` column to a table whose ticks are on the reference clock.
+    packet: PacketLike, data: pa.Table, *, resource_id: str | None = ..., session_id: int | None = ...
+) -> pa.Table: ...
+@overload
+def seconds(
+    packet: PacketLike, data: pa.RecordBatch, *, resource_id: str | None = ..., session_id: int | None = ...
+) -> pa.RecordBatch: ...
+@overload
+def seconds(
+    packet: PacketLike, data: Stream, *, resource_id: str | None = ..., session_id: int | None = ...
+) -> pa.RecordBatchReader: ...
+def seconds(packet: PacketLike, data: Arrow, *, resource_id: str | None = None, session_id: int | None = None) -> Arrow:
+    """Add a `t_second` column to rows whose ticks are on the reference clock.
 
     Part 01 §2.2: `(t_tick - t_zero_tick) / reference_tick_rate`, taking the rate as the declared
     rational so nothing is lost to the rounded `tick_rate_hz`.
@@ -969,9 +1061,11 @@ def seconds(
     Parameters
     ----------
     packet : PacketLike
-        The packet the table came from, for its origin and reference rate.
-    table : pyarrow.Table
-        A table carrying `t_tick` and `clock_id`, or with `resource_id` rows of that resource.
+        The packet the rows came from, for its origin and reference rate.
+    data : pyarrow.Table, RecordBatch, RecordBatchReader, or pyarrow.dataset Scanner or Dataset
+        Rows carrying `t_tick` and `clock_id`, or with `resource_id` rows of that resource. Rows
+        already known to be on the reference clock can stay a scan through
+        :func:`seconds_expression` instead.
     resource_id : str, optional
         The resource the rows are of, whose declaration says which columns are coordinates.
     session_id : int, optional
@@ -995,10 +1089,38 @@ def seconds(
     """
     start, num, den = origin(packet, session_id)
     reference = reference_clock(packet, session_id=session_id)
+    parents: dict[str, pa.Table] | None = None if isinstance(data, (pa.Table, pa.RecordBatch)) else {}
+    return _each(data, lambda table: _with_seconds(packet, table, resource_id, start, num / den, reference, parents))
+
+
+def seconds_expression(packet: PacketLike, column: str = "t_tick", *, session_id: int | None = None) -> pc.Expression:
+    """Return `column` in seconds as an expression, for ticks already on the reference clock.
+
+    The arithmetic :func:`seconds` does, so a scan can project seconds without materializing.
+    Nothing checks the clock: use it only where the rows are known to be on the reference clock.
+
+    Examples
+    --------
+    >>> packet.scanner("analysis.spike_events", columns={"t_second": seconds_expression(packet)})  # doctest: +SKIP
+    """
+    start, num, den = origin(packet, session_id)
+    offset = pc.subtract(pc.field(column), pa.scalar(start, pa.int64()))
+    return pc.divide(offset.cast(pa.float64()), pa.scalar(float(num) / float(den)))
+
+
+def _with_seconds(
+    packet: PacketLike,
+    table: pa.Table,
+    resource_id: str | None,
+    start: int,
+    rate: float,
+    reference: int,
+    parents: dict[str, pa.Table] | None,
+) -> pa.Table:
     if resource_id is None:
         pairs = {"t_tick": "clock_id"}
     else:
-        table = attach_clocks(packet, resource_id, table)
+        table = _attach(packet, resource_id, table, parents)
         pairs = {c: k for c, k in clock_columns(packet, resource_id).items() if c in table.column_names}
     for clock_column in dict.fromkeys(pairs.values()):
         present = _present(_flat(table.column(clock_column))) if table.num_rows else []
@@ -1011,8 +1133,42 @@ def seconds(
         if name in table.column_names:
             raise Refused(f"the table already carries {name}")
         offset = pc.subtract(table.column(coordinate), pa.scalar(start, pa.int64()))
-        table = table.append_column(name, pc.divide(pc.cast(offset, pa.float64()), float(num) / float(den)))
+        table = table.append_column(name, pc.divide(pc.cast(offset, pa.float64()), rate))
     return table
+
+
+#: What a transform takes: one in memory, or a stream it maps batch by batch.
+Stream = pa.RecordBatchReader | pads.Scanner | pads.Dataset
+Arrow = pa.Table | pa.RecordBatch | Stream
+
+
+def _each(data: Arrow, transform: Callable[[pa.Table], pa.Table]) -> Arrow:
+    """Apply a table transform to any Arrow form, returning a Table or RecordBatch as itself and a stream otherwise."""
+    if isinstance(data, pa.Table):
+        return transform(data)
+    if isinstance(data, pa.RecordBatch):
+        out = transform(pa.Table.from_batches([data]))
+        return pa.record_batch([column.combine_chunks() for column in out.columns], schema=out.schema)
+    if isinstance(data, pads.Dataset):
+        data = data.scanner()
+    reader = data.to_reader() if isinstance(data, pads.Scanner) else data
+    if not isinstance(reader, pa.RecordBatchReader):
+        raise TypeError(
+            f"expected a pyarrow Table, RecordBatch, RecordBatchReader, Scanner or Dataset, not {type(data)}"
+        )
+    tables = (transform(pa.Table.from_batches([batch], schema=reader.schema)) for batch in reader)
+    # The first batch fixes the schema; an empty stream takes it from an empty table.
+    first = next(tables, None)
+    if first is None:
+        first = transform(reader.schema.empty_table())
+    schema = first.schema
+
+    def batches() -> Iterator[pa.RecordBatch]:
+        yield from first.to_batches()
+        for table in tables:
+            yield from table.cast(schema).to_batches()
+
+    return pa.RecordBatchReader.from_batches(schema, batches())
 
 
 __all__ = [
@@ -1030,4 +1186,5 @@ __all__ = [
     "origin",
     "reference_clock",
     "seconds",
+    "seconds_expression",
 ]

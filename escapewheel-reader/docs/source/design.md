@@ -71,8 +71,8 @@ wrong answer. `clock=STORED` asks for the ticks as stored.
 Any other table reaches the same answer through its declaration. Part 02 §8.4 says which clock
 each coordinate column is on. It is the column's `clock_from` target where one is declared, and
 otherwise the row's own `clock_id`. A target such as `core.intervals.clock_id` is reached through
-the one reference the table declares to `core.intervals`. `attach_clocks(packet, resource_id,
-table)` follows that rule for any resource in a bound registry, core or extension. It reads only
+the one reference the table declares to `core.intervals`. `attach_clocks(packet, table,
+resource_id)` follows that rule for any resource in a bound registry, core or extension. It reads only
 the referenced table's key and clock columns, for the keys present, and needs no per-table code.
 A row whose key finds no target row gets a null clock. `clocks.clock_columns` names the added
 columns, from the declaration alone:

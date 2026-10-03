@@ -406,7 +406,7 @@ def arm_map_kernel(plan: dict):
 
     packet = open_packet(plan)
     stored = packet.table("core.spike_events", columns=["unit_id", "t_tick"])
-    with_clock = clocks.attach_clocks(packet, "core.spike_events", stored)
+    with_clock = clocks.attach_clocks(packet, stored, "core.spike_events")
     batch = pa.record_batch(
         {
             "t_tick": with_clock.column("t_tick").combine_chunks(),
@@ -425,7 +425,7 @@ def arm_map_diagnose(plan: dict):
 
     packet = open_packet(plan)
     stored = clocks.attach_clocks(
-        packet, "core.spike_events", packet.table("core.spike_events", columns=["unit_id", "t_tick"])
+        packet, packet.table("core.spike_events", columns=["unit_id", "t_tick"]), "core.spike_events"
     )
     ticks = stored.column("t_tick").to_numpy()
     clock = stored.column("clock_id").to_numpy()

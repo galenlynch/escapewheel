@@ -45,6 +45,7 @@ Clocks and seconds
    attach_clocks
    on_clock
    seconds
+   seconds_expression
    reference_clock
    origin
    align

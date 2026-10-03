@@ -66,7 +66,7 @@ from .axes import (
     describe,
 )
 from .channels import ChannelsUndeclared, electrode_at, kept_channels, runs_without_channels
-from .clocks import BOUND, align, attach_clocks, on_clock, origin, reference_clock, seconds
+from .clocks import BOUND, align, attach_clocks, on_clock, origin, reference_clock, seconds, seconds_expression
 from .discriminators import (
     Discriminator,
     Unresolved,
@@ -202,6 +202,7 @@ __all__ = [
     "resolved",
     "runs_without_channels",
     "seconds",
+    "seconds_expression",
     "specialised",
     "spike_times",
     "sql_name",

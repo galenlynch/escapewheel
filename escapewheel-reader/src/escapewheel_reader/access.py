@@ -150,7 +150,7 @@ def events(
     found = packet.scan(CORE_EVENTS).to_table(filter=wanted, memory_pool=read_pool())
     # A tick has no meaning without its clock, and every caller needs it either to convert or to
     # report, so the stream's clock comes back with each event.
-    found = clocks.attach_clocks(packet, CORE_EVENTS, found)
+    found = clocks.attach_clocks(packet, found, CORE_EVENTS)
     return _finish(packet, found, t_tick, clock, seconds, session_id)
 
 
@@ -236,7 +236,7 @@ def spike_times(
         found = packet.scan(CORE_SPIKE_EVENTS).to_table(
             columns=["t_tick", "unit_id"], filter=wanted, memory_pool=read_pool()
         )
-        found = clocks.attach_clocks(packet, CORE_SPIKE_EVENTS, found).select(["unit_id", "t_tick", "clock_id"])
+        found = clocks.attach_clocks(packet, found, CORE_SPIKE_EVENTS).select(["unit_id", "t_tick", "clock_id"])
         found = _finish(packet, found, t_tick, clock, seconds, session_id)
         if t_tick is None:
             # Only for the unit's whole record. A range-narrowed read is a subset the
@@ -257,7 +257,7 @@ def spike_times(
     found = packet.scan(CORE_SPIKE_EVENTS).to_table(columns=["t_tick", *keys], filter=wanted, memory_pool=read_pool())
     if not exact:
         found = within(found, units, keys)
-    found = clocks.attach_clocks(packet, CORE_SPIKE_EVENTS, found)
+    found = clocks.attach_clocks(packet, found, CORE_SPIKE_EVENTS)
     return _finish(packet, found.select([*keys, "t_tick", "clock_id"]), t_tick, clock, seconds, session_id)
 
 

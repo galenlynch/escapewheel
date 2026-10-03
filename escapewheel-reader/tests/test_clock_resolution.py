@@ -205,52 +205,52 @@ def test_every_declared_coordinate_has_a_clock_column():
 
 def test_a_spike_takes_its_units_clock_and_an_unknown_unit_none(resolved_packet):
     spikes = pa.table({"unit_id": pa.array([UNITS[0], UNITS[2], 99], I32), "t_tick": pa.array([1, 2, 3], I64)})
-    attached = attach_clocks(resolved_packet, "core.spike_events", spikes)
+    attached = attach_clocks(resolved_packet, spikes, "core.spike_events")
     assert attached.column("clock_id").to_pylist() == [CLOCK_PROBE, CLOCK_BEHAVIOUR, None]
 
 
 def test_an_event_takes_its_streams_clock(resolved_packet):
-    attached = attach_clocks(resolved_packet, "core.events", resolved_packet.table("core.events"))
+    attached = attach_clocks(resolved_packet, resolved_packet.table("core.events"), "core.events")
     assert attached.column("clock_id").to_pylist() == [CLOCK_BEHAVIOUR]
 
 
 def test_an_anchors_parent_tick_takes_its_clocks_parent(resolved_packet):
-    attached = attach_clocks(resolved_packet, "core.clock_anchors", resolved_packet.table("core.clock_anchors"))
+    attached = attach_clocks(resolved_packet, resolved_packet.table("core.clock_anchors"), "core.clock_anchors")
     assert set(attached.column("clock_id").to_pylist()) == {CLOCK_PROBE}
     assert set(attached.column("parent_tick_clock_id").to_pylist()) == {CLOCK_BEHAVIOUR}
 
 
 def test_the_origin_takes_the_reference_clock(resolved_packet):
-    attached = attach_clocks(resolved_packet, "core.sessions", resolved_packet.table("core.sessions"))
+    attached = attach_clocks(resolved_packet, resolved_packet.table("core.sessions"), "core.sessions")
     assert attached.column("clock_id").to_pylist() == [CLOCK_BEHAVIOUR]
     assert seconds(resolved_packet, attached, resource_id="core.sessions").column("t_zero_second").to_pylist() == [0.0]
 
 
 def test_an_extension_trial_takes_its_intervals_clock(resolved_packet):
     trials = resolved_packet.table("dynamic_foraging.trials")
-    attached = attach_clocks(resolved_packet, "dynamic_foraging.trials", trials)
+    attached = attach_clocks(resolved_packet, trials, "dynamic_foraging.trials")
     assert attached.column("clock_id").to_pylist() == [CLOCK_PROBE, CLOCK_BEHAVIOUR, None]
 
 
 def test_a_two_column_hop_matches_on_both(resolved_packet):
-    attached = attach_clocks(resolved_packet, "lab.sweeps", resolved_packet.table("lab.sweeps"))
+    attached = attach_clocks(resolved_packet, resolved_packet.table("lab.sweeps"), "lab.sweeps")
     assert attached.column("clock_id").to_pylist() == [CLOCK_PROBE, CLOCK_BEHAVIOUR, None]
 
 
 def test_attaching_twice_is_attaching_once(resolved_packet):
-    trials = attach_clocks(resolved_packet, "dynamic_foraging.trials", resolved_packet.table("dynamic_foraging.trials"))
-    assert attach_clocks(resolved_packet, "dynamic_foraging.trials", trials).equals(trials)
+    trials = attach_clocks(resolved_packet, resolved_packet.table("dynamic_foraging.trials"), "dynamic_foraging.trials")
+    assert attach_clocks(resolved_packet, trials, "dynamic_foraging.trials").equals(trials)
 
 
 def test_a_hop_through_two_references_is_refused(resolved_packet):
     with pytest.raises(NotDeclared, match="2 references to core.intervals"):
-        attach_clocks(resolved_packet, "lab.pairs", resolved_packet.table("lab.pairs"))
+        attach_clocks(resolved_packet, resolved_packet.table("lab.pairs"), "lab.pairs")
 
 
 def test_a_hop_without_its_key_is_refused(resolved_packet):
     trials = resolved_packet.table("dynamic_foraging.trials", columns=["go_cue_start_tick"])
     with pytest.raises(ValueError, match="trial_id"):
-        attach_clocks(resolved_packet, "dynamic_foraging.trials", trials)
+        attach_clocks(resolved_packet, trials, "dynamic_foraging.trials")
 
 
 # -- mapping -----------------------------------------------------------------------------

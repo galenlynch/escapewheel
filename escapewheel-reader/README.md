@@ -53,7 +53,7 @@ timed = seconds(packet, aligned)  # with t_second from the session's time origin
 ```
 
 Any table resource, an extension's included, gets the same treatment from its declaration.
-`attach_clocks(packet, resource_id, table)` adds the clock each coordinate column is counted on,
+`attach_clocks(packet, table, resource_id)` adds the clock each coordinate column is counted on,
 following `clock_from` through the reference the table declares. `on_clock` and `seconds` take the
 same `resource_id` and then convert every coordinate. `Packet.table` does all three in one read:
 

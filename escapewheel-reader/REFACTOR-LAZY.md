@@ -175,7 +175,7 @@ Each step holds `spike_times` over every unit at 4.7 s and `on_clock` at 2.6 s.
   `Packet.scanner`; make `where` public.
 - [x] 2. `tick_range` and `tick_bounds` with the exact inverse, the monotonicity check and the
   property test; remove the union in `stored_span`.
-- [ ] 3. `attach_clocks`, `on_clock` and `seconds` over every Arrow form; `seconds_expression`.
+- [x] 3. `attach_clocks`, `on_clock` and `seconds` over every Arrow form; `seconds_expression`.
 - [ ] 4. Rebuild `Packet.table`, `spike_times`, `events`, `intervals` and `units` on these, with
   the reference-clock default and spike routing.
 - [ ] 5. `PacketSet.scan`, `PacketSet.scanner` and `PacketSet.table`.
