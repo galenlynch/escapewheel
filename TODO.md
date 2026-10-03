@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R167 accepted. R42 and R73 withdrawn. 2 change documents, 1 Open and 1 Ready. None of them is binding, and none takes a number until it is accepted.
+R1–R41, R43–R72 and R74–R167 accepted. R42 and R73 withdrawn. 2 change documents, 0 Open and 2 Ready. None of them is binding, and none takes a number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 91 Tier 2 rules (2 advisory)
@@ -138,11 +138,12 @@ already solves that this code solves again.
 
 Both are under `revisions/changes/`, whose README gives each one's status:
 
-- a null identifier says only that a row names nothing, as the default reading of every nullable
-  naming column, with `label_id` padding and the axis-form columns as the exceptions; and
-- a frame's `pts` is read after its container's edit list, `dropped` states as true, false or null
-  what the writer knows of a loss, and a new rule checks that `t_tick` does not decrease in
-  `frame_index` order.
+- Ready: a null identifier says only that a row names nothing, as the default reading of every
+  naming column, with `label_id` padding and the axis-form columns as the exceptions, and a writer
+  writes a null `label_id` only for padding; and
+- Ready: a frame's `pts` is read after its container's edit list, `dropped` states as true, false
+  or null what the writer knows of a loss, and a new rule checks that `t_tick` does not decrease
+  in `frame_index` order.
 
 **Accepted as R165, 2026-10-02:** Part 11 §4 states the ISO meaning of `BETWEEN` and `IN`, Part
 11 §8 makes a valid rule that a validator cannot evaluate with Part 11's semantics incomplete, Part
