@@ -306,7 +306,7 @@ def mapped(batch: pa.RecordBatch, reference: Any, anchors: Any, bound: float) ->
     parent = np.empty(ticks.size, dtype=np.int64)
     keep = np.zeros(ticks.size, dtype=bool)
     # Every clock with anchors, prepared before the workers start: a dozen at most, each cheap.
-    maps: dict[int, _Map | None] = {int(name): _Map(*pair, bound) for name, pair in anchors.items()}
+    maps: dict[int, _Map | None] = {int(name): _Map(pair[0], pair[1], bound) for name, pair in anchors.items()}
     maps[int(reference)] = None
 
     def run(lo: int, hi: int) -> None:
@@ -314,7 +314,7 @@ def mapped(batch: pa.RecordBatch, reference: Any, anchors: Any, bound: float) ->
         # Rows cluster by unit and a unit has one clock, so a chunk is ordinarily on one clock
         # and maps as a slice, gathering nothing.
         first = chunk[0]
-        groups = [(int(first), slice(lo, hi))] if (chunk == first).all() else []
+        groups: list[tuple[int, Any]] = [(int(first), slice(lo, hi))] if (chunk == first).all() else []
         if not groups:
             for name in np.unique(chunk).tolist():
                 groups.append((name, lo + np.flatnonzero(chunk == name)))
@@ -664,6 +664,10 @@ def _placed(
     parent = np.zeros(len(ticks), dtype=np.int64)
     placed = np.zeros(len(ticks), dtype=bool)
     rows = np.flatnonzero(known)
+    if rows.size == len(ticks):
+        # Nothing null, so nothing to gather around.
+        parent, placed = mapped(pa.record_batch({"t_tick": ticks, "clock_id": clock}), target, by_clock, bound)
+        return pa.array(parent, mask=~placed).cast(ticks.type), placed
     if rows.size:
         batch = pa.record_batch({"t_tick": ticks.take(rows), "clock_id": clock.take(rows)})
         parent[rows], placed[rows] = mapped(batch, target, by_clock, bound)

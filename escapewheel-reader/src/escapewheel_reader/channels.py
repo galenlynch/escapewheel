@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+import pyarrow as pa
+import pyarrow.compute as pc
 from numpy.typing import NDArray
 
 from .errors import PacketError, UnresolvableChannelIndex
@@ -39,7 +41,13 @@ class ChannelsUndeclared:
 
 
 def _rows(packet: PacketLike, resource_id: str, columns: list[str], *, required: bool = False) -> list[dict[str, Any]]:
-    """Read named columns from a resource, or nothing where the packet holds it not at all.
+    """Read a small resource's named columns as rows, a column it lacks reading as None."""
+    table = _table(packet, resource_id, columns, required=required)
+    return [] if table is None else [{c: row.get(c) for c in columns} for row in table.to_pylist()]
+
+
+def _table(packet: PacketLike, resource_id: str, columns: list[str], *, required: bool = False) -> pa.Table | None:
+    """Read named columns from a resource, or None where the packet holds it not at all.
 
     `core.sorting_run_channels` is optional, so a packet may carry no such resource and
     absence is ordinary rather than an error. A column is another matter where
@@ -47,14 +55,12 @@ def _rows(packet: PacketLike, resource_id: str, columns: list[str], *, required:
     channels, and reading it as one is the silent wrong answer this module exists to prevent.
     """
     if resource_id not in {r.resource_id for r in packet.resources()}:
-        return []
+        return None
     held = set(packet.table_resource(resource_id).schema().names)
     if required and (absent := [c for c in columns if c not in held]):
         raise PacketError(f"{resource_id} carries no {', '.join(absent)}, which every row must")
     present = [c for c in columns if c in held]
-    if not present:
-        return []
-    return [{c: row.get(c) for c in columns} for row in packet.table(resource_id, columns=present).to_pylist()]
+    return packet.table(resource_id, columns=present) if present else None
 
 
 def kept_channels(packet: PacketLike, *, sorting_run_id: int | None = None) -> dict[int, tuple[int, ...]]:
@@ -83,23 +89,27 @@ def kept_channels(packet: PacketLike, *, sorting_run_id: int | None = None) -> d
         wrong electrode and says nothing, so it is refused here too rather than assumed away in
         a packet this reader did not validate.
     """
-    rows = _rows(packet, CORE_SORTING_RUN_CHANNELS, ["sorting_run_id", "channel_index", "electrode_id"], required=True)
-    by_run: dict[int, list[tuple[int, int]]] = {}
-    for row in rows:
-        run = row["sorting_run_id"]
-        if sorting_run_id is not None and run != sorting_run_id:
-            continue
-        by_run.setdefault(int(run), []).append((int(row["channel_index"]), int(row["electrode_id"])))
+    columns = ["sorting_run_id", "channel_index", "electrode_id"]
+    table = _table(packet, CORE_SORTING_RUN_CHANNELS, columns, required=True)
+    if table is None or not table.num_rows:
+        return {}
+    if sorting_run_id is not None:
+        table = table.filter(pc.equal(table.column("sorting_run_id"), sorting_run_id))
+    table = table.sort_by([("sorting_run_id", "ascending"), ("channel_index", "ascending")])
+    run, index, electrode = (np.asarray(table.column(c).to_numpy(zero_copy_only=False)) for c in columns)
+    starts = np.flatnonzero(np.r_[True, run[1:] != run[:-1]])
+    stops = np.r_[starts[1:], run.size]
+    # Within each run, the sorted indices must be exactly 0 to n-1.
+    expected = np.arange(run.size) - np.repeat(starts, stops - starts)
     kept = {}
-    for run, pairs in by_run.items():
-        pairs.sort()
-        if [index for index, _ in pairs] != list(range(len(pairs))):
+    for start, stop in zip(starts.tolist(), stops.tolist(), strict=True):
+        if not np.array_equal(index[start:stop], expected[start:stop]):
             raise PacketError(
-                f"sorting run {run}: channel indices are not 0 to {len(pairs) - 1}, so a position "
+                f"sorting run {run[start]}: channel indices are not 0 to {stop - start - 1}, so a position "
                 f"in this list is not the index it was recorded under "
                 f"(core.sorting_run_channels.index_contiguous)"
             )
-        kept[run] = tuple(electrode for _, electrode in pairs)
+        kept[int(run[start])] = tuple(electrode[start:stop].tolist())
     return kept
 
 

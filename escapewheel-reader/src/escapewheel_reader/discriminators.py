@@ -135,11 +135,8 @@ def kinds(packet: PacketLike, resource_id: str, column: str | None = None) -> di
     and which a consumer reports apart from a value naming nothing.
     """
     found = _one(packet, resource_id, column)
-    values = packet.table(found.resource, columns=[found.column]).column(found.column).to_pylist()
-    counted: dict[str | None, int] = {}
-    for value in values:
-        counted[value] = counted.get(value, 0) + 1
-    return counted
+    counts = pc.value_counts(packet.table(found.resource, columns=[found.column]).column(found.column))
+    return dict(zip(counts.field("values").to_pylist(), counts.field("counts").to_pylist(), strict=True))
 
 
 def unresolved(packet: PacketLike) -> list[Unresolved]:

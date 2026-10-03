@@ -36,7 +36,7 @@ def _connect(packet: PacketLike, connection: duckdb.DuckDBPyConnection | None) -
     return con
 
 
-def _clock(packet: PacketLike, event_type: str, session_id: int | None) -> int:
+def _clock(packet: PacketLike, con: duckdb.DuckDBPyConnection, event_type: str, session_id: int | None) -> int:
     """Return the clock both sides are on, refusing if they differ.
 
     Checked rather than assumed. A packet may carry several streams on several clocks, and is
@@ -52,13 +52,9 @@ def _clock(packet: PacketLike, event_type: str, session_id: int | None) -> int:
     if not streams.num_rows:
         raise NotDeclared(f"no {event_type!r} stream in {CORE_EVENT_STREAMS}")
     on = sorted({v for v in streams.column("clock_id").unique().to_pylist() if v is not None})
-    spikes = (
-        packet.table(ANALYSIS_SPIKE_EVENTS, columns=["clock_id"], session_id=session_id)
-        .column("clock_id")
-        .unique()
-        .to_pylist()
-    )
-    reference = sorted({v for v in spikes if v is not None})
+    # Asked of DuckDB, which streams the column, where reading it whole holds every spike's clock.
+    spikes = con.sql(f"SELECT DISTINCT clock_id FROM {_spikes(session_id)} WHERE clock_id IS NOT NULL").fetchall()
+    reference = sorted(row[0] for row in spikes)
     if len(on) > 1 or on != reference:
         raise ClockMismatch(
             f"{event_type!r} events are on {on} and {ANALYSIS_SPIKE_EVENTS} is on {reference}; "
@@ -190,8 +186,8 @@ def aligned_spikes(
     >>> psth = aligned_spikes(packet, "go_cue", 15_625).aggregate(  # doctest: +SKIP
     ...     "t_rel_tick // 625 AS bin, count(*) AS n", "bin")
     """
-    _clock(packet, event_type, session_id)
     con = _connect(packet, connection)
+    _clock(packet, con, event_type, session_id)
     spikes, events = _spikes(session_id), _events(event_type, session_id)
     if windows_disjoint(packet, event_type, half_window, session_id=session_id):
         join = f"ASOF JOIN {events} e ON s.session_id = e.session_id AND s.t_tick >= e.t_tick - {half_window}"
@@ -255,8 +251,8 @@ def assigned_spikes(
     """
     if to not in ASSIGNMENTS:
         raise ValueError(f"to must be one of {ASSIGNMENTS}, not {to!r}")
-    _clock(packet, event_type, session_id)
     con = _connect(packet, connection)
+    _clock(packet, con, event_type, session_id)
     spikes, events = _spikes(session_id), _events(event_type, session_id)
     keys = "s.session_id, s.unit_id, s.t_tick"
 
