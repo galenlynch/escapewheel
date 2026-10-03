@@ -814,54 +814,70 @@ def _placed(
     kept, and a tick on a null clock cannot be placed.
     """
     ticks, clock = _flat(ticks), _flat(clock)
+    if not ticks.null_count and not clock.null_count:
+        # Nothing null, so nothing to gather around.
+        parent, placed = mapped(pa.record_batch({"t_tick": ticks, "clock_id": clock}), target, graph, bound)
+        return _ticks(parent, placed, ticks.type), placed
     known = pc.and_(pc.is_valid(ticks), pc.is_valid(clock)).to_numpy(zero_copy_only=False)
     parent = np.zeros(len(ticks), dtype=np.int64)
     placed = np.zeros(len(ticks), dtype=bool)
     rows = np.flatnonzero(known)
-    if rows.size == len(ticks):
-        # Nothing null, so nothing to gather around.
-        parent, placed = mapped(pa.record_batch({"t_tick": ticks, "clock_id": clock}), target, graph, bound)
-        return pa.array(parent, mask=~placed).cast(ticks.type), placed
     if rows.size:
         batch = pa.record_batch({"t_tick": ticks.take(rows), "clock_id": clock.take(rows)})
         parent[rows], placed[rows] = mapped(batch, target, graph, bound)
     absent = pc.is_null(ticks).to_numpy(zero_copy_only=False)
-    return pa.array(parent, mask=~placed).cast(ticks.type), placed | absent
+    return _ticks(parent, placed, ticks.type), placed | absent
 
 
-def _resource_on_clock(
-    packet: PacketLike, table: pa.Table, clock: int | None, resource_id: str, bound: float | None
+def _ticks(parent: NDArray[np.int64], placed: NDArray[np.bool_], kind: pa.DataType) -> pa.Array[Any]:
+    """Wrap mapped ticks as the column's type, null where unplaced, copying only what that needs."""
+    out = pa.array(parent) if placed.all() else pa.array(parent, mask=~placed)
+    return out if out.type == kind else out.cast(kind)
+
+
+def _on_target(
+    packet: PacketLike,
+    table: pa.Table,
+    by_column: Mapping[str, list[str]],
+    drop: bool,
+    clock: int | None,
+    bound: float | None,
 ) -> pa.Table:
-    """:func:`on_clock` over every coordinate the resource declares."""
-    table = attach_clocks(packet, resource_id, table)
-    declared = clock_columns(packet, resource_id)
-    by_column: dict[str, list[str]] = {}
-    for coordinate, column in declared.items():
-        if coordinate in table.column_names:
-            by_column.setdefault(column, []).append(coordinate)
+    """Map each coordinate through its clock column onto one clock, the one path every caller takes.
+
+    `by_column` names the coordinates counted on each clock column. With `drop`, a row any
+    coordinate cannot place goes: one coordinate is a row's whole content, as `analysis.spike_events`
+    omits it. Otherwise only the cell is nulled and the row's other coordinates stay worth having.
+    """
     if not by_column or table.num_rows == 0:
         return table
-    present = sorted({value for column in by_column for value in _present(_flat(table.column(column)))})
+    flat = {column: _flat(table.column(column)) for column in by_column}
+    present_by_column = {column: _present(values) for column, values in flat.items()}
+    present = sorted({value for values in present_by_column.values() for value in values})
     target = default_clock(packet, present) if clock is None else clock
-    # One coordinate is a row's whole content, so a row it cannot place goes, as `on_clock` drops
-    # it and `analysis.spike_events` omits it. Among several, the others stay worth having.
-    drop = len(declared) == 1
-    keep = np.ones(table.num_rows, dtype=bool)
+    keep: NDArray[np.bool_] | None = None
     limit = declared_bound(packet) if bound is None else bound
     for column, coordinates in by_column.items():
-        clock_column = _flat(table.column(column))
-        if _present(clock_column) == [target] and not clock_column.null_count:
+        clock_column = flat[column]
+        if present_by_column[column] == [target] and not clock_column.null_count:
+            # Already there: the whole single-clock case, and what keeps a packet with no anchors
+            # readable.
             continue
         graph = clock_graph(packet)
         for coordinate in coordinates:
             ticks, placed = _placed(table.column(coordinate), clock_column, target, graph, limit)
             if drop:
-                keep &= placed
+                keep = placed if keep is None else keep & placed
             table = table.set_column(table.column_names.index(coordinate), coordinate, ticks)
         kind = _plain(clock_column).type
-        on_target = pc.if_else(pc.is_valid(clock_column), pa.scalar(target, kind), pa.scalar(None, kind))
-        table = table.set_column(table.column_names.index(column), column, on_target)
-    return table if keep.all() else table.filter(pa.array(keep))
+        if clock_column.null_count:
+            on_target = pc.if_else(pc.is_valid(clock_column), pa.scalar(target, kind), pa.scalar(None, kind))
+        else:
+            on_target = pa.repeat(pa.scalar(target, kind), table.num_rows)
+        # The column keeps its declared type; a dictionary of one value buys nothing on an integer.
+        declared_type = table.schema.field(column).type
+        table = table.set_column(table.column_names.index(column), column, on_target.cast(declared_type))
+    return table if keep is None or keep.all() else table.filter(pa.array(keep))
 
 
 def on_clock(
@@ -912,32 +928,16 @@ def on_clock(
     NotAligned
         If a clock the rows are on has no anchors, so no path reaches `clock`.
     """
-    if resource_id is not None:
-        return _resource_on_clock(packet, table, clock, resource_id, bound)
-    if table.num_rows == 0:
-        return table
-    columns = {name: _flat(table.column(name)) for name in ("t_tick", "clock_id")}
-    present = _present(columns["clock_id"])
-    target = default_clock(packet, present) if clock is None else clock
-    if present == [target]:
-        # Already there. Worth the check: it is the whole single-clock case, and it keeps a
-        # packet with no anchors readable.
-        return table
-    limit = declared_bound(packet) if bound is None else bound
-    ticks, keep = mapped(pa.record_batch(columns), target, clock_graph(packet), limit)
-    if keep.all():
-        keep = None
-    names = table.column_names
-    out = table.set_column(names.index("t_tick"), "t_tick", pa.array(ticks))
-    # The replacement keeps the column's declared type. A dictionary would change it, and buys
-    # nothing on an integer, which is what every identifier is.
-    clock_column = table.column("clock_id")
-    out = out.set_column(
-        names.index("clock_id"),
-        "clock_id",
-        pa.repeat(pa.scalar(target, _plain(clock_column).type), table.num_rows).cast(clock_column.type),
-    )
-    return out if keep is None else out.filter(pa.array(keep))
+    if resource_id is None:
+        # A bare table is one coordinate, `t_tick`, on its own `clock_id`.
+        return _on_target(packet, table, {"clock_id": ["t_tick"]}, True, clock, bound)
+    table = attach_clocks(packet, resource_id, table)
+    declared = clock_columns(packet, resource_id)
+    by_column: dict[str, list[str]] = {}
+    for coordinate, column in declared.items():
+        if coordinate in table.column_names:
+            by_column.setdefault(column, []).append(coordinate)
+    return _on_target(packet, table, by_column, len(declared) == 1, clock, bound)
 
 
 def seconds(
