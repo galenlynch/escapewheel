@@ -103,8 +103,10 @@ Each returns a `pyarrow.compute.Expression`, usable on any Dataset or Scanner.
 - `seconds_expression(packet, column="t_tick", *, session_id=None)` — `(t - t_zero) * den / num`
   as float64, for data already on the reference clock, so seconds can be projected inside a scan.
 
-The reader checks a clock's anchors increase as it builds the clock's map, and refuses a range on
-a clock whose anchors do not, since the inverse is wrong there.
+The reader checks a clock's anchors increase as it builds the clock's map. A clock whose anchors do
+not, or that cannot reach `clock`, gets no interval: `tick_range` matches its rows whatever their
+tick and `tick_bounds` gives it int64's limits, so mapping them refuses as it would without the
+range.
 
 ### 3.3 Transforms
 
@@ -171,7 +173,7 @@ Each step holds `spike_times` over every unit at 4.7 s and `on_clock` at 2.6 s.
 
 - [x] 1. Rename `Dataset` to `PacketSet` and `open_dataset` to `open_packets`; add `filter=` to
   `Packet.scanner`; make `where` public.
-- [ ] 2. `tick_range` and `tick_bounds` with the exact inverse, the monotonicity check and the
+- [x] 2. `tick_range` and `tick_bounds` with the exact inverse, the monotonicity check and the
   property test; remove the union in `stored_span`.
 - [ ] 3. `attach_clocks`, `on_clock` and `seconds` over every Arrow form; `seconds_expression`.
 - [ ] 4. Rebuild `Packet.table`, `spike_times`, `events`, `intervals` and `units` on these, with

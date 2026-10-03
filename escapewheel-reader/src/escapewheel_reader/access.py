@@ -22,6 +22,7 @@ from . import clocks
 from .dictionaries import key_filter, within
 from .errors import NotAligned, NotDeclared
 from .observation import attach_support, unit_windows
+from .predicates import both, expression, tick_range
 from .protocols import Memo, PacketLike
 from .resource_ids import CORE_EVENT_STREAMS, CORE_EVENTS, CORE_INTERVALS, CORE_SPIKE_EVENTS, CORE_UNITS
 from .resources import read_pool
@@ -143,11 +144,10 @@ def events(
             .column("event_stream_id")
             .to_pylist()
         )
-    span = _span(packet, t_tick, clock)
-    if streams is None:
-        found = packet.table(CORE_EVENTS, session_id=session_id, t_tick=span)
-    else:
-        found = packet.table(CORE_EVENTS, session_id=session_id, t_tick=span, stream_id=streams)
+    wanted = both(
+        expression({"session_id": session_id, "stream_id": streams}), _range(packet, CORE_EVENTS, t_tick, clock)
+    )
+    found = packet.scan(CORE_EVENTS).to_table(filter=wanted, memory_pool=read_pool())
     # A tick has no meaning without its clock, and every caller needs it either to convert or to
     # report, so the stream's clock comes back with each event.
     found = clocks.attach_clocks(packet, CORE_EVENTS, found)
@@ -230,12 +230,11 @@ def spike_times(
     if (unit_id is None) == (units is None):
         raise ValueError("name exactly one of unit_id or units")
     if unit_id is not None:
-        found = packet.table(
-            CORE_SPIKE_EVENTS,
-            columns=["t_tick", "unit_id"],
-            unit_id=unit_id,
-            session_id=session_id,
-            t_tick=_span(packet, t_tick, clock),
+        wanted = both(
+            expression({"unit_id": unit_id, "session_id": session_id}), _range(packet, CORE_SPIKE_EVENTS, t_tick, clock)
+        )
+        found = packet.scan(CORE_SPIKE_EVENTS).to_table(
+            columns=["t_tick", "unit_id"], filter=wanted, memory_pool=read_pool()
         )
         found = clocks.attach_clocks(packet, CORE_SPIKE_EVENTS, found).select(["unit_id", "t_tick", "clock_id"])
         found = _finish(packet, found, t_tick, clock, seconds, session_id)
@@ -253,8 +252,8 @@ def spike_times(
     wanted, exact = key_filter(units, keys)
     if session_id is not None:
         wanted = wanted & (pc.field("session_id") == session_id)
-    if (pushed := _span(packet, t_tick, clock)) is not None:
-        wanted = wanted & (pc.field("t_tick") >= pushed[0]) & (pc.field("t_tick") <= pushed[1])
+    if (pushed := _range(packet, CORE_SPIKE_EVENTS, t_tick, clock)) is not None:
+        wanted = wanted & pushed
     found = packet.scan(CORE_SPIKE_EVENTS).to_table(columns=["t_tick", *keys], filter=wanted, memory_pool=read_pool())
     if not exact:
         found = within(found, units, keys)
@@ -333,17 +332,18 @@ def _unit_support(packet: PacketLike, unit_id: int, session_id: int | None) -> p
     return windows.filter(keep)
 
 
-def _span(
-    packet: PacketLike, span: tuple[int, int] | None, clock: int | Literal["stored"] | None
-) -> tuple[int, int] | None:
-    """Widen a range stated on the result's clock into one the file can be pruned by."""
-    if span is None or clock == STORED:
-        return span
+def _range(
+    packet: PacketLike, resource_id: str, span: tuple[int, int] | None, clock: int | Literal["stored"] | None
+) -> pc.Expression | None:
+    """Turn a range stated on the result's clock into a filter on the ticks the file holds."""
+    if span is None:
+        return None
+    if clock == STORED:
+        return expression({"t_tick": span})
     try:
-        target = clocks.reference_clock(packet) if clock is None else int(clock)
+        return tick_range(packet, resource_id, span, clock=None if clock is None else int(clock))
     except NotAligned:
-        return span
-    return clocks.stored_span(clocks.clock_graph(packet), target, span)
+        return None  # no clock to state it on; mapping refuses or decides, and the cut follows it
 
 
 def _finish(

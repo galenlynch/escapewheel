@@ -14,7 +14,7 @@ from escapewheel_reader.clocks import (
     extrapolation_error,
     mapped,
     rate,
-    stored_span,
+    stored_intervals,
 )
 from escapewheel_reader.errors import NotAligned, Unanchored
 
@@ -280,7 +280,12 @@ def test_a_sibling_clock_is_refused_with_the_way_to_stored_ticks():
         _on(2, [500], target=4)
 
 
-def test_a_range_widens_down_every_chain_onto_the_stored_ticks():
-    """A root range around 10,020 has to reach clock 3's stored tick 5 for that row group to be read."""
-    lo, hi = stored_span(CHAIN, 1, (10_020, 10_020))
-    assert lo <= 5 <= hi
+def test_a_range_inverts_down_a_chain_onto_exactly_the_stored_ticks():
+    """Clock 3's tick 5 is clock 2's 10, which lands on 10,020 at the root, and no other tick does."""
+    starts, stops = stored_intervals(CHAIN, 3, 1, (10_020, 10_020), 1.0)
+    assert (starts.tolist(), stops.tolist()) == ([5], [5])
+
+
+def test_a_range_beyond_every_anchor_inverts_to_nothing():
+    starts, _ = stored_intervals(CHAIN, 2, 1, (10**9, 10**9 + 10), 1.0)
+    assert starts.size == 0

@@ -16,8 +16,8 @@ Over arrays:
 - :func:`align` -- ticks mapped onto a parent clock, and a mask of those it cannot place.
 - :func:`rate` -- the parent-to-child rate fitted over an anchor sequence.
 - :func:`extrapolation_error` -- :func:`align`'s error beyond the terminal anchors.
-- :func:`mapped`, :func:`stored_span`, :func:`default_clock` -- the accessors' and the writer's
-  building blocks.
+- :func:`mapped`, :func:`stored_intervals`, :func:`default_clock` -- the accessors' and the
+  writer's building blocks.
 
 The writer maps with these functions too, so ticks mapped at write time and at read time agree.
 """
@@ -25,7 +25,7 @@ The writer maps with these functions too, so ticks mapped at write time and at r
 from __future__ import annotations
 
 import os
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any, cast
@@ -114,9 +114,6 @@ class _Map:
             raise ValueError("anchors do not increase together, so interpolation between them is undefined")
         self.anchor_t, self.anchor_p, self.bound = anchor_t, anchor_p, bound
         self.span = float(np.median(np.diff(anchor_t))) * bound
-        # A median interval on the parent: what rounding and the fitted ends can move a mapped
-        # range by, so :func:`stored_span` widens by it.
-        self.slack = float(np.median(np.diff(anchor_p)))
         self.slope, _ = rate(anchor_t, anchor_p)
         # The distance to the nearest anchor, which is what the bound is on, is piecewise linear:
         # zero at each anchor, rising with slope one to the midpoint and falling back. Knots at
@@ -155,15 +152,33 @@ class _Map:
                 parent[end] = parent_tick + np.rint(self.slope * offsets).astype(np.int64)
         return parent, np.interp(ticks, self.knots, self.distance) <= self.span
 
-    def inverse(self) -> _Map:
-        """Read the same anchors from parent to child, for widening a range and never for placing a tick."""
-        return _Map(self.anchor_p, self.anchor_t, self.bound)
+    def reach(self) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+        """Return the closed tick intervals this map places, found against :meth:`__call__` itself.
+
+        The distance to the nearest anchor rises from each anchor to the midpoint of its gap and
+        falls after it, so each half holds one boundary, and a gap wider than twice the span is a
+        hole.
+        """
+        anchor_t = self.anchor_t
+        margin = int(np.ceil(self.span)) + 1
+
+        def placed(ticks: NDArray[np.int64]) -> NDArray[np.bool_]:
+            return self(ticks)[1]
+
+        def unplaced(ticks: NDArray[np.int64]) -> NDArray[np.bool_]:
+            return ~self(ticks)[1]
+
+        first = _least(placed, anchor_t[:1] - margin, anchor_t[:1])
+        beyond = _least(unplaced, anchor_t[-1:], anchor_t[-1:] + margin)
+        middle = anchor_t[:-1] + np.diff(anchor_t) // 2
+        hole_start = _least(unplaced, anchor_t[:-1], middle)
+        hole_stop = _least(placed, middle, anchor_t[1:])
+        holes = hole_start <= middle
+        return np.concatenate([first, hole_stop[holes]]), np.concatenate([hole_start[holes] - 1, beyond - 1])
 
 
 class _Linear:
     """A clock's declared linear transform onto its parent, defined at every tick (Part 01 §3.9)."""
-
-    slack = 1.0
 
     def __init__(self, slope: float, offset: float) -> None:
         self.slope, self.offset = slope, offset
@@ -173,9 +188,12 @@ class _Linear:
         parent = np.rint(self.offset + self.slope * ticks.astype(np.float64)).astype(np.int64)
         return parent, np.ones(ticks.shape, dtype=bool)
 
-    def inverse(self) -> _Linear:
-        """Return the transform from parent to child, for widening a range."""
-        return _Linear(1.0 / self.slope, -self.offset / self.slope)
+    def reach(self) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+        """Return every tick within 2**53 whose parent tick fits in int64, the one interval it places."""
+        limit = float(2**62)
+        low = max(-(2**53), int(np.ceil((-limit - self.offset) / self.slope)))
+        high = min(2**53, int(np.floor((limit - self.offset) / self.slope)))
+        return np.array([low], dtype=np.int64), np.array([high], dtype=np.int64)
 
 
 class _Path:
@@ -499,33 +517,62 @@ def _clock_ids(column: Any) -> NDArray[np.int64]:
     return np.asarray(column.to_numpy(zero_copy_only=False), dtype=np.int64)
 
 
-def stored_span(graph: ClockGraph, target: int, span: tuple[int, int]) -> tuple[int, int]:
-    """Widen a range on `target` into one that covers it on every stored clock.
+def stored_intervals(
+    graph: ClockGraph, clock: int, target: int, span: tuple[int, int], bound: float
+) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+    """Return the closed intervals of `clock`'s ticks that map into `span` on `target`.
 
-    A constraint a caller states on the reference clock has to reach the file as a constraint
-    on the ticks the file holds, and each clock maps differently, so the pushed range is the
-    union over clocks. It is deliberately loose: its only job is to let row groups that cannot
-    match go unread, and the exact range is applied after mapping, where every row is on one
-    clock and the comparison means something.
+    Exact: a stored tick lies in an interval if and only if :func:`mapped` places it and its mapped
+    tick lies in `span`. Every edge is monotone, since anchors increase together and a transform's
+    slope is positive (Part 01 §3.9), so the ticks an edge sends into an interval form one
+    interval, found by bisecting the edge itself and then cut to what it places.
+
+    Raises
+    ------
+    NotAligned, Unanchored, ValueError
+        As :meth:`ClockGraph.path` does, including for anchors that do not increase, where the
+        inverse would be wrong.
     """
-    lo, hi = span
-    lows, highs = [lo], [hi]
-    for clock in graph.clocks() - {target}:
-        try:
-            path = graph.path(clock, target, BOUND)
-        except (NotAligned, ValueError):
-            continue  # its rows cannot reach the target, and mapping them refuses
-        ends = np.array([lo, hi], dtype=np.int64)
-        # Down the chain through each edge read the other way, widening by a median interval
-        # per hop: that covers the rounding and the fitted ends the forward map applies.
-        for edge in reversed(path.edges):
-            inverse = edge.inverse()
-            ends = inverse(ends)[0]
-            slack = int(np.ceil(inverse.slack))
-            ends = np.array([ends[0] - slack, ends[1] + slack], dtype=np.int64)
-        lows.append(int(ends[0]))
-        highs.append(int(ends[1]))
-    return min(lows), max(highs)
+    starts = np.array([span[0]], dtype=np.int64)
+    stops = np.array([span[1]], dtype=np.int64)
+    for edge in reversed(graph.path(clock, target, bound).edges):
+        starts, stops = _preimage(edge, starts[starts <= stops], stops[starts <= stops])
+    keep = starts <= stops
+    return starts[keep], stops[keep]
+
+
+def _preimage(
+    edge: _Map | _Linear, starts: NDArray[np.int64], stops: NDArray[np.int64]
+) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+    """Return the ticks `edge` places onto the closed intervals `starts` to `stops`, as closed intervals."""
+    reach_starts, reach_stops = edge.reach()
+    low = np.full(starts.shape, reach_starts[0], dtype=np.int64)
+    high = np.full(starts.shape, reach_stops[-1], dtype=np.int64)
+    first = _least(lambda ticks: edge(ticks)[0] >= starts, low, high)
+    last = _least(lambda ticks: edge(ticks)[0] > stops, low, high) - 1
+    # Each preimage cut to each interval the edge places; a few of each, so pairwise is cheap.
+    cut_starts = np.maximum(first[:, None], reach_starts[None, :]).ravel()
+    cut_stops = np.minimum(last[:, None], reach_stops[None, :]).ravel()
+    keep = cut_starts <= cut_stops
+    order = np.argsort(cut_starts[keep], kind="stable")
+    return cut_starts[keep][order], cut_stops[keep][order]
+
+
+def _least(
+    holds: Callable[[NDArray[np.int64]], NDArray[np.bool_]], low: NDArray[np.int64], high: NDArray[np.int64]
+) -> NDArray[np.int64]:
+    """Return the least tick in each closed `[low, high]` where `holds` does, or `high + 1` where none does.
+
+    `holds` must turn from False to True at most once across each interval.
+    """
+    low = np.array(low, dtype=np.int64)
+    high = np.array(high, dtype=np.int64) + 1
+    while (active := low < high).any():
+        middle = low + (high - low) // 2
+        found = holds(middle)
+        high = np.where(active & found, middle, high)
+        low = np.where(active & ~found, middle + 1, low)
+    return low
 
 
 # -- (packet, table) semantics ------------------------------------------------------------

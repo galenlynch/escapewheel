@@ -30,6 +30,8 @@ packet
     Opening one packet and reading its resources.
 packet_set
     Many packets as one relation.
+predicates
+    Row constraints as Arrow expressions, on stored values or on a clock.
 runs
     Which of several coexisting sortings or curations to read.
 manifest, resources, location
@@ -114,7 +116,7 @@ from .observation import (
 )
 from .packet import Packet, open_packet
 from .packet_set import PacketSet, Session, open_packets
-from .predicates import where
+from .predicates import tick_bounds, tick_range, where
 from .resources import ArrayResource, TableResource, read_pool
 from .runs import Ambiguity, ambiguities, preferred_run
 from .sql import quote, sql_name
@@ -205,6 +207,8 @@ __all__ = [
     "sql_name",
     "stream_windows",
     "support_of",
+    "tick_bounds",
+    "tick_range",
     "unit_windows",
     "units",
     "unresolved",

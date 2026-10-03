@@ -32,6 +32,8 @@ Reading tables
    spike_times
    distinct
    where
+   tick_range
+   tick_bounds
    STORED
 
 Clocks and seconds
