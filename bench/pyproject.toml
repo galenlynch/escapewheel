@@ -16,6 +16,7 @@ dependencies = [
     "pynwb>=4.2",
     "s3fs>=2026.7.0",
     "boto3>=1.40",
+    "narwhals>=2.26.0",
 ]
 
 [tool.uv]
