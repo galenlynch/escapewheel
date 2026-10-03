@@ -1,4 +1,4 @@
-"""Focused conformance checks for the revision lifecycle established by R120."""
+"""Focused conformance checks for the revision lifecycle and its process tools."""
 
 from __future__ import annotations
 
@@ -35,22 +35,16 @@ class ProcessSemanticsTests(unittest.TestCase):
         )
 
     def test_decision_domain_required_prospectively(self) -> None:
-        errors = stages.lifecycle_metadata(Path("future.md"), "", proposal_stage=True)
+        errors = stages.lifecycle_metadata(Path("R130-subject.md"), "")
         self.assertTrue(any("Decision domain" in error for error in errors))
 
     def test_change_form_required_prospectively(self) -> None:
-        proposal = metadata(**{"Decision domain": "specification"})
-        draft = metadata(**{"Decision domain": "specification"})
-        self.assertEqual(
-            stages.lifecycle_metadata(Path("proposal.md"), proposal, proposal_stage=True),
-            [],
-        )
+        record = metadata(**{"Decision domain": "specification"})
         self.assertTrue(
-            any(
-                "Change form" in error
-                for error in stages.lifecycle_metadata(Path("draft.md"), draft, proposal_stage=False)
-            )
+            any("Change form" in error for error in stages.lifecycle_metadata(Path("R130-subject.md"), record))
         )
+        record += "\n" + metadata(**{"Change form": "ordinary"})
+        self.assertEqual(stages.lifecycle_metadata(Path("R130-subject.md"), record), [])
 
     def test_process_amends_requires_path_anchor(self) -> None:
         text = metadata(
@@ -61,7 +55,7 @@ class ProcessSemanticsTests(unittest.TestCase):
                 "Amends": "Part NN §x",
             }
         )
-        errors = stages.lifecycle_metadata(Path("draft.md"), text, proposal_stage=False)
+        errors = stages.lifecycle_metadata(Path("R130-subject.md"), text)
         self.assertTrue(any("path#anchor" in error for error in errors))
 
     def test_ledger_process_owner_resolves(self) -> None:
@@ -84,7 +78,7 @@ class ProcessSemanticsTests(unittest.TestCase):
         text = (ROOT / "revisions/CONTRIBUTING.md").read_text()
         identifiers = process_rules.canonical_anchor_occurrences(text)
         self.assertEqual(len(identifiers), len(set(identifiers)))
-        self.assertEqual(len(identifiers), 16)
+        self.assertEqual(len(identifiers), 17)
 
     def test_anchor_bootstrap_is_metadata_only(self) -> None:
         before = "## 1. Subject\nBody\n"
@@ -136,6 +130,115 @@ class ProcessSemanticsTests(unittest.TestCase):
     def test_part00_process_citations_are_repointed(self) -> None:
         sites = [site for section in ("10.1", "10.2", "10.3", "10.4") for site in impact.citers("00", section)]
         self.assertEqual([site for site in sites if not site.startswith("spec/parts/07_")], [])
+
+
+#: A commit this repository holds, standing in for a document's baseline.
+BASELINE = "`9462b393a00e9e681b7a38528112483b6a5aa206`"
+OPEN_DOCUMENT = (
+    "# Subject\n\n| | |\n|---|---|\n"
+    + metadata(Status="**Open**", Opened="2026-10-02", **{"Based on": BASELINE}, Affects="Part 02 §6")
+    + "\n\n## 1. Problem\n\nWhy.\n\n## 2. Evidence\n\nSeen.\n\n## 3. Preferred direction\n\nThis way.\n\n"
+    "## 4. Questions\n\n1. **Which way?** **Answered 2026-10-02: this one.**\n2. **How far?**\n\n"
+    "## 5. Consequence\n\nNone.\n"
+)
+READY_DOCUMENT = (
+    "# Subject\n\n| | |\n|---|---|\n"
+    + metadata(
+        Status="**Ready**",
+        Opened="2026-10-02",
+        **{
+            "Based on": BASELINE,
+            "Change form": "ordinary",
+            "Amends": "Part 02 §6",
+            "Depends on": "none",
+            "Profile": "all",
+            "Decision clauses": "§3.1",
+        },
+    )
+    + "\n\n## 1. Problem\n\nWhy.\n\n## 2. Evidence\n\nSeen.\n\n## 3. Decision\n\n### 3.1 Rule\n\n"
+    "A writer MUST do it.\n\n## 4. Questions\n\n1. **Which way?** **Answered 2026-10-02: this one.**\n"
+    "2. **How far?**\n   **Answered 2026-10-02: far.**\n\n## 5. Consequence\n\nNone.\n\n"
+    "## 6. Conformance and implementation evidence\n\nA test.\n"
+)
+#: An accepted record numbered after R167, which declares no decision domain.
+LATER_RECORD = READY_DOCUMENT.replace("**Ready**", "**Accepted** 2026-10-02")
+
+
+class ChangeDocumentTests(unittest.TestCase):
+    """The stage check reads a change document at the status it declares."""
+
+    def errors(self, text: str, name: str = "subject.md") -> list[str]:
+        """Return the stage defects of `text` written as a change document named `name`."""
+        with tempfile.TemporaryDirectory() as scratch:
+            path = Path(scratch) / name
+            path.write_text(text)
+            return stages.change(path)
+
+    def test_open_document_with_unanswered_questions_passes(self) -> None:
+        self.assertEqual(self.errors(OPEN_DOCUMENT), [])
+
+    def test_ready_document_with_every_answer_passes(self) -> None:
+        self.assertEqual(self.errors(READY_DOCUMENT), [])
+
+    def test_accepted_record_without_domain_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as scratch:
+            path = Path(scratch) / "R168-subject.md"
+            path.write_text(LATER_RECORD)
+            self.assertEqual(stages.accepted(path), [])
+            path = Path(scratch) / "R166-subject.md"
+            path.write_text(LATER_RECORD)
+            self.assertTrue(any("Decision domain" in error for error in stages.accepted(path)))
+        for name in (
+            "R120-allow-controlled-specification-reorganization.md",
+            "R158-the-ledger-resolves-a-superseded-entrys-successor-and-keeps-no-ratchet.md",
+        ):
+            with self.subTest(record=name):
+                record = ROOT / "revisions/accepted" / name
+                self.assertTrue(record.is_file())
+                self.assertEqual(stages.accepted(record), [])
+
+    def test_ready_question_without_answer_fails(self) -> None:
+        text = READY_DOCUMENT.replace("   **Answered 2026-10-02: far.**\n", "")
+        self.assertIn("question 2 has no recorded answer", self.errors(text))
+
+    def test_open_document_with_bcp14_fails(self) -> None:
+        text = OPEN_DOCUMENT.replace("This way.", "A writer MUST do it.")
+        self.assertTrue(any("BCP 14" in error for error in self.errors(text)))
+
+    def test_change_document_with_domain_number_or_status_fails(self) -> None:
+        domain = OPEN_DOCUMENT.replace("| **Opened**", "| **Decision domain** | specification |\n| **Opened**")
+        self.assertTrue(any("Decision domain" in error for error in self.errors(domain)))
+        numbered = self.errors(OPEN_DOCUMENT, "R168-subject.md")
+        self.assertTrue(any("revision number" in error for error in numbered))
+        for status in ("**Proposal**", "**Draft**", "**Accepted** 2026-10-02"):
+            with self.subTest(status=status):
+                text = OPEN_DOCUMENT.replace("**Open**", status)
+                self.assertTrue(any("status is" in error for error in self.errors(text)))
+
+    def test_document_under_retired_directory_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as scratch:
+            proposals, drafts = Path(scratch) / "proposals", Path(scratch) / "drafts"
+            drafts.mkdir()
+            (drafts / "subject.md").write_text(READY_DOCUMENT)
+            with mock.patch.object(stages, "RETIRED", (proposals, drafts)):
+                self.assertEqual(stages.retired(), [drafts / "subject.md"])
+        self.assertEqual(stages.retired(), [])
+
+    def test_accepted_record_citing_change_document_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as scratch:
+            accepted = Path(scratch)
+            changes = accepted / "changes"
+            changes.mkdir()
+            (changes / "subject.md").write_text(OPEN_DOCUMENT)
+            later, earlier = accepted / "R168-later.md", accepted / "R166-earlier.md"
+            for path in (later, earlier):
+                path.write_text("As `subject.md` and `revisions/drafts/old.md` say.\n")
+            with (
+                mock.patch.object(check_citations, "ACCEPTED", accepted),
+                mock.patch.object(check_citations, "CHANGES", changes),
+            ):
+                self.assertEqual(len(check_citations.unaccepted_citations(later)), 2)
+                self.assertEqual(check_citations.unaccepted_citations(earlier), [])
 
 
 class LedgerErrorTests(unittest.TestCase):
@@ -251,6 +354,28 @@ class LedgerCheckTests(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()):
             ledger.main(["--summary"])
         self.assertEqual(ledger.LEDGER.read_bytes(), before)
+
+    def test_noted_entry_from_r167_fails(self) -> None:
+        later = {
+            "entry": '[clause."R3 §2"]\ndisposition = "rationale"\nnote = "why"\n\n',
+            "destination": '[clause."R3 §2"]\ndisposition = "applied"\n'
+            'where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-acceptance", note = "where" }]\n\n',
+        }
+        earlier = '[clause."R1 §2"]\ndisposition = "rationale"\nnote = "kept"\n\n' + RATIONALE.format(2)
+        # The scratch revisions are numbered 1 to 3, so the third stands for R167.
+        with mock.patch.object(ledger, "NOTELESS_FROM", 3):
+            for case, entry in later.items():
+                with self.subTest(case=case):
+                    status, report = self.check(earlier + entry)
+                    self.assertEqual(status, 1)
+                    self.assert_names(report, "NOTED", "R3 §2")
+            status, report = self.check(earlier + RATIONALE.format(3))
+            self.assertEqual(status, 0, report)
+
+    def test_incorporated_ledger_carries_no_new_note(self) -> None:
+        recorded = ledger.recorded()
+        self.assertTrue([key for key in recorded if key.startswith("R167 ")])
+        self.assertEqual(ledger.noted(recorded), [])
 
     def test_incorporated_ledger_resolves_every_superseded_entry(self) -> None:
         recorded = ledger.recorded()

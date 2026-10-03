@@ -11,14 +11,14 @@ This document preserves the design direction from the project review and the dep
 the resulting work. It exists so that narrowing or replacing an individual
 proposal does not discard research needed by later proposals.
 
-This is not a proposal, a revision draft, or an authority for packet behavior. It cannot settle a
+This is not a change document or an authority for packet behavior. It cannot settle a
 normative question or bypass the lifecycle in the [specification change guide](CONTRIBUTING.md).
-Each contract change below still needs its own reproduced problem, appraisal, promotion decision,
-draft, acceptance authorization, incorporation evidence, and verification. The current generated
+Each contract change below still needs its own reproduced problem, appraisal, answered questions,
+Decision, acceptance authorization, incorporation evidence, and verification. The current generated
 v0.2 material remains authoritative while this roadmap is being worked.
 
 Labels such as P0.1, P0.2, and P1 are coordination identifiers for work items in this roadmap. They
-are not section numbers in a proposal or draft, and they are not the permanent `R<N>` numbers
+are not section numbers in a change document, and they are not the permanent `R<N>` numbers
 assigned to accepted revisions.
 
 The principal inputs are the

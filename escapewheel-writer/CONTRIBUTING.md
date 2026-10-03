@@ -15,8 +15,8 @@ Use the monorepo's [authority model](../README.md#authority). Packet constructio
 v0.2 parts and the generated declarations in `../spec/artifacts/logical_schemas.json`.
 `../inventory/` records measured defects in real sources; every compensation cites one.
 
-**A defect found while implementing starts as a proposal or revision draft, never as a silent
-workaround here.** The current v0.2 text continues to govern until the change is accepted and
+**A defect found while implementing starts as a change document, never as a silent workaround
+here.** The current v0.2 text continues to govern until the change is accepted and
 incorporated. Cite the current specification section for behavior; add an accepted-revision
 citation where the code also needs to preserve why the rule exists.
 

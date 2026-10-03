@@ -152,7 +152,7 @@ actually states the rule, not a neighboring section or the revision that introdu
 specification parts and incorporated machine-readable artifacts do not cite revision records;
 accepted records and Git preserve that provenance and rationale.
 
-The specification never cites proposals, drafts, agent instructions, or contribution guides.
+The specification never cites change documents, agent instructions, or contribution guides.
 Those documents may change or disappear and have no normative standing for packet conformance.
 
 Place a citation next to the claim it supports. Do not collect citations in a provenance paragraph

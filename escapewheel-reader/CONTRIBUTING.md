@@ -21,8 +21,8 @@ come from the physical-profile descriptor copied from the specification's tree i
 `schemas/physical_profiles/`: `profile.py` checks it once, with the copied `descriptor.py`, and `ordering.py` takes Part 03 §5.4's
 overriding orders from its table interface for the writer and validator.
 
-**A defect found while implementing starts as a proposal or revision draft, never as a silent
-workaround here.** The current v0.2 text continues to govern until the change is accepted and
+**A defect found while implementing starts as a change document, never as a silent workaround
+here.** The current v0.2 text continues to govern until the change is accepted and
 incorporated. Several revisions exist only because an implementation attempt exposed something —
 that is the process working, not a detour.
 

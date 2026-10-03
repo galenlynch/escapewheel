@@ -18,7 +18,7 @@ These instructions apply throughout the monorepo. A nested `AGENTS.md` may add n
 - Keep agent instruction files short and agent-specific. Put explanations and developer workflows
   in a `README.md` or `CONTRIBUTING.md`, and normative requirements in the specification.
 - Do not accept, number, or incorporate a revision without explicit user direction. Agents may
-  prepare proposals and drafts.
+  prepare change documents.
 - Do not edit generated artifacts directly. Follow the source and generator documented in
   `CONTRIBUTING.md` or the applicable package guide.
 - Preserve unrelated working-tree changes and run repository commands from the monorepo root unless

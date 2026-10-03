@@ -4565,3 +4565,31 @@ where = [{ part = "05", anchor = "ew-amendment-scope" }]
 [clause."R166 §3.8"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-recipe-purpose" }]
+
+[clause."R167 §3.1"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-decision-domains" }, { path = "revisions/CONTRIBUTING.md", anchor = "ew-acceptance" }]
+
+[clause."R167 §3.2"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-proposal-evaluation" }]
+
+[clause."R167 §3.3"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-draft-writing" }]
+
+[clause."R167 §3.4"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-pre-acceptance-gates" }]
+
+[clause."R167 §3.5"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-current-owner-ledger" }]
+
+[clause."R167 §3.6"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-revision-scope" }, { path = "revisions/CONTRIBUTING.md", anchor = "ew-decision-domains" }]
+
+[clause."R167 §3.7"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-revision-scope" }]

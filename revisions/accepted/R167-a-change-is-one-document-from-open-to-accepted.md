@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-10-02 |
 | **Based on** | `9462b393a00e9e681b7a38528112483b6a5aa206` |
 | **Decision domain** | process |
 | **Change form** | ordinary |

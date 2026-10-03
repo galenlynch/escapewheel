@@ -1,0 +1,271 @@
+{
+  "version": 1,
+  "revision": "R167",
+  "based_on": "9462b393a00e9e681b7a38528112483b6a5aa206",
+  "clauses": {
+    "R167 §3.1": {
+      "owners": [
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-decision-domains"
+        },
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-acceptance"
+        }
+      ],
+      "projections": {
+        "unchanged": "the process owner is authored directly and has no generated projection"
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "change_document_with_domain_number_or_status_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "accepted_record_citing_change_document_fails"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "revisions/stages.py",
+          "revisions/check_citations.py",
+          "revisions/changes/a-null-identifier-says-only-that-a-row-names-nothing.md",
+          "revisions/changes/a-frames-pts-and-dropped-flag-each-have-one-meaning.md"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "revisions/README.md",
+          "revisions/changes/README.md",
+          "revisions/templates/change.md",
+          "revisions/AGENTS.md",
+          "AGENTS.md",
+          "CONTRIBUTING.md"
+        ]
+      }
+    },
+    "R167 §3.2": {
+      "owners": [
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-proposal-evaluation"
+        }
+      ],
+      "projections": {
+        "unchanged": "the process owner is authored directly and has no generated projection"
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "open_document_with_unanswered_questions_passes"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "open_document_with_bcp14_fails"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "revisions/stages.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "revisions/templates/change.md"
+        ]
+      }
+    },
+    "R167 §3.3": {
+      "owners": [
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-draft-writing"
+        }
+      ],
+      "projections": {
+        "unchanged": "the process owner is authored directly and has no generated projection"
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "ready_document_with_every_answer_passes"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "ready_question_without_answer_fails"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "revisions/stages.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "revisions/templates/change.md",
+          "revisions/templates/accepted-revision.md"
+        ]
+      }
+    },
+    "R167 §3.4": {
+      "owners": [
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-pre-acceptance-gates"
+        }
+      ],
+      "projections": {
+        "unchanged": "the process owner is authored directly and has no generated projection"
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "document_under_retired_directory_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "ready_question_without_answer_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "accepted_record_citing_change_document_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "clause_without_entry_fails"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "revisions/stages.py",
+          "revisions/check_citations.py",
+          "revisions/ledger.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the guide section that owns the rule is the only document that lists what the process tools check"
+      }
+    },
+    "R167 §3.5": {
+      "owners": [
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-current-owner-ledger"
+        }
+      ],
+      "projections": {
+        "unchanged": "the process owner is authored directly and has no generated projection"
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "noted_entry_from_r167_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "incorporated_ledger_carries_no_new_note"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "revisions/ledger.py",
+          "revisions/applied.toml"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the guide section that owns the rule is the only document that describes how an entry is recorded"
+      }
+    },
+    "R167 §3.6": {
+      "owners": [
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-revision-scope"
+        },
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-decision-domains"
+        }
+      ],
+      "projections": {
+        "unchanged": "the process owner is authored directly and has no generated projection"
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "accepted_record_without_domain_passes"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "change_document_with_domain_number_or_status_fails"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "revisions/stages.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "revisions/templates/accepted-revision.md"
+        ]
+      }
+    },
+    "R167 §3.7": {
+      "owners": [
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-revision-scope"
+        }
+      ],
+      "projections": {
+        "unchanged": "the process owner is authored directly and has no generated projection"
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "ledger_process_owner_resolves"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "revisions/ledger.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the guide section that owns the rule is the only document that describes how a guide change treats the ledger"
+      }
+    }
+  }
+}

@@ -155,10 +155,15 @@ def facts() -> dict[str, str]:
         number = int(re.match(r"R(\d+)", path.name).group(1))
         head = path.read_text()[:400]
         (accepted if "**Accepted**" in head else withdrawn if "withdrawn" in head.lower() else proposed).add(number)
-    # Proposals and drafts carry no number; the numbered space reads in application order.
-    # `revisions/drafts/README.md` holds the order of drafts awaiting acceptance.
-    proposals = [p for p in (ROOT / "revisions/proposals").glob("*.md") if p.name != "README.md"]
-    drafts = [p for p in (ROOT / "revisions/drafts").glob("*.md") if p.name != "README.md"]
+    # A change document carries no number; the numbered space reads in application order, which
+    # `revisions/changes/README.md` holds for the documents still open.
+    statuses = [
+        re.search(r"\| \*\*Status\*\* \| \*\*(\w+)\*\*", p.read_text())
+        for p in (ROOT / "revisions/changes").glob("*.md")
+        if p.name != "README.md"
+    ]
+    statuses = [match.group(1) if match else "" for match in statuses]
+    open_count, ready_count = statuses.count("Open"), statuses.count("Ready")
 
     extensions = sorted(p.stem for directory in EXTENSIONS for p in directory.glob("*.json"))
     per_document, whole = _check_counts()
@@ -175,11 +180,11 @@ def facts() -> dict[str, str]:
             + (f"{_revision_span(withdrawn)} withdrawn. " if withdrawn else "")
             + (f"{_revision_span(proposed)} proposed and not binding. " if proposed else "")
             + (
-                f"{len(proposals)} proposal{'s' if len(proposals) != 1 else ''} and "
-                f"{len(drafts)} draft{'s' if len(drafts) != 1 else ''} are open. "
-                "None of them is binding; a draft takes no number until it is accepted."
-                if proposals or drafts
-                else "No proposal or draft is open."
+                f"{len(statuses)} change document{'s' if len(statuses) != 1 else ''}, "
+                f"{open_count} Open and {ready_count} Ready. "
+                "None of them is binding, and none takes a number until it is accepted."
+                if statuses
+                else "No change document is open."
             )
         ),
         "tier1": (

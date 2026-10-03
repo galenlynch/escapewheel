@@ -45,7 +45,7 @@ partial reads expensive. Escapewheel keeps the science and changes the substrate
 | Directory | What it is |
 |---|---|
 | `spec/` | The specification's tree: the README and style guide, the numbered parts in `parts/`, the incorporated artifacts in `artifacts/`, the core registry's source in `source/`, the rendered listing, single-file rendering and examples in `informative/`, and the tools producing and checking them in `tools/`. See [Authority](#authority). |
-| [`revisions/`](revisions/) | The specification-change lifecycle: proposals, drafts, accepted decision records, project reviews, and in `baseline-v0.1/` the frozen v0.1 specification the current one was compiled from. |
+| [`revisions/`](revisions/) | The specification-change lifecycle: open change documents, accepted decision records, project reviews, and in `baseline-v0.1/` the frozen v0.1 specification the current one was compiled from. |
 | `extensions/` | The dynamic-foraging and VR-foraging extension registries, generated from TOML sources and checked where they sit by the tree's checker. |
 | `escapewheel-reader/` | The reference reader. Opens a packet, resolves resources, gives tabular and array access. |
 | `escapewheel-validator/` | The reference validator. SQL rules generated from the registry, plus the shim for what SQL cannot see. |
@@ -136,7 +136,7 @@ Python 3.12 or newer. Always `uv`, never bare `pip` or `python`.
 
 For the registry and generation pipeline, see `CONTRIBUTING.md`. The specification style guide is
 `spec/CONTRIBUTING.md`. For specification changes, start at
-`revisions/README.md`; uncertain changes begin as proposals rather than normative drafts.
+`revisions/README.md`; a change begins as an Open change document, before any normative text.
 
 Run the monorepo verification from the repository root:
 

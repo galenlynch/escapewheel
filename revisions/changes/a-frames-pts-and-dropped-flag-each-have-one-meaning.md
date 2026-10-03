@@ -2,10 +2,9 @@
 
 | | |
 |---|---|
-| **Status** | **Proposal** |
+| **Status** | **Open** |
 | **Opened** | 2026-10-02 |
 | **Based on** | `c0f9214b88a2b134bf130a37abde0c396fb0b932` |
-| **Decision domain** | specification |
 | **Affects** | Part 01 §3.18, which states what a frame's index, time and presentation timestamp are; the core declarations of `core.media_frames.frame_index`, `pts` and `dropped`; the `core.media_frames` rules |
 
 ## 1. Problem
@@ -112,22 +111,9 @@ No packet in the conformance corpus holds `core.media_frames`, so neither existi
 invalid case. The adapter's tests give presentation timestamps already in order and assert nothing
 of `dropped`.
 
-## 3. Desired outcome and constraints
+### 2.5 Alternatives
 
-- One stored `pts` per frame for a given file, whichever library a writer uses.
-- A `dropped` value whose true, false and null each state something a consumer can act on.
-- A check that catches frames timed in an order other than the one they are numbered in.
-- The existing packets stay conforming, and R69's order and R68's integer type stay as they are.
-
-## 4. Options and tradeoffs
-
-### 4.1 `pts`
-
-**Preferred direction: the timestamp after the edit list is applied.** `pts` is the frame's
-presentation timestamp on the container's presentation timeline, which is the timeline after its
-edit list is applied, in the container's own time base. A frame the edit list excludes is not
-presented, so it is not a frame the asset presents and gets no row. This is libav's default and the
-value the existing packets store.
+For `pts`:
 
 **Keep the current text.** Two conforming writers of one file can store values a constant apart,
 and a consumer seeking through a library that makes the other choice lands on the wrong frame.
@@ -136,10 +122,42 @@ and a consumer seeking through a library that makes the other choice lands on th
 does not present it, a frame the edit list excludes would need a row, and libav reports it only
 when told to ignore the list.
 
-### 4.2 `dropped`
+For `dropped`:
 
-**Preferred direction: three stated claims.** The **capture** is the sequence of frames the source
-records the camera producing, such as the exposures a frame counter numbers.
+**Keep the flag undefined.** A consumer cannot use false, and every writer chooses its own meaning.
+
+**Two values, with null forbidden.** A writer whose source has no frame counter would have to claim
+false or true without knowing either.
+
+**A per-frame capture counter beside the flag.** The reviewer declined it for v0.2. `t_tick` and
+`dropped` suffice to align a frame and to find a loss, and a counter is per frame, so it cannot sit
+in the asset's metadata and would be a new column whose values only some sources can supply.
+
+For the `t_tick` check:
+
+**No check.** A writer that pairs times with frames in decode order passes every rule, and the error
+is monotonic within each group of pictures, so nothing else shows it.
+
+## 3. Preferred direction
+
+The direction aims at:
+
+- One stored `pts` per frame for a given file, whichever library a writer uses.
+- A `dropped` value whose true, false and null each state something a consumer can act on.
+- A check that catches frames timed in an order other than the one they are numbered in.
+- The existing packets stay conforming, and R69's order and R68's integer type stay as they are.
+
+### 3.1 `pts` is read after the edit list
+
+`pts` is the frame's presentation timestamp on the container's presentation timeline, which is the
+timeline after its edit list is applied, in the container's own time base. A frame the edit list excludes is not
+presented, so it is not a frame the asset presents and gets no row. This is libav's default and the
+value the existing packets store.
+
+### 3.2 `dropped` states three claims
+
+The **capture** is the sequence of frames the source records the camera producing, such as the
+exposures a frame counter numbers.
 
 - True states that the writer knows the capture produced at least one frame, after the asset's
   previous frame and before this one, that the asset lacks. At frame 0 it states the same of the
@@ -151,32 +169,35 @@ The flag carries no count. A consumer estimating how many frames went missing re
 step in `t_tick`. A loss from either cause counts, whether the host dropped an exposure or a
 transcode lost a picture, which is the reading R69 §3 gave.
 
-**Keep the flag undefined.** A consumer cannot use false, and every writer chooses its own meaning.
+### 3.3 `t_tick` does not decrease in `frame_index` order
 
-**Two values, with null forbidden.** A writer whose source has no frame counter would have to claim
-false or true without knowing either.
-
-**A per-frame capture counter beside the flag.** The reviewer declined it for v0.2. `t_tick` and
-`dropped` suffice to align a frame and to find a loss, and a counter is per frame, so it cannot sit
-in the asset's metadata and would be a new column whose values only some sources can supply.
-
-### 4.3 The `t_tick` check
-
-**Preferred direction: an error-level rule that `t_tick` does not decrease in `frame_index`
-order**, comparing each frame with the frame before it on the same clock. Two frames of one asset
+An error-level rule checks that `t_tick` does not decrease in `frame_index` order, comparing each
+frame with the frame before it on the same clock. Two frames of one asset
 can share a tick where the clock is coarser than the frame period, so equal ticks pass. The check
 compares only frames on one clock because ticks on different clocks are not comparable.
 
-**No check.** A writer that pairs times with frames in decode order passes every rule, and the error
-is monotonic within each group of pictures, so nothing else shows it.
+### 3.4 One document
 
-### 4.4 One proposal or two
+The `pts` and `dropped` decisions are independent, and the revision guide advises splitting
+independent decisions. They are kept together because both rewrite Part 01 §3.18's account of a
+frame and the same registry declaration, and share one core version.
 
-The `pts` and `dropped` decisions are independent, and the revision guide's section on length and
-focus splits independent decisions. They are kept together because both rewrite Part 01 §3.18's account of a frame and the
-same registry declaration, and share one core version.
+## 4. Questions
 
-## 5. Impact sketch
+1. **Frames on more than one clock.** **Answered 2026-10-02: the check compares only consecutive
+   frames on the same clock,** and an asset's frames are not required to share one clock. Each
+   measured asset's frames lie on one clock, and `clock_id` is a per-frame column.
+2. **An edit list that presents one stored frame twice.** **Answered 2026-10-02: each presentation
+   gets its own row,** since each is a frame the asset presents. No measured file has such a list.
+3. **One document or two** (§3.4). **Answered 2026-10-02: one.**
+
+No question that would change the decision is open.
+
+No other open change document changes Part 01 §3.18 or `core.media_frames`. The one giving a null
+in a nullable naming column a default reading does not reach `pts` or `dropped`, which are not
+naming columns.
+
+## 5. Consequence
 
 | surface | effect |
 |---|---|
@@ -194,31 +215,3 @@ same registry declaration, and share one core version.
 | conformance fixtures and tests | Affected: a corpus packet holding `core.media_frames`, with invalid cases for `frame_index_contiguous`, `pts_increases_with_frame_index` and the new rule. |
 | revision lifecycle and tooling | Unchanged. |
 | publications and developer documentation | Affected: the regenerated parts and registry. |
-
-## 6. Open questions
-
-1. **Frames on more than one clock.** **Answered 2026-10-02: the check compares only consecutive
-   frames on the same clock,** and an asset's frames are not required to share one clock. Each
-   measured asset's frames lie on one clock, and `clock_id` is a per-frame column.
-2. **An edit list that presents one stored frame twice.** **Answered 2026-10-02: each presentation
-   gets its own row,** since each is a frame the asset presents. No measured file has such a list.
-3. **One proposal or two** (§4.4). **Answered 2026-10-02: one.**
-
-No question that would change the decision is open.
-
-No other proposal or draft changes Part 01 §3.18 or `core.media_frames`. The open proposal giving a
-null in a nullable naming column a default reading does not reach `pts` or `dropped`, which are not
-naming columns.
-
-## 7. Promotion criteria
-
-- [x] The baseline commit is recorded and the problem is demonstrated against its generated v0.2 specification.
-- [x] The current owner of each affected fact and the affected abstraction level are identified.
-- [x] Every impact-sketch surface is marked affected, unchanged with a reason, or unknown.
-- [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
-- [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
-- [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
-- [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
-- [x] The exact proposal and its final appraisal state are tracked in the current commit.
-- [ ] The proposal has explicit approval to advance to a revision draft.

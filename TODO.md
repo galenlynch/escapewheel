@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R166 accepted. R42 and R73 withdrawn. 2 proposals and 1 draft are open. None of them is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R167 accepted. R42 and R73 withdrawn. 2 change documents, 2 Open and 0 Ready. None of them is binding, and none takes a number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 91 Tier 2 rules (2 advisory)
@@ -44,7 +44,7 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 4. **Publish immutably** (P11): the released artifact set, its manifest and the publication
    verifier.
 
-**Order of work before the field test.** The refactor comes first, because each open proposal's
+**Order of work before the field test.** The refactor comes first, because each open change's
 code lands in a module the refactor moves.
 
 1. Refactor stages 1 to 5, each listed defect fixed in its stage.
@@ -134,9 +134,9 @@ read what each target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. One draft awaits acceptance
+## 3a. Two change documents are open
 
-The draft is under `revisions/drafts/`. Two proposals are open:
+Both are Open under `revisions/changes/`:
 
 - a null identifier says only that a row names nothing, as the default reading of every nullable
   naming column, with `label_id` padding and the axis-form columns as the exceptions; and
@@ -156,12 +156,11 @@ not declare non-conforming, and Part 05 §5.3 reports one at `error` under
 table it does not derive again that the registry it binds does not declare, unless a `[drop]` entry
 names it, and then writes the table without it. Recipe schema 0.5.0 admits `[drop]`.
 
-- **A change is one document from Open to Accepted.** A process draft, opened 2026-10-02 with no
-  proposal and not appraised. One change document under `revisions/changes/` replaces the proposal
-  and the draft, moving in place from Open to Ready. Only the stage fields, citations, ledger and
-  the reviewer's authorization bind acceptance; the pre-acceptance gates become guidance. It
-  ratifies the ledger section's rule that a new entry carries no note, and returns changes to the
-  revision guide to the ordinary workflow under the reviewer's approval.
+**Accepted as R167, 2026-10-02:** one change document under `revisions/changes/` carries a change
+from Open to Ready to acceptance, replacing the proposal and the draft. Only the stage fields,
+citations, ledger and the reviewer's authorization bind acceptance; the pre-acceptance gates are
+guidance. A ledger entry from R167 on carries no note, and the revision guide changes by ordinary
+commits under the reviewer's approval.
 
 ## 3b. Sidecars are declared, and video is not yet packet-owned
 

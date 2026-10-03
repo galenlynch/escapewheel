@@ -5,7 +5,9 @@ current owner. An `applied` target may identify an untouched numbered section, a
 section, or an anchored process section. A current owner need not cite the accepted revision back;
 target existence is mechanically checkable, while semantic fidelity remains a review judgment.
 A `superseded` entry names the later accepted revision that replaced its clause, as
-`revisions/CONTRIBUTING.md#ew-current-owner-ledger` requires. The check reads and never writes.
+`revisions/CONTRIBUTING.md#ew-current-owner-ledger` requires, and an entry for a clause of R167 or a
+later revision carries no `note`, at its top level or in a destination. The check reads and never
+writes.
 
 Registry dispositions resolve through exact JSON locations in `registry-targets.toml`. Older
 revisions retain their historical clause inference; current revisions enumerate `Decision clauses`.
@@ -45,6 +47,8 @@ REGISTRY_ROOTS = ("spec/artifacts", "extensions", "escapewheel-aind/extensions")
 DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
 #: The one form a `superseded` entry's `by` takes.
 SUCCESSOR = re.compile(r"R(\d+)")
+#: The first revision whose entries carry no `note`; earlier notes are left as they stand.
+NOTELESS_FROM = 167
 
 
 class LedgerError(Exception):
@@ -203,6 +207,20 @@ def unresolved(  # noqa: C901
     return dangling, unparsed
 
 
+def noted(ledger: dict[str, dict]) -> list[str]:
+    """Return the clauses from `NOTELESS_FROM` onward whose entry or a destination carries a note."""
+    found = []
+    for key, entry in ledger.items():
+        number = re.match(r"R(\d+) ", key)
+        if number is None or int(number.group(1)) < NOTELESS_FROM:
+            continue
+        where = entry.get("where")
+        destinations = where if isinstance(where, list) else []
+        if "note" in entry or any(isinstance(d, dict) and "note" in d for d in destinations):
+            found.append(key)
+    return sorted(found)
+
+
 def accepted_revisions() -> frozenset[int]:
     """The number of every revision an accepted record states."""
     return frozenset(
@@ -328,6 +346,7 @@ def main(argv: list[str] | None = None) -> int:
     dangling, unparsed = unresolved(ledger)
     unsucceeded = successor_defects(ledger, accepted_revisions())
     registry_defects = registry_target_defects(ledger)
+    annotated = noted(ledger)
     counts: dict[str, int] = {}
     for entry in ledger.values():
         counts[entry.get("disposition", "?")] = counts.get(entry.get("disposition", "?"), 0) + 1
@@ -338,12 +357,15 @@ def main(argv: list[str] | None = None) -> int:
 
     for key, title in sorted(undisposed.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])):
         print(f"    UNDISPOSED  {key:<12} {'' if args.summary else title[:62]}".rstrip())
-    for key in stale:
-        print(f"    STALE       {key:<12} the ledger disposes a clause no revision states")
+    for label, keys, reason in (
+        ("STALE", stale, "the ledger disposes a clause no revision states"),
+        ("PLACELESS", placeless, "applied, but `where` names no part"),
+        ("NOTED", annotated, f"an entry from R{NOTELESS_FROM} onward carries no `note`"),
+    ):
+        for key in keys:
+            print(f"    {label:<11} {key:<12} {reason}")
     for key, value in sorted(bad.items()):
         print(f"    BAD         {key:<12} disposition {value!r} is not one of {sorted(DISPOSITIONS)}")
-    for key in placeless:
-        print(f"    PLACELESS   {key:<12} applied, but `where` names no part")
     for key, target in dangling:
         print(f"    DANGLING    {key:<12} {target}")
     for key, piece in unparsed:
@@ -360,6 +382,7 @@ def main(argv: list[str] | None = None) -> int:
         + len(unparsed)
         + len(unsucceeded)
         + len(registry_defects)
+        + len(annotated)
     )
     if undisposed:
         print(f"\n{len(undisposed)} clause(s) need a disposition")

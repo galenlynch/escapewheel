@@ -6,11 +6,12 @@ Three forms are resolved:
     Part 03 §5.4    against spec/parts/03_*.md
     §3.1            against the citing document itself
 
-A live document is an open proposal or draft, a numbered part, or any other tracked Markdown or
-Python file. An accepted revision, a project review and the frozen v0.1 specification are history:
-they are read against the baseline they were written on, never gated on the current tree
-(`revisions/CONTRIBUTING.md#ew-citation-context`), so none of them is read here. An accepted
-revision is still a citation target.
+A live document is a change document, a numbered part, or any other tracked Markdown or Python
+file. An accepted revision, a project review and the frozen v0.1 specification are history: they are
+read against the baseline they were written on, never gated on the current tree
+(`revisions/CONTRIBUTING.md#ew-citation-context`). The exception is an accepted revision `HEAD` does
+not yet hold, whose baseline is the tree it is incorporated into, so it is read like a live document.
+An accepted revision from R167 onward also may not cite a document that has not been accepted.
 
 A revision or part citation that does not resolve fails. An unprefixed
 `§N` matching no local heading is reported and does not fail, since it usually continues a
@@ -29,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -39,6 +41,7 @@ except ModuleNotFoundError:  # Direct execution from revisions/.
 
 HERE = Path(__file__).resolve().parent
 ACCEPTED = HERE / "accepted"
+CHANGES = HERE / "changes"
 SPEC = HERE.parent / "spec"
 PARTS = SPEC / "parts"
 sys.path.insert(0, str(SPEC / "tools"))
@@ -61,6 +64,10 @@ NUMBERED = re.compile(r"`(\d\d)`")
 MARKDOWN_ANCHOR = re.compile(r"\[[^\]]+\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)")
 SOURCE_ANCHOR = re.compile(r"`([^`#]+\.md)#(ew-[a-z0-9-]+)`")
 LINKED_PART = re.compile(rf"\[Part (\d\d) §({specdoc.SECTION})\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)")
+#: A path into a directory that holds, or once held, documents not yet accepted.
+UNACCEPTED_PATH = re.compile(r"\b(?:changes|proposals|drafts)/[a-z0-9-]+\.md\b")
+#: The first accepted revision that may cite no unaccepted document.
+SELF_CONTAINED_FROM = 167
 
 
 def headings(text: str) -> set[str]:
@@ -220,8 +227,31 @@ def current_contract_history_refs() -> list[str]:
     return defects
 
 
+def committed(path: Path) -> bool:
+    """Whether `HEAD` holds this file, which makes an accepted record history."""
+    target = f"HEAD:{path.relative_to(HERE.parent).as_posix()}"
+    return subprocess.run(["git", "cat-file", "-e", target], cwd=HERE.parent, capture_output=True).returncode == 0
+
+
+def incoming() -> list[Path]:
+    """Accepted records the working tree adds, which are checked as live until committed."""
+    return [p for p in sorted(ACCEPTED.glob("R[0-9]*.md")) if p.is_file() and not committed(p)]
+
+
+def unaccepted_citations(path: Path) -> list[str]:
+    """Each citation, in an accepted record from `SELF_CONTAINED_FROM` on, of an unaccepted document."""
+    number = re.match(r"R(\d+)-", path.name)
+    if path.parent != ACCEPTED or number is None or int(number.group(1)) < SELF_CONTAINED_FROM:
+        return []
+    text = path.read_text()
+    names = {p.name for p in CHANGES.glob("[!.]*.md") if p.name != "README.md"}
+    found = [match.group() for match in UNACCEPTED_PATH.finditer(text)]
+    found += [name for name in sorted(names) if f"`{name}`" in text]
+    return [f"cites `{name}`, which has not been accepted" for name in found]
+
+
 def elsewhere() -> list[Path]:
-    """Every live working-tree document and source file other than the proposals and drafts."""
+    """Every live working-tree document and source file other than the change documents."""
     listed = specdoc.tracked_files(HERE.parent, whole_names=False)
     found = []
     for name in listed:
@@ -230,8 +260,8 @@ def elsewhere() -> list[Path]:
             continue
         if path.suffix not in {".py", ".md"} or not path.is_file():
             continue
-        # The proposals and drafts are read in their own pass.
-        if name.startswith(("revisions/drafts/", "revisions/proposals/")):
+        # The change documents are read in their own pass.
+        if name.startswith("revisions/changes/"):
             continue
         found.append(path)
     return found
@@ -242,14 +272,14 @@ def main() -> int:
     ap.add_argument("--quiet", action="store_true", help="errors only")
     args = ap.parse_args()
 
-    paths = sorted((HERE / "proposals").glob("[!.]*.md"))
-    paths += sorted((HERE / "drafts").glob("[!.]*.md"))
+    paths = sorted(p for p in CHANGES.glob("[!.]*.md") if p.name != "README.md")
     # An editor's lock file is a symlink to a target that never existed -- Emacs writes
     # `.#name.md -> user@host:pid`. Following one raises, so a full `verify.py` would fail for as
     # long as any tracked document is open. `is_file()` is false for a dangling link and true for
     # a real one, so this skips the lock and nothing else.
     paths = [p for p in paths if p.is_file()]
     code = elsewhere()
+    records = incoming()
     broken = 0
 
     history_defects = current_contract_history_refs()
@@ -273,9 +303,10 @@ def main() -> int:
                 if before != after:
                     print(f"  order   {target.name}: §{after} follows §{before}")
 
-    for path in paths + code:
+    for path in paths + records + code:
         errors, parts, loose = check(path)
         errors += parts
+        errors += unaccepted_citations(path)
         # The current citation rule binds prose spelling; a source file is read only for resolution.
         if path.suffix == ".md":
             errors += numbered(path.read_text())
@@ -286,7 +317,10 @@ def main() -> int:
         if not args.quiet:
             for line in loose:
                 print(f"  loose   {shown}: {line}")
-    print(f"{len(paths)} proposals and drafts and {len(code)} other live files, {broken} unresolved citation(s)")
+    print(
+        f"{len(paths)} change documents, {len(records)} uncommitted accepted records and {len(code)} other "
+        f"live files, {broken} unresolved citation(s)"
+    )
     return 1 if broken else 0
 
 

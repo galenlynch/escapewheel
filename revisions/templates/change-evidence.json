@@ -1,7 +1,7 @@
 {
   "version": 1,
   "revision": "R<N>",
-  "based_on": "<full commit hash against which the draft was appraised>",
+  "based_on": "<full commit hash of the Ready document's baseline>",
   "clauses": {
     "R<N> §3.1": {
       "owners": [

@@ -25,8 +25,7 @@ fixtures and conformance probes depend on it.
 | `spec/parts/01_*.md` through `12_*.md` | subject-owning numbered parts, including their local normative references; normative prose changes through an accepted revision's incorporation |
 | `spec/CONTRIBUTING.md` | the non-normative specification style guide |
 | `spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md` | generated convenience rendering; never edited directly |
-| `revisions/proposals/*.md` | active problem statements and alternatives; non-authoritative |
-| `revisions/drafts/*.md` | candidate normative changes; non-authoritative and unnumbered |
+| `revisions/changes/*.md` | open change documents, Open or Ready; non-authoritative and unnumbered |
 | `revisions/accepted/R<N>-*.md` | accepted decision records explaining changes incorporated into the specification or revision process |
 | `spec/source/core/*.toml` | the core registry's source: one file per resource, named by its resource ID, and `registry.toml` for the document's own fields |
 | `spec/artifacts/registry.schema.json` | the local-shape schema a registry document validates against |
@@ -222,7 +221,7 @@ the order matters.
 
 | you want to | edit | then |
 |---|---|---|
-| add or change a column, key, type, reference | begin with a proposal or draft, then get the revision accepted and edit the table's file in `spec/source/core/` | `verify.py`; `revisions/CONTRIBUTING.md` has the whole sequence |
+| add or change a column, key, type, reference | begin with a change document, then get the revision accepted and edit the table's file in `spec/source/core/` | `verify.py`; `revisions/CONTRIBUTING.md` has the whole sequence |
 | add a Tier 2 rule | a `[[rules]]` entry in the table's file | `verify.py` |
 | change how Tier 1 is derived | `escapewheel-validator/.../generate.py` | `verify.py` |
 | add an extension | a directory `extensions/<id>/` holding `registry.toml` and one file per resource | `extensions/registries.py build extensions`; `verify.py` |
@@ -235,7 +234,7 @@ the order matters.
 locates each accepted clause in the generated registry, so a declaration traces to the argument
 that set it. A declaration changed with no revision breaks that chain silently.
 
-Moving a draft to an accepted revision requires explicit authorization. Acceptance and
+Accepting a Ready change document as a revision requires explicit authorization. Acceptance and
 incorporation into the applicable current owner are one reviewable change; until it is complete,
 the existing v0.2 text and revision-process guide remain authoritative for their respective
 subjects.
@@ -269,7 +268,7 @@ the revision is cited for its *other* clauses. `revisions/ledger.py` is what see
 accepted clause has no entry. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 885 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 892 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 8. What each check is for
@@ -289,7 +288,7 @@ and those checks:
 
 | check | catches |
 |---|---|
-| `revisions/stages.py` | an open or prospective accepted artifact with invalid lifecycle metadata, missing stage sections, template residue, or no exact draft clause list |
+| `revisions/stages.py` | a change document or prospective accepted record with invalid lifecycle metadata, missing sections for its status, an unanswered question in a Ready document, template residue, or no exact Decision clause list; any file under the retired `proposals/` or `drafts/` |
 | `revisions/test_evidence.py` | regressions in owner, corpus, verifier-stage, and complete-manifest validation |
 | `revisions/evidence.py` | an accepted current-format clause with no owner, projection, conformance evidence, implementation disposition, or documentation disposition |
 | `revisions/check_citations.py` and `revisions/repoint.py` | a citation that does not resolve, or implementation source that names a historical decision where the current part owns the rule |

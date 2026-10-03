@@ -2,10 +2,9 @@
 
 | | |
 |---|---|
-| **Status** | **Proposal** |
+| **Status** | **Open** |
 | **Opened** | 2026-10-02 |
 | **Based on** | `c0f9214b88a2b134bf130a37abde0c396fb0b932` |
-| **Decision domain** | specification |
 | **Affects** | a new subsection of Part 02 §6, which gives each presence state and no meaning to a null; Part 01 §§3.12 and 3.17, which give that meaning for one column family; Part 03 §§5.6 and 6.3; the descriptions of `core.devices.parent_device_id`, `core.sessions.source_session_id` and `core.processing_runs.supersedes_run_id`; the core registry version |
 
 ## 1. Problem
@@ -103,7 +102,26 @@ absence was never adopted. HL7 FHIR adds a companion `data-absent-reason` code i
 null, and that is the pattern Part 03 §5.6 already rejects in favour of recording the specific
 distinguishing fact.
 
-## 3. Desired outcome and constraints
+### 2.5 Alternatives
+
+- **Keep the current design.** Three descriptions keep claiming readings no writer honours, and
+  every new nullable column is a new chance to omit one.
+- **"None exists" as the default.** This is the literal reading of a null as no such thing. It
+  contradicts R161's consumer clauses and Part 01 §3.18. It would also oblige a writer to refuse
+  whenever a source is silent, so a packet from an NWB file stating no device attachment could not
+  be built. The reviewer confirmed it is not the reading meant (§4).
+- **A `null_means` attribute on each column.** It would put a meaning into the registry
+  meta-schema that Part 00 §2.2 assigns to prose. It would cost a meta-schema version and a version
+  of every extension, and it still could not separate an ambiguous column's two cases.
+- **A companion reason column.** This is FHIR's `data-absent-reason` pattern. It doubles the
+  column set with values adapters mostly cannot fill, and Part 03 §5.6 asks for the specific
+  distinguishing fact instead.
+- **A writer refuses every null it cannot classify.** This makes silent sources unbuildable, as in
+  the "none exists" alternative.
+- **Sentinel values or sentinel rows.** Part 03 §5.6 forbids a sentinel value, and a sentinel row
+  would be a referent that does not exist.
+
+## 3. Preferred direction
 
 A consumer reading any nullable naming column can tell what its null says without reading the
 writer's code. The outcome must:
@@ -113,9 +131,7 @@ writer's code. The outcome must:
 - stay buildable from a source that is silent about a referent; and
 - change no row of an existing packet.
 
-## 4. Options and tradeoffs
-
-### 4.1 Preferred direction: a default reading in Part 02, with named exceptions
+### 3.1 A default reading in Part 02, with named exceptions
 
 Part 02 §6 gains a rule for every nullable column whose role is `identifier` or `discriminator`. A
 null in such a column says only that the row names nothing in that column. It does not say that
@@ -165,26 +181,7 @@ distinguishing fact. None is proposed here, since no measured source states it.
 otherwise in its description. The default needs no extension change. The corpus holds 269 null
 `block_id` values in 269 trial rows, and both session packets hold none.
 
-### 4.2 Alternatives
-
-- **Keep the current design.** Three descriptions keep claiming readings no writer honours, and
-  every new nullable column is a new chance to omit one.
-- **"None exists" as the default.** This is the literal reading of a null as no such thing. It
-  contradicts R161's consumer clauses and Part 01 §3.18. It would also oblige a writer to refuse
-  whenever a source is silent, so a packet from an NWB file stating no device attachment could not
-  be built. The reviewer confirmed it is not the reading meant (§6).
-- **A `null_means` attribute on each column.** It would put a meaning into the registry
-  meta-schema that Part 00 §2.2 assigns to prose. It would cost a meta-schema version and a version
-  of every extension, and it still could not separate an ambiguous column's two cases.
-- **A companion reason column.** This is FHIR's `data-absent-reason` pattern. It doubles the
-  column set with values adapters mostly cannot fill, and Part 03 §5.6 asks for the specific
-  distinguishing fact instead.
-- **A writer refuses every null it cannot classify.** This makes silent sources unbuildable, as in
-  the "none exists" alternative.
-- **Sentinel values or sentinel rows.** Part 03 §5.6 forbids a sentinel value, and a sentinel row
-  would be a referent that does not exist.
-
-### 4.3 Placement
+### 3.2 Placement
 
 The reading is a logical fact about a column's values, so it belongs in Part 02 beside presence,
 not in Part 03's encoding section or in each Part 01 concept. An ordinary change appends it as a
@@ -194,7 +191,22 @@ subsection at the end of Part 02 §6, which takes its own anchor when created. P
 R166 §3.1 added a subsection at the end of Part 02 §6 on a column a table's declaration does not
 declare. This rule's subsection follows it. Neither depends on the other's content.
 
-## 5. Impact sketch
+## 4. Questions
+
+1. **Which reading does the default take?** **Answered 2026-10-02: the agnostic one,** that a null
+   says only that the row names nothing (§3.1). The reviewer's earlier approval of "null means no
+   such thing" was given on a description of it as the reading R161 gave the null producing run,
+   which §2.3 shows is the agnostic reading; this answer replaces it.
+2. **Do the sixteen silent descriptions restate the default?** **Answered 2026-10-02: no.** Part 02
+   owns the rule once, and a reader of the registry alone does not find it there. R161's seven
+   descriptions, which already agree with it, stay.
+3. **Does the default cover every nullable column, or only naming ones?** **Answered 2026-10-02:
+   naming ones only,** the `identifier` and `discriminator` columns. For a data column Part 03 §5.6
+   already implies that a null records no value.
+
+No question that would change the decision is open.
+
+## 5. Consequence
 
 | surface | effect |
 |---|---|
@@ -209,31 +221,3 @@ declare. This rule's subsection follows it. Neither depends on the other's conte
 | conformance fixtures and tests | corpus regenerates under the new core version; a registry test pins the three new descriptions |
 | revision tooling | unchanged |
 | documentation | generated column tables pick up the three descriptions |
-
-## 6. Open questions
-
-1. **Which reading does the default take?** **Answered 2026-10-02: the agnostic one,** that a null
-   says only that the row names nothing (§4.1). The reviewer's earlier approval of "null means no
-   such thing" was given on a description of it as the reading R161 gave the null producing run,
-   which §2.3 shows is the agnostic reading; this answer replaces it.
-2. **Do the sixteen silent descriptions restate the default?** **Answered 2026-10-02: no.** Part 02
-   owns the rule once, and a reader of the registry alone does not find it there. R161's seven
-   descriptions, which already agree with it, stay.
-3. **Does the default cover every nullable column, or only naming ones?** **Answered 2026-10-02:
-   naming ones only,** the `identifier` and `discriminator` columns. For a data column Part 03 §5.6
-   already implies that a null records no value.
-
-No question that would change the decision is open.
-
-## 7. Promotion criteria
-
-- [x] The baseline commit is recorded and the problem is demonstrated against its generated v0.2 specification.
-- [x] The current owner of each affected fact and the affected abstraction level are identified.
-- [x] Every impact-sketch surface is marked affected, unchanged with a reason, or unknown.
-- [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
-- [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
-- [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
-- [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
-- [x] The exact proposal and its final appraisal state are tracked in the current commit.
-- [ ] The proposal has explicit approval to advance to a revision draft.
