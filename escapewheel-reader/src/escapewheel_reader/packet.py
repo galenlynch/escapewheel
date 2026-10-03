@@ -387,12 +387,42 @@ class Packet:
         >>> packet.table("core.events", event_type="reward")           # doctest: +SKIP
         >>> packet.table("core.spike_events", t_tick=(30_000, 60_000))  # doctest: +SKIP
         """
-        handle = self.table_resource(resource_id)
-        if not where:
-            # Projection is not a filter, so it goes straight to the Parquet reader rather
-            # than through a dataset scan that would touch every row.
-            return handle.to_arrow(columns=columns)
-        return handle.dataset().to_table(columns=columns, filter=self._predicate(where), memory_pool=read_pool())
+        return self.scanner(resource_id, columns=columns, **where).to_table()
+
+    def scanner(
+        self,
+        resource_id: str,
+        *,
+        columns: list[str] | None = None,
+        **where: Predicate,
+    ) -> pads.Scanner:
+        """Narrow a table resource as :meth:`table` does, without reading it.
+
+        The scanner carries the projection, the pushed-down constraints and the reader's memory
+        pool, so reading it later costs what :meth:`table` costs. Polars, DuckDB and Arrow each
+        consume one, directly or through ``to_reader()``; ``to_batches()`` streams a resource too
+        large to hold.
+
+        Parameters
+        ----------
+        resource_id : str
+            Dotted resource ID.
+        columns : list of str, optional
+            Read only these columns. Reading every column is the default.
+        **where : str, int, float, bool, tuple, list, set, or None
+            Column constraints, as for :meth:`table`.
+
+        Returns
+        -------
+        pyarrow.dataset.Scanner
+            A lazy, single-use scan of the matching rows, in stored order.
+
+        Examples
+        --------
+        >>> reader = packet.scanner("core.spike_events", columns=["t_tick"], unit_id=7).to_reader()  # doctest: +SKIP
+        """
+        dataset = self.table_resource(resource_id).dataset()
+        return dataset.scanner(columns=columns, filter=self._predicate(where), memory_pool=read_pool())
 
     def scan(self, resource_id: str) -> pads.Dataset:
         """Open a resource lazily, without reading it.

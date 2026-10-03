@@ -251,6 +251,20 @@ def test_scan_is_lazy(packet_root):
     assert pq  # the import exists so the lazy contrast is explicit
 
 
+def test_a_scanner_reads_what_table_reads(packet_root):
+    import pyarrow.dataset as pads
+
+    from escapewheel_reader.resources import read_pool
+
+    packet = open_packet(packet_root)
+    scanner = packet.scanner("core.events", columns=["stream_id"], stream_id=99)
+    assert isinstance(scanner, pads.Scanner)
+    assert scanner.to_table().equals(packet.table("core.events", columns=["stream_id"], stream_id=99))
+    before = read_pool().bytes_allocated()
+    held = packet.scanner("core.events").to_table()
+    assert held.num_rows and read_pool().bytes_allocated() > before
+
+
 # -- the packet's default clock ------------------------------------------------------------
 
 

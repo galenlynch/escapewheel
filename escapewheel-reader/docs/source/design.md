@@ -195,7 +195,8 @@ PyArrow allocates from mimalloc by default, and under it reading a large table i
 slower than under jemalloc or the system allocator: a 287-million-row integer column took 23 s
 against 0.5 s, the time going to allocation rather than to I/O. The reader therefore passes
 `read_pool()`, jemalloc where PyArrow was built with it and the system allocator otherwise, to
-each table read it makes, and leaves the process-wide default alone. A dataset from `scan` is read
-by the caller, who can pass the same pool,
+each table read it makes, and leaves the process-wide default alone. A lazy read keeps the pool
+by going through `Packet.scanner`, whose scanner carries it. A dataset from `scan` is read by the
+caller, who can pass the same pool,
 `dataset.to_table(memory_pool=escapewheel_reader.resources.read_pool())`, or set
 `ARROW_DEFAULT_MEMORY_POOL=jemalloc` for the whole process.
