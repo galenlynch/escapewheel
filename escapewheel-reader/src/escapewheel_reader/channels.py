@@ -94,7 +94,7 @@ def kept_channels(packet: PacketLike, *, sorting_run_id: int | None = None) -> d
     if table is None or not table.num_rows:
         return {}
     if sorting_run_id is not None:
-        table = table.filter(pc.equal(table.column("sorting_run_id"), sorting_run_id))
+        table = table.filter(pc.equal(table.column("sorting_run_id"), pa.scalar(sorting_run_id)))
     table = table.sort_by([("sorting_run_id", "ascending"), ("channel_index", "ascending")])
     run, index, electrode = (np.asarray(table.column(c).to_numpy(zero_copy_only=False)) for c in columns)
     starts = np.flatnonzero(np.r_[True, run[1:] != run[:-1]])

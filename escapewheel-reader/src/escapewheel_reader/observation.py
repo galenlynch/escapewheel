@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+from typing import Literal
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -104,7 +105,9 @@ def _resolve(own: pa.Table, inherited: pa.Table, key: tuple[str, ...]) -> pa.Tab
     return pa.concat_tables([own, kept.select(own.column_names)])
 
 
-def _join(left: pa.Table, right: pa.Table, keys: list[str], join_type: str = "inner") -> pa.Table:
+def _join(
+    left: pa.Table, right: pa.Table, keys: list[str], join_type: Literal["inner", "left outer", "left anti"] = "inner"
+) -> pa.Table:
     """Join on `keys` cast to the left's types, since Arrow joins no dictionary or mixed width."""
     left, right = _decoded(left), _decoded(right)
     for key in keys:
@@ -254,11 +257,13 @@ def observed_seconds(packet: PacketLike, windows: pa.Table) -> float:
     clocks = _decoded(packet.table(CORE_CLOCKS, columns=["clock_id", "tick_rate_hz", "tick_rate_num", "tick_rate_den"]))
     num, den = (pc.cast(clocks.column(c), pa.float64()) for c in ("tick_rate_num", "tick_rate_den"))
     # The exact ratio where both terms are given and nonzero, the decimal rate otherwise.
-    exact = pc.fill_null(pc.and_(pc.not_equal(num, 0), pc.not_equal(den, 0)), False)
+    zero = pa.scalar(0.0)
+    exact = pc.fill_null(pc.and_(pc.not_equal(num, zero), pc.not_equal(den, zero)), pa.scalar(False))
     hz = pc.if_else(exact, pc.divide(num, den), pc.cast(clocks.column("tick_rate_hz"), pa.float64()))
     rates = pa.table({"clock_id": clocks.column("clock_id"), "hz": hz})
     timed = _join(windows.select(["clock_id", "start_tick", "stop_tick"]), rates, ["clock_id"], "left outer")
-    undeclared = timed.filter(pc.invert(pc.fill_null(pc.not_equal(timed.column("hz"), 0), False)))
+    hz_of = timed.column("hz")
+    undeclared = timed.filter(pc.or_kleene(pc.is_null(hz_of), pc.equal(hz_of, zero)))
     if undeclared.num_rows:
         clock = undeclared.column("clock_id")[0].as_py()
         raise NotDeclared(f"clock {clock!r} declares no tick rate, so its windows have no duration")

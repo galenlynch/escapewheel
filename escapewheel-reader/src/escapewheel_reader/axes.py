@@ -91,7 +91,7 @@ class LabelledAxis:
         Masked rather than filled, since every integer is a possible label and no fill can mean none.
         """
         labels = self.rows.column(self.key)
-        values = np.asarray(pc.fill_null(labels, 0).to_numpy(), dtype=np.int64)
+        values = np.asarray(pc.fill_null(labels, pa.scalar(0, labels.type)).to_numpy(), dtype=np.int64)
         mask = np.asarray(pc.is_null(labels).to_numpy(), dtype=bool)
         return np.ma.MaskedArray(values.reshape(self.shape), mask=mask.reshape(self.shape))
 
@@ -329,7 +329,10 @@ def _scaling(
     return Scaling(
         channel_units,
         np.asarray(per_channel.column("conversion").to_numpy(), dtype=np.float64),
-        np.asarray(pc.fill_null(per_channel.column("offset"), 0.0).to_numpy(), dtype=np.float64),
+        np.asarray(
+            cast("pa.Array[Any]", pc.fill_null(per_channel.column("offset"), pa.scalar(0.0))).to_numpy(),
+            dtype=np.float64,
+        ),
         axis,
     )
 

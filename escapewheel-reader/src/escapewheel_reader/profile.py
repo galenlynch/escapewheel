@@ -60,7 +60,8 @@ def variant_for_zarr_format(format_version: int) -> Mapping[str, Any] | None:
 
 def parquet_floor() -> Mapping[str, Any]:
     """Return the incorporated Parquet reader and packet-writer floor."""
-    return physical_profile()["interfaces"]["parquet"]["reader_floor"]
+    floor: Mapping[str, Any] = physical_profile()["interfaces"]["parquet"]["reader_floor"]
+    return floor
 
 
 def zarr_floor_admits(metadata: Mapping[str, Any], reader_floor: Mapping[str, Any]) -> bool:

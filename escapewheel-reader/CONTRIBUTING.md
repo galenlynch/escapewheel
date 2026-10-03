@@ -169,8 +169,7 @@ uv run --no-cache --with ../escapewheel-validator --with duckdb python ../fixtur
 ./scripts/run_linters_and_checks.sh -c    # format, lint, mypy, interrogate, codespell, pytest
 ```
 
-Known noise: `mypy` reports a handful of pyarrow-stub errors in `discriminators.py` and
-`profile.py`, and `codespell` flags "sortings", which is correct usage here.
+Known noise: `codespell` flags "sortings", which is correct usage here.
 
 Commits are conventional (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`). The title is
 imperative; the body says **what changed and why**, not how — the diff already says how. Where a

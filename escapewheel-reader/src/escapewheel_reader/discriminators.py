@@ -136,7 +136,9 @@ def kinds(packet: PacketLike, resource_id: str, column: str | None = None) -> di
     """
     found = _one(packet, resource_id, column)
     counts = pc.value_counts(packet.table(found.resource, columns=[found.column]).column(found.column))
-    return dict(zip(counts.field("values").to_pylist(), counts.field("counts").to_pylist(), strict=True))
+    named: list[str | None] = counts.field("values").to_pylist()
+    counted = [int(n) for n in counts.field("counts").to_numpy()]
+    return dict(zip(named, counted, strict=True))
 
 
 def unresolved(packet: PacketLike) -> list[Unresolved]:
@@ -198,7 +200,7 @@ def _paired_target(packet: PacketLike, kind: str, found: Discriminator) -> str:
     if len(key) != 1:
         raise NotDeclared(f"{kind} has a {len(key)}-column key, which a paired value cannot name")
     holder = registries(packet).get(found.specialised, {}).get("columns", [])
-    value = next((c for c in holder if c["name"] == found.discriminates), {})
+    value: dict[str, Any] = next((c for c in holder if c["name"] == found.discriminates), {})
     declared_columns = {c["name"]: c for c in registries(packet).get(kind, {}).get("columns", [])}
     if value.get("role") == "identifier" or declared_columns.get(key[0], {}).get("identity") != "assigned":
         return key[0]
@@ -241,12 +243,12 @@ def resolved(packet: PacketLike, resource_id: str, kind: str, *, column: str | N
     rows = packet.table(found.specialised)
     if found.shape == "paired value":
         if found.discriminates_via is None:
-            rows = rows.filter(pc.equal(rows.column(found.column), kind))
+            rows = rows.filter(pc.equal(rows.column(found.column), pa.scalar(kind)))
         else:
             # The kind is on the discriminator's row, one reference away from the value.
             ours, theirs = _reference_back(packet, found.specialised, found.resource)
             of_kind = packet.table(found.resource, columns=[*theirs, found.column])
-            of_kind = of_kind.filter(pc.equal(of_kind.column(found.column), kind)).select(theirs)
+            of_kind = of_kind.filter(pc.equal(of_kind.column(found.column), pa.scalar(kind))).select(theirs)
             rows = rows.join(of_kind, keys=ours, right_keys=theirs, join_type="inner")
         # Per kind, since the values of two kinds share one column and may coincide.
         assert found.discriminates is not None
@@ -258,7 +260,7 @@ def resolved(packet: PacketLike, resource_id: str, kind: str, *, column: str | N
     theirs, ours = _specialising_reference(packet, kind, found)
     # The key need not hold the kind -- `core.intervals` keys on `interval_id` alone -- so the rows
     # are filtered to it, and a column both tables carry, such as `session_id`, is kept once.
-    rows = rows.filter(pc.equal(rows.column(found.column), kind))
+    rows = rows.filter(pc.equal(rows.column(found.column), pa.scalar(kind)))
     named = named.select([c for c in named.column_names if c in theirs or c not in rows.column_names])
     return rows.join(named, keys=ours, right_keys=theirs, join_type="inner")
 
