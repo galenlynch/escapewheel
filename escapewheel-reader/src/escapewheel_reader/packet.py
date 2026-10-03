@@ -21,7 +21,7 @@ from .location import Location, Rewrite, Sources, resolve_sources
 from .manifest import Manifest, Resource
 from .protocols import Memo
 from .registries import acquire, parse
-from .resources import ArrayResource, TableResource
+from .resources import ArrayResource, TableResource, read_pool
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
@@ -392,7 +392,7 @@ class Packet:
             # Projection is not a filter, so it goes straight to the Parquet reader rather
             # than through a dataset scan that would touch every row.
             return handle.to_arrow(columns=columns)
-        return handle.dataset().to_table(columns=columns, filter=self._predicate(where))
+        return handle.dataset().to_table(columns=columns, filter=self._predicate(where), memory_pool=read_pool())
 
     def scan(self, resource_id: str) -> pads.Dataset:
         """Open a resource lazily, without reading it.

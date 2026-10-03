@@ -24,6 +24,7 @@ from .errors import NotAligned, NotDeclared
 from .observation import attach_support, unit_windows
 from .protocols import Memo, PacketLike
 from .resource_ids import CORE_EVENT_STREAMS, CORE_EVENTS, CORE_INTERVALS, CORE_SPIKE_EVENTS, CORE_UNITS
+from .resources import read_pool
 from .runs import check as _check_runs
 
 #: Ask for ticks exactly as the file stores them. Spikes are counted on the probe that
@@ -280,7 +281,7 @@ def spike_times(
     # `core.spike_events` carries no `clock_id`: a tick reaches its clock through its unit, so
     # the column comes from `core.units` rather than from the scan. A tick still travels with
     # its clock, which is what this accessor exists to guarantee.
-    found = packet.scan(CORE_SPIKE_EVENTS).to_table(columns=["t_tick", *keys], filter=wanted)
+    found = packet.scan(CORE_SPIKE_EVENTS).to_table(columns=["t_tick", *keys], filter=wanted, memory_pool=read_pool())
     unit_clocks = _unit_clocks(packet, keys, session_id=session_id)
     found = found.append_column(
         "clock_id", pa.array([unit_clocks.get(tuple(r[k] for k in keys)) for r in found.select(keys).to_pylist()])

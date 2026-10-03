@@ -188,3 +188,14 @@ wherever such a column is read without decoding. The helpers in `dictionaries` t
 where there is one and the column where there is not. Arrow cannot sort a dictionary column, and
 `group_by` fails across row groups until `Table.unify_dictionaries` reconciles them; both fail
 loudly. The reader's modules share these helpers so that they meet those edges identically.
+
+## Memory pools
+
+PyArrow allocates from mimalloc by default, and under it reading a large table is many times
+slower than under jemalloc or the system allocator: a 287-million-row integer column took 23 s
+against 0.5 s, the time going to allocation rather than to I/O. The reader therefore passes
+`read_pool()`, jemalloc where PyArrow was built with it and the system allocator otherwise, to
+each table read it makes, and leaves the process-wide default alone. A dataset from `scan` is read
+by the caller, who can pass the same pool,
+`dataset.to_table(memory_pool=escapewheel_reader.resources.read_pool())`, or set
+`ARROW_DEFAULT_MEMORY_POOL=jemalloc` for the whole process.

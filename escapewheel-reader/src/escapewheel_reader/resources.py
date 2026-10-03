@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import functools
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -31,6 +32,19 @@ if TYPE_CHECKING:  # pragma: no cover
 #: Where a Zarr array keeps its metadata, by format version. v3 names it `zarr.json`; v2, which
 #: Part 03 §6.1 permits an external array to use, names it `.zarray`. Both are JSON.
 ZARR_METADATA_FILENAMES: dict[Literal[2, 3], str] = {3: "zarr.json", 2: ".zarray"}
+
+
+@functools.cache
+def read_pool() -> pa.MemoryPool:
+    """Return the pool the reader's table reads allocate from: jemalloc, else the system's.
+
+    PyArrow's default mimalloc pool makes a large Parquet read many times slower, and the cost is
+    in allocation, not I/O. Passing a pool per read leaves the caller's process-wide default alone.
+    """
+    try:
+        return pa.jemalloc_memory_pool()
+    except NotImplementedError:
+        return pa.system_memory_pool()
 
 
 def _locate(resource: Resource, root: Location) -> Location:
@@ -210,8 +224,7 @@ class TableResource:
             into a dictionary and this decodes them, which is what a caller expects and what
             everything downstream handles.
         """
-        path, filesystem = self._store()
-        return pq.read_table(path, columns=columns, filesystem=filesystem)
+        return self.dataset().to_table(columns=columns, memory_pool=read_pool())
 
     def dataset(self) -> pads.Dataset:
         """Open the resource as a PyArrow dataset without reading it.
