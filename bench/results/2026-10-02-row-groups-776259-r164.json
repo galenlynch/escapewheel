@@ -1,0 +1,265 @@
+{
+  "environment": {
+    "date": "2026-10-03",
+    "commit": "c0f9214b+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      6.25,
+      9.95,
+      11.17
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r164/776259/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      },
+      {
+        "path": "/home/galen.lynch/bench-cold/r164/rowgroups",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "core_version": "0.18.0",
+  "plan": {
+    "window_s": [
+      100.0,
+      101.0
+    ],
+    "window_tick": [
+      361749256863,
+      361749288113
+    ],
+    "unit_id": 1475
+  },
+  "cells": [
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "read_from": "/home/galen.lynch/bench-cold/r164/776259/packet/tables/analysis/spike_events.parquet",
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.059017815976403654,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 222,
+      "value": "42826"
+    },
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "read_from": "/home/galen.lynch/bench-cold/r164/776259/packet/tables/analysis/spike_events.parquet",
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.04139402799773961,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 66,
+      "value": "42826"
+    },
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "read_from": "/home/galen.lynch/bench-cold/r164/776259/packet/tables/analysis/spike_events.parquet",
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.05371983296936378,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 573,
+      "value": "1789113"
+    },
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "read_from": "/home/galen.lynch/bench-cold/r164/776259/packet/tables/analysis/spike_events.parquet",
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.03852359298616648,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 111,
+      "value": "1789113"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.131072.parquet",
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.05926925700623542,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 0,
+      "value": "42826"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.131072.parquet",
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.039833115006331354,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 0,
+      "value": "42826"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.131072.parquet",
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.05690182402031496,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 222,
+      "value": "1789113"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.131072.parquet",
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.038415841991081834,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 0,
+      "value": "1789113"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.1048576.parquet",
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.034791390993632376,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 0,
+      "value": "42826"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.1048576.parquet",
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.08084864704869688,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 2487,
+      "value": "42826"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.1048576.parquet",
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.12082437198841944,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 433,
+      "value": "1789113"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.1048576.parquet",
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.05136989295715466,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 243,
+      "value": "1789113"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.4194304.parquet",
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.05772674398031086,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 132,
+      "value": "42826"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.4194304.parquet",
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.05241161194862798,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 439,
+      "value": "42826"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.4194304.parquet",
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.3079503359622322,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 1589,
+      "value": "1789113"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "read_from": "/home/galen.lynch/bench-cold/r164/rowgroups/packet.spike_events.4194304.parquet",
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.04608571605058387,
+      "peak_mib": 1299.81640625,
+      "received_bytes": 3640,
+      "value": "1789113"
+    }
+  ]
+}

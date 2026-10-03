@@ -1,0 +1,144 @@
+{
+  "environment": {
+    "date": "2026-10-03",
+    "commit": "c0f9214b+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      4.27,
+      4.15,
+      5.46
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb.zarr",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+    "nwb": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb.zarr",
+    "region": "MD",
+    "region_aws": "us-west-2",
+    "window_tick": [
+      361749256863,
+      361749569363
+    ],
+    "window_s": [
+      11575976.219616,
+      11575986.219616
+    ],
+    "unit_id": 1475,
+    "unit_label": "671",
+    "probe_name": "45883-2",
+    "unit_spikes": 1789113,
+    "unit_tables": [
+      "core.units",
+      "aind_unit_qc.metrics"
+    ],
+    "trial_tables": [
+      "core.intervals",
+      "dynamic_foraging.trials"
+    ]
+  },
+  "core_version": "0.18.0",
+  "packet_bytes": 1219662231,
+  "nwb_bytes": 8493662834,
+  "cells": [
+    {
+      "reader": "lazynwb",
+      "operation": "open",
+      "runs": 3,
+      "seconds": 0.4013275829493068,
+      "peak_mib": 227.953125,
+      "received_bytes": 311455,
+      "value": "78"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "units 5 cols",
+      "runs": 3,
+      "seconds": 0.8316062170197256,
+      "peak_mib": 259.6796875,
+      "received_bytes": 705624,
+      "value": "6781"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "units all meta",
+      "runs": 3,
+      "seconds": 3.970527826983016,
+      "peak_mib": 266.76953125,
+      "received_bytes": 3592927,
+      "value": "71"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "trials",
+      "runs": 3,
+      "seconds": 3.7258428250206634,
+      "peak_mib": 258.83203125,
+      "received_bytes": 782033,
+      "value": "708"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "every spike",
+      "runs": 3,
+      "seconds": 246.20050004101358,
+      "peak_mib": 17952.390625,
+      "received_bytes": 2317198416,
+      "value": "3322068097369328.0"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "10 s window",
+      "runs": 3,
+      "seconds": 222.99733087496134,
+      "peak_mib": 17960.484375,
+      "received_bytes": 2321620553,
+      "value": "349553"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "one train",
+      "runs": 3,
+      "seconds": 1.259904499980621,
+      "peak_mib": 520.0078125,
+      "received_bytes": 7562877,
+      "value": "1789113"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "region units",
+      "runs": 3,
+      "seconds": 12.802157635975163,
+      "peak_mib": 2101.95703125,
+      "received_bytes": 193496523,
+      "value": "(409, 29394216)"
+    }
+  ]
+}

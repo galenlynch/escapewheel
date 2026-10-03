@@ -1,0 +1,98 @@
+{
+  "environment": {
+    "date": "2026-10-03",
+    "commit": "c0f9214b+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      3.07,
+      3.97,
+      6.06
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "/home/galen.lynch/bench-cold/stage",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "roots": [
+    {
+      "name": "776259 packet",
+      "uri": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+      "list_seconds": 0.19023673702031374,
+      "objects": 55,
+      "bytes": 1219662231,
+      "stage_seconds": 11.722216475987807,
+      "staged_bytes": 1219662231
+    },
+    {
+      "name": "776259 nwb",
+      "uri": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+      "list_seconds": 0.6568186389631592,
+      "objects": 6519,
+      "bytes": 8493662834,
+      "stage_seconds": 73.379294081009,
+      "staged_bytes": 8493662834
+    },
+    {
+      "name": "786867 packet",
+      "uri": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+      "list_seconds": 0.07383388601010665,
+      "objects": 53,
+      "bytes": 604667752,
+      "stage_seconds": 7.501331594015937,
+      "staged_bytes": 604667752
+    },
+    {
+      "name": "786867 nwb",
+      "uri": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb",
+      "list_seconds": 0.5619710910250433,
+      "objects": 4809,
+      "bytes": 4735714418,
+      "stage_seconds": 42.25028762599686,
+      "staged_bytes": 4735714418
+    }
+  ]
+}

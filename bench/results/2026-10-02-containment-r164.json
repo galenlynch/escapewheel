@@ -1,0 +1,135 @@
+{
+  "environment": {
+    "date": "2026-10-03",
+    "commit": "c0f9214b+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      7.83,
+      10.02,
+      11.16
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/Documents/Code/nwb-lake/.claude/worktrees/agent-ae750b0d0ffa169b5/bench",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "threads": 4,
+  "cells": [
+    {
+      "trials": 708,
+      "blocks": 18,
+      "arm": "range join",
+      "seconds": 0.0016623029951006174
+    },
+    {
+      "trials": 708,
+      "blocks": 18,
+      "arm": "ASOF join",
+      "seconds": 0.0018897390109486878
+    },
+    {
+      "trials": 708,
+      "blocks": 18,
+      "arm": "searchsorted",
+      "seconds": 1.401000190526247e-05
+    },
+    {
+      "trials": 708,
+      "blocks": 18,
+      "arm": "stored key",
+      "seconds": 0.0006006949697621167
+    },
+    {
+      "trials": 10000,
+      "blocks": 250,
+      "arm": "range join",
+      "seconds": 0.0047820539912208915
+    },
+    {
+      "trials": 10000,
+      "blocks": 250,
+      "arm": "ASOF join",
+      "seconds": 0.029814362002070993
+    },
+    {
+      "trials": 10000,
+      "blocks": 250,
+      "arm": "searchsorted",
+      "seconds": 8.443102706223726e-05
+    },
+    {
+      "trials": 10000,
+      "blocks": 250,
+      "arm": "stored key",
+      "seconds": 0.0006427059997804463
+    },
+    {
+      "trials": 100000,
+      "blocks": 2500,
+      "arm": "range join",
+      "seconds": 0.28085461602313444
+    },
+    {
+      "trials": 100000,
+      "blocks": 2500,
+      "arm": "ASOF join",
+      "seconds": 1.578886799979955
+    },
+    {
+      "trials": 100000,
+      "blocks": 2500,
+      "arm": "searchsorted",
+      "seconds": 0.0011965039884671569
+    },
+    {
+      "trials": 100000,
+      "blocks": 2500,
+      "arm": "stored key",
+      "seconds": 0.0016703590517863631
+    },
+    {
+      "trials": 1000000,
+      "blocks": 25000,
+      "arm": "range join",
+      "seconds": 30.616857446031645
+    },
+    {
+      "trials": 1000000,
+      "blocks": 25000,
+      "arm": "ASOF join",
+      "seconds": 164.60637064499315
+    },
+    {
+      "trials": 1000000,
+      "blocks": 25000,
+      "arm": "searchsorted",
+      "seconds": 0.021190582017879933
+    },
+    {
+      "trials": 1000000,
+      "blocks": 25000,
+      "arm": "stored key",
+      "seconds": 0.011977492016740143
+    }
+  ]
+}

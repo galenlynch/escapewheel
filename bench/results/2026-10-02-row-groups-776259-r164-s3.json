@@ -1,0 +1,263 @@
+{
+  "environment": {
+    "date": "2026-10-03",
+    "commit": "c0f9214b+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      2.83,
+      4.15,
+      6.24
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "core_version": "0.18.0",
+  "plan": {
+    "window_s": [
+      100.0,
+      101.0
+    ],
+    "window_tick": [
+      361749256863,
+      361749288113
+    ],
+    "unit_id": 1475
+  },
+  "cells": [
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet/tables/analysis/spike_events.parquet",
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.6150663580046967,
+      "peak_mib": 709.1171875,
+      "received_bytes": 18948554,
+      "value": "42826"
+    },
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet/tables/analysis/spike_events.parquet",
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.5890787080279551,
+      "peak_mib": 709.1171875,
+      "received_bytes": 17649086,
+      "value": "42826"
+    },
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet/tables/analysis/spike_events.parquet",
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.6188135740230791,
+      "peak_mib": 709.1171875,
+      "received_bytes": 2889708,
+      "value": "1789113"
+    },
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet/tables/analysis/spike_events.parquet",
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.3491697129793465,
+      "peak_mib": 709.1171875,
+      "received_bytes": 1600021,
+      "value": "1789113"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.131072.parquet",
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.6272784110042267,
+      "peak_mib": 709.1171875,
+      "received_bytes": 18884684,
+      "value": "42826"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.131072.parquet",
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.6232094430015422,
+      "peak_mib": 709.1171875,
+      "received_bytes": 17717972,
+      "value": "42826"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.131072.parquet",
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.7631379319936968,
+      "peak_mib": 709.1171875,
+      "received_bytes": 2816032,
+      "value": "1789113"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.131072.parquet",
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.3805529589881189,
+      "peak_mib": 709.1171875,
+      "received_bytes": 1646011,
+      "value": "1789113"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.1048576.parquet",
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.7563640410080552,
+      "peak_mib": 709.1171875,
+      "received_bytes": 16705557,
+      "value": "42826"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.1048576.parquet",
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.5008544299635105,
+      "peak_mib": 709.1171875,
+      "received_bytes": 16504064,
+      "value": "42826"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.1048576.parquet",
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 1.3072439649840817,
+      "peak_mib": 709.1171875,
+      "received_bytes": 872506,
+      "value": "1789113"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.1048576.parquet",
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.28576985001564026,
+      "peak_mib": 709.1171875,
+      "received_bytes": 820939,
+      "value": "1789113"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.4194304.parquet",
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.5936449079890735,
+      "peak_mib": 709.1171875,
+      "received_bytes": 16360392,
+      "value": "42826"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.4194304.parquet",
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.3903496490092948,
+      "peak_mib": 709.1171875,
+      "received_bytes": 16429902,
+      "value": "42826"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.4194304.parquet",
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 2.6771400639554486,
+      "peak_mib": 709.1171875,
+      "received_bytes": 1105004,
+      "value": "1789113"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "read_from": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/rowgroups/packet.spike_events.4194304.parquet",
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.29854425601661205,
+      "peak_mib": 709.1171875,
+      "received_bytes": 1397175,
+      "value": "1789113"
+    }
+  ]
+}

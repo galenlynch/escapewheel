@@ -5,11 +5,81 @@ it was taken, what it was taken on, and the script that produced it. Where that 
 the row says why. A reading against an older packet shape is kept for its date, not for its
 currency. Before 2026-10-02 no toolchain was recorded. The 2026-10-02 JSON records a
 dirty `786d6d7c`, or `517d9316` for the rerun: the scripts ran uncommitted, as `517d9316` commits
-them.
+them. The core 0.18.0 runs record a dirty `c0f9214b`, for the same reason: the S3 arm and the
+region operation were committed after they ran.
 
 "Rotational" is a Toshiba MG09 SATA disk under ntfs-3g. There a cold read is approximate: eviction
 does not reach the block device's buffer cache. "NVMe" is a WD SN850X under btrfs, where a cold
 read is checked by `mincore`.
+
+## A core 0.18.0 packet against its NWB, local and S3
+
+Both sessions were rebuilt on 2026-10-02 at core 0.18.0 as `packet-r164` and read with the same
+toolchain as the core 0.14.0 rows below. Each cell is the cold median of three in seconds. Other
+work kept the host's load average between 3 and 10 on 24 threads throughout; each JSON records it.
+The local cells are from the reruns, `*-r164-rerun.json`. The first 776259 run overlapped another
+build on the same machine. The 786867 run agreed with its rerun to within 0.37 s in every cell.
+
+On the NVMe:
+
+| session | operation | packet, PyArrow | packet, DuckDB | pynwb | lazynwb |
+|---|---|---|---|---|---|
+| 776259 | open | 0.001 | 0.015 | 0.313 | 0.011 |
+| 776259 | units, five columns | 0.003 | 0.016 | 0.345 | 0.032 |
+| 776259 | units, all metadata | 0.018 | 0.032 | 0.427 | 0.123 |
+| 776259 | trials | 0.006 | 0.027 | 0.395 | 0.103 |
+| 776259 | every spike | 41.398 | 0.135 | 19.674 | 38.354 |
+| 776259 | 10 s window | 0.063 | 0.063 | 22.226 | 22.049 |
+| 776259 | one train | 0.197 | 0.031 | 0.348 | 0.199 |
+| 776259 | units in MD with their trains | 0.231 | 0.092 | 1.137 | 2.127 |
+| 786867 | open | 0.001 | 0.015 | 0.320 | 0.010 |
+| 786867 | units, five columns | 0.003 | 0.016 | 0.329 | 0.032 |
+| 786867 | units, all metadata | 0.008 | 0.030 | 0.373 | 0.112 |
+| 786867 | trials | 0.005 | 0.025 | 0.372 | 0.101 |
+| 786867 | every spike | 0.320 | 0.074 | 0.669 | 8.701 |
+| 786867 | 10 s window | 0.041 | 0.040 | 0.772 | 9.051 |
+| 786867 | one train | 0.080 | 0.024 | 0.330 | 0.093 |
+| 786867 | units in MD with their trains | 0.119 | 0.055 | 0.610 | 0.412 |
+
+From S3, with the megabytes the host received during the cell in parentheses. The packets and
+NWB-Zarr copies are under `s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/` in us-west-2,
+read from an on-premises workstation over a 1 Gbit/s link, not from inside AWS. The lazynwb column
+was measured an hour after the others, at a load average near 4, because its first run failed on
+the NWB's name (see `README.md`).
+
+| session | operation | packet, PyArrow | packet, DuckDB | pynwb | lazynwb |
+|---|---|---|---|---|---|
+| 776259 | open | 0.17 (0.0) | 0.54 (0.1) | 40.62 (4.1) | 0.40 (0.3) |
+| 776259 | units, five columns | 0.28 (0.1) | 0.62 (0.1) | 39.91 (4.2) | 0.83 (0.7) |
+| 776259 | units, all metadata | 0.46 (0.8) | 0.85 (0.8) | 44.16 (7.8) | 3.97 (3.6) |
+| 776259 | trials | 0.41 (0.2) | 0.82 (0.2) | 46.63 (4.3) | 3.73 (0.8) |
+| 776259 | every spike | 43.39 (484) | 4.87 (485) | 87.59 (1,177) | 246.20 (2,317) |
+| 776259 | 10 s window | 0.71 (19.0) | 0.91 (17.7) | 99.24 (1,177) | 223.00 (2,322) |
+| 776259 | one train | 1.57 (3.0) | 0.70 (3.3) | 38.11 (11.8) | 1.26 (7.6) |
+| 776259 | units in MD with their trains | 4.04 (2.0) | 1.21 (0.9) | 122.18 (632) | 12.80 (194) |
+| 786867 | open | 0.17 (0.0) | 0.57 (0.1) | 40.30 (3.9) | 0.40 (0.3) |
+| 786867 | units, five columns | 0.28 (0.1) | 0.57 (0.1) | 38.65 (3.9) | 0.84 (0.7) |
+| 786867 | units, all metadata | 0.50 (0.6) | 0.93 (0.6) | 43.77 (5.8) | 4.12 (2.5) |
+| 786867 | trials | 0.61 (0.1) | 0.77 (0.2) | 47.04 (4.0) | 3.82 (0.7) |
+| 786867 | every spike | 44.57 (239) | 2.69 (240) | 74.91 (560) | 118.81 (625) |
+| 786867 | 10 s window | 0.62 (19.0) | 0.88 (18.6) | 44.17 (559) | 114.04 (607) |
+| 786867 | one train | 1.27 (1.8) | 0.68 (1.7) | 36.31 (6.7) | 0.92 (3.5) |
+| 786867 | units in MD with their trains | 2.35 (1.0) | 1.13 (0.5) | 61.25 (182) | 2.19 (26.9) |
+
+The readers agreed on every count, with the two-spike window difference on 786867 described
+below. On units in MD they differ by design: the packet counts a unit with any electrode in the
+region, 466 and 164 units, while the NWBs give 409 and 140, through the units table's own
+`location` for 776259 and through each unit's electrodes for 786867.
+
+Over S3 the packet's DuckDB path answered every question in under 5 s. Its PyArrow path fetched
+the same 485 MB for every spike as DuckDB and took 43 s instead of 4.9 s, the whole-column read
+described below. pynwb took about 40 s to open either NWB from S3, against 0.3 s locally and 6.2 s
+on 2026-09-05; why was not investigated.
+
+Locally, the packet's PyArrow path read every spike of 786867 in 0.32 s and of 776259 in 41 s, so
+the whole-column slowdown does not scale with the table's size alone. On the core 0.14.0 packet
+of 786867, the same cell took 16.8 s and pynwb took 11.4 s, against 0.67 s now from the same NWB.
+That difference is not explained either.
 
 ## A packet against its NWB
 
@@ -60,9 +130,8 @@ that took 19â€“38 s warm for `core.spike_events.t_tick` of 776259, against 0.4â€
 through DuckDB. A narrow read prunes to a few row groups and is unaffected.
 
 On every spike in the 2026-09-05 S3 run, the packet, pynwb and lazynwb fetched 486 MB, 1,174 MB
-and 1,177 MB. The S3 copies were
-staged under a scratch prefix in the packet shape of that date, and the S3 arm was not ported. A
-rerun needs the current packet staged there first.
+and 1,177 MB. Those S3 copies, in the packet shape of that date, are no longer under the prefix;
+the core 0.18.0 S3 readings are in the section above.
 
 Spelling matters as much as format. Warm on 776259, 2026-09-04, from `bench4.py` and `bench5.py`,
 both removed:
@@ -102,6 +171,14 @@ the unit is the largest, 1,789,113 spikes. Each cell is in seconds.
 
 | date | disk | rows per group | groups | window, PyArrow | window, DuckDB | one unit, PyArrow | one unit, DuckDB |
 |---|---|---|---|---|---|---|---|
+| 2026-10-02 | S3 | as stored | 2,197 | 0.615 | 0.589 | 0.619 | 0.349 |
+| 2026-10-02 | S3 | 131,072 | 2,189 | 0.627 | 0.623 | 0.763 | 0.381 |
+| 2026-10-02 | S3 | 1,048,576 | 274 | 0.756 | 0.501 | 1.307 | 0.286 |
+| 2026-10-02 | S3 | 4,194,304 | 69 | 0.594 | 0.390 | 2.677 | 0.299 |
+| 2026-10-02 | NVMe, core 0.18.0 | as stored | 2,197 | 0.059 | 0.041 | 0.054 | 0.039 |
+| 2026-10-02 | NVMe, core 0.18.0 | 131,072 | 2,189 | 0.059 | 0.040 | 0.057 | 0.038 |
+| 2026-10-02 | NVMe, core 0.18.0 | 1,048,576 | 274 | 0.035 | 0.081 | 0.121 | 0.051 |
+| 2026-10-02 | NVMe, core 0.18.0 | 4,194,304 | 69 | 0.058 | 0.052 | 0.308 | 0.046 |
 | 2026-10-02 | NVMe | as stored | 2,197 | 0.106 | 0.038 | 0.085 | 0.034 |
 | 2026-10-02 | NVMe | 131,072 | 2,189 | 0.057 | 0.032 | 0.054 | 0.031 |
 | 2026-10-02 | NVMe | 1,048,576 | 274 | 0.033 | 0.015 | 0.065 | 0.015 |
@@ -109,8 +186,14 @@ the unit is the largest, 1,789,113 spikes. Each cell is in seconds.
 | 2026-08-29 | rotational | 1 M | | 1.93, engine not kept | | | |
 | 2026-08-29 | rotational | 4 M | | 4.42, engine not kept | | | |
 
-The 2026-08-29 rows are quoted in the writer's performance guide; their script was not kept. On
-the NVMe every cell is under a quarter of a second. Through DuckDB a million rows was the fastest
+The S3 and core 0.18.0 rows read `packet-r164` of 776259, whose table has the same 2,197 groups;
+from S3 the rewritten copies were uploaded beside it. From S3, DuckDB was fastest at four million
+rows for the window, 0.390 s against 0.589 s as stored, and at a million rows for one unit, 0.286 s
+against 0.349 s. PyArrow's one-unit read slowed as the groups grew, from 0.619 s as stored to
+2.677 s at four million rows, and its window read was within 0.16 s at every size. No size was
+fastest for every engine and query; the writer's cut was within 0.2 s of the fastest in every S3
+cell. The 2026-08-29 rows are quoted in the writer's performance guide; their script was not kept.
+On the NVMe every cell is under a quarter of a second. Through DuckDB a million rows was the fastest
 of the four for both queries. Through PyArrow it was the fastest for the window, and 131,072 rows
 was the fastest for one unit, by 0.011 s.
 
@@ -130,6 +213,10 @@ Median of five, DuckDB at four threads. Each cell is in milliseconds.
 
 | date | trials | blocks | range join | ASOF join | searchsorted | stored key | source |
 |---|---|---|---|---|---|---|---|
+| 2026-10-02, second run | 708 | 18 | 1.66 | 1.89 | 0.01 | 0.60 | `containment.py` |
+| 2026-10-02, second run | 10,000 | 250 | 4.78 | 29.81 | 0.08 | 0.64 | `containment.py` |
+| 2026-10-02, second run | 100,000 | 2,500 | 280.85 | 1,578.89 | 1.20 | 1.67 | `containment.py` |
+| 2026-10-02, second run | 1,000,000 | 25,000 | 30,616.86 | 164,606.37 | 21.19 | 11.98 | `containment.py` |
 | 2026-10-02 | 708 | 18 | 2.51 | 3.41 | 0.05 | 1.66 | `containment.py` |
 | 2026-10-02 | 10,000 | 250 | 6.43 | 43.42 | 0.19 | 1.67 | `containment.py` |
 | 2026-10-02 | 100,000 | 2,500 | 750.62 | 2,543.76 | 1.21 | 1.79 | `containment.py` |
@@ -148,12 +235,31 @@ within 13 ms of reading a stored key up to a million trials.
 
 | date | session, disk | what | time | source |
 |---|---|---|---|---|
+| 2026-10-02 | 776259, rotational | `escapewheel import` of a 57-resource packet, core 0.18.0 | 806.8 s: sources 515.0, staging 227.7, derive 48.9, validate 15.2, promote 0.0 | the packet's build log |
+| 2026-10-02 | 786867, rotational | `escapewheel import` of a 58-resource packet with video, core 0.18.0 | 587.8 s: sources 404.6, staging 145.0, derive 28.5, validate 9.7, promote 0.0 | the packet's build log |
 | 2026-09-30 | 776259, rotational | `escapewheel import` of a 57-resource packet, core 0.14.0 | 630.1 s: sources 431.7, staging 146.6, derive 41.4, validate 9.5, promote 0.9 | the packet's build log |
 | 2026-08-30 | 776259, rotational | `escapewheel import` of a 23-resource packet | 105.1 s: sources 9.5, core 50.5, analysis 32.7, validate 12.5 | not kept; quoted in the writer's performance guide |
 | 2026-08-30 | 776259, rotational | `--sample 200000` import | 8.7 s | not kept; quoted in the writer's performance guide |
 
 The 2026-09-30 sources include the waveforms (217.5 s) and the unit QC metrics (62.6 s). The
-2026-08-30 import read neither, so the two totals are not comparable.
+2026-08-30 import read neither, so the two totals are not comparable. The 2026-10-02 776259 build
+spent 215.8 s in the sorter source, 217.2 s in the waveforms and 62.1 s in the unit QC metrics, at a
+load average near 12 from unrelated work; the 2026-09-30 load was not recorded.
+
+## Listing and downloading a stored session
+
+Cold, 2026-10-02, from `stores.py`: one listing of each root by its own prefix, then a download
+with `s5cmd` at 64 workers to the NVMe, over the same 1 Gbit/s link as above.
+
+| root | list (s) | objects | GB | download (s) | MB/s |
+|---|---|---|---|---|---|
+| 776259 packet, core 0.18.0 | 0.19 | 55 | 1.220 | 11.72 | 104.0 |
+| 776259 NWB-Zarr | 0.66 | 6,519 | 8.494 | 73.38 | 115.8 |
+| 786867 packet, core 0.18.0 | 0.07 | 53 | 0.605 | 7.50 | 80.6 |
+| 786867 NWB-Zarr | 0.56 | 4,809 | 4.736 | 42.25 | 112.1 |
+
+Both downloads ran near the link's limit, so these say what a 1 Gbit/s host pays, not what S3
+can serve inside its region.
 
 The validator readings below were removed from its docstrings on 2026-10-01, and none has been
 taken again. Each date is that of the commit that first quoted it:
