@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R165 accepted. R42 and R73 withdrawn. 2 proposals and 1 draft are open. None of them is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R165 accepted. R42 and R73 withdrawn. 2 proposals and 2 drafts are open. None of them is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 91 Tier 2 rules (2 advisory)
@@ -134,9 +134,9 @@ read what each target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. One draft awaits acceptance
+## 3a. Two drafts await acceptance
 
-The draft is under `revisions/drafts/`. Two proposals are open:
+The drafts are under `revisions/drafts/`. Two proposals are open:
 
 - a null identifier says only that a row names nothing, as the default reading of every nullable
   naming column, with `label_id` padding and the axis-form columns as the exceptions; and
@@ -144,7 +144,6 @@ The draft is under `revisions/drafts/`. Two proposals are open:
   what the writer knows of a loss, and a new rule checks that `t_tick` does not decrease in
   `frame_index` order.
 
-<<<<<<< HEAD
 **Accepted as R165, 2026-10-02:** Part 11 §4 states the ISO meaning of `BETWEEN` and `IN`, Part
 11 §8 makes a valid rule that a validator cannot evaluate with Part 11's semantics incomplete, Part
 11 §1 binds its meaning requirement to completed evaluations, and Part 05 §9.4 takes a rule's
@@ -157,6 +156,11 @@ causes from Part 11 §8. Its ISO basis is read in the 1992 draft and the 1999 ed
   refuses a held column of a canonical table that the registry it binds does not declare, unless a
   `[drop]` entry names it, and then writes the table without it. The recipe schema advances to
   admit `[drop]`.
+- **A change is one document from Open to Accepted.** A process draft, opened 2026-10-02 with no
+  proposal and not appraised. One change document under `revisions/changes/` replaces the proposal
+  and the draft, moving in place from Open to Ready, with one appraisal of the Ready text before
+  acceptance. It ratifies the ledger section's rule that a new entry carries no note, and returns
+  changes to the revision guide to the ordinary workflow under the reviewer's approval.
 
 ## 3b. Sidecars are declared, and video is not yet packet-owned
 

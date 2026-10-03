@@ -24,3 +24,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
 | 1 | [An amendment drops a held column only where its recipe names it](an-amendment-drops-a-held-column-only-where-its-recipe-names-it.md) | 4744 | Promoted 2026-10-02, not yet appraised. | structural: a new subsection at the end of Part 02 §6; in place at Part 05 §§3.1, 3.5, 4.3, 5.3 and 15.2; no existing ledger entry changes |
+| 2 | [A change is one document from Open to Accepted](a-change-is-one-document-from-open-to-accepted.md) | 2810 | Opened 2026-10-02 as a draft, with no proposal; not yet appraised. | process, ordinary: in place at fifteen anchored sections of the revision guide, from §1 to §14; no existing ledger entry changes |
