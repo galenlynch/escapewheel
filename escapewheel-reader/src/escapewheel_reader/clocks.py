@@ -375,8 +375,8 @@ def declared_bound(packet: PacketLike) -> float:
         sessions = packet.table(CORE_SESSIONS, columns=["alignment_bound"])
     except Exception:  # noqa: BLE001 -- an absent or unreadable table is simply no record
         return BOUND
-    declared = [float(v) for v in sessions.column("alignment_bound").to_pylist() if v is not None]
-    widest = max([BOUND, *declared])
+    declared = pc.max(sessions.column("alignment_bound")).as_py()
+    widest = BOUND if declared is None else max(BOUND, float(declared))
     memo.bound = widest
     return widest
 
@@ -406,27 +406,30 @@ def reference_clock(packet: PacketLike, *, session_id: int | None = None) -> int
     memo = Memo.of(packet)
     if session_id is None and memo.reference_clock is not None:
         return memo.reference_clock
-    table = packet.table(CORE_SESSIONS)
-    if "reference_clock_id" not in table.column_names:
-        raise NotAligned(f"{CORE_SESSIONS} carries no reference_clock_id")
-    declared = {
-        session: clock
-        for session, clock in zip(
-            table.column("session_id").to_pylist(), table.column("reference_clock_id").to_pylist(), strict=True
-        )
-        if clock is not None
-    }
+    found = _session_value(packet, "reference_clock_id", session_id, NotAligned)
+    if session_id is None:
+        memo.reference_clock = found
+    return found
+
+
+def _session_value(packet: PacketLike, column: str, session_id: int | None, refusal: type[Exception]) -> int:
+    """Return the `column` one session declares, or the one value every declaring session agrees on.
+
+    A multi-session packet whose sessions disagree is refused rather than resolved by picking one.
+    """
+    sessions = read_optional(packet, CORE_SESSIONS, ["session_id", column])
+    declared = sessions.filter(pc.is_valid(sessions.column(column)))
     if session_id is not None:
-        if session_id not in declared:
-            raise NotAligned(f"session {session_id!r} declares no reference_clock_id")
-        return int(declared[session_id])
-    named = sorted({int(clock) for clock in declared.values()})
-    if not named:
-        raise NotAligned("no session declares a reference_clock_id")
-    if len(named) > 1:
-        raise NotAligned(f"sessions declare different reference clocks {named}; name a session_id")
-    memo.reference_clock = named[0]
-    return named[0]
+        ids = _plain(declared.column("session_id"))
+        declared = declared.filter(pc.equal(ids, pa.scalar(session_id, ids.type)))
+        if not declared.num_rows:
+            raise refusal(f"session {session_id!r} declares no {column}")
+    found = sorted(pc.unique(_plain(declared.column(column))).to_pylist())
+    if not found:
+        raise refusal(f"no session declares a {column}")
+    if len(found) > 1:
+        raise refusal(f"sessions declare different values of {column}, {found}; name a session_id")
+    return int(found[0])
 
 
 def mapped(batch: pa.RecordBatch, target: Any, graph: ClockGraph, bound: float) -> tuple[Any, Any]:
@@ -579,13 +582,12 @@ def default_clock(packet: PacketLike, present: list[int]) -> int:
 
 def tick_rate(packet: PacketLike, clock_id: int) -> tuple[int, int]:
     """Return a clock's declared rational tick rate."""
-    clocks = packet.table(CORE_CLOCKS)
-    names = clocks.column("clock_id").to_pylist()
-    if clock_id not in names:
+    clocks = read_optional(packet, CORE_CLOCKS, ["clock_id", "tick_rate_num", "tick_rate_den"])
+    ids = _plain(clocks.column("clock_id"))
+    rows = clocks.filter(pc.equal(ids, pa.scalar(clock_id, ids.type))).to_pylist()
+    if not rows:
         raise NotAligned(f"{CORE_CLOCKS} declares no {clock_id!r}, so its rate is unknown")
-    row = names.index(clock_id)
-    num = clocks.column("tick_rate_num")[row].as_py()
-    den = clocks.column("tick_rate_den")[row].as_py() if "tick_rate_den" in clocks.column_names else 1
+    num, den = rows[0]["tick_rate_num"], rows[0]["tick_rate_den"]
     if not num:
         raise NotAligned(f"{clock_id!r} declares no tick_rate_num, so seconds cannot be derived")
     return int(num), int(den or 1)
@@ -619,27 +621,7 @@ def origin(packet: PacketLike, session_id: int | None = None) -> tuple[int, int,
     origins = Memo.of(packet).origins
     if session_id in origins:
         return origins[session_id]
-    sessions = packet.table(CORE_SESSIONS)
-    if "t_zero_tick" not in sessions.column_names:
-        raise NoTimeOrigin(f"{CORE_SESSIONS} carries no t_zero_tick, so seconds are undefined")
-    declared = {
-        session: tick
-        for session, tick in zip(
-            sessions.column("session_id").to_pylist(), sessions.column("t_zero_tick").to_pylist(), strict=True
-        )
-        if tick is not None
-    }
-    if session_id is not None:
-        if session_id not in declared:
-            raise NoTimeOrigin(f"session {session_id!r} declares no t_zero_tick")
-        found_tick = int(declared[session_id])
-    else:
-        found = sorted(set(declared.values()))
-        if not found:
-            raise NoTimeOrigin("no session declares a t_zero_tick, so seconds are undefined")
-        if len(found) > 1:
-            raise NoTimeOrigin(f"sessions declare different origins {found}; name a session_id")
-        found_tick = int(found[0])
+    found_tick = _session_value(packet, "t_zero_tick", session_id, NoTimeOrigin)
     num, den = tick_rate(packet, reference_clock(packet, session_id=session_id))
     origins[session_id] = (found_tick, num, den)
     return origins[session_id]

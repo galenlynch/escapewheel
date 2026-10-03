@@ -276,10 +276,7 @@ def attach_support(table: pa.Table, windows: pa.Table) -> pa.Table:
     """
     if not windows.num_rows:
         return table
-    carried = [
-        {"clock_id": r["clock_id"], "start_tick": r["start_tick"], "stop_tick": r["stop_tick"]}
-        for r in windows.to_pylist()
-    ]
+    carried = windows.select(["clock_id", "start_tick", "stop_tick"]).to_pylist()
     metadata = dict(table.schema.metadata or {})
     metadata[SUPPORT_KEY] = json.dumps(carried).encode()
     metadata[ROWS_KEY] = str(table.num_rows).encode()

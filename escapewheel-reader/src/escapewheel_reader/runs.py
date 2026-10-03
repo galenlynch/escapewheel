@@ -16,6 +16,10 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
+import pyarrow as pa
+import pyarrow.compute as pc
+
+from .dictionaries import plain
 from .errors import AmbiguousRun, NotDeclared
 from .optional import read_optional
 from .protocols import Memo, PacketLike
@@ -59,9 +63,13 @@ class Ambiguity:
         return f"{self.activity_type} for {about}: {len(self.run_ids)} runs ({shown})"
 
 
-def _rows(packet: PacketLike, resource_id: str, columns: list[str]) -> list[dict[str, Any]]:
-    """Read named columns as rows; a packet may declare no runs at all, or runs without scopes."""
-    return read_optional(packet, resource_id, columns).to_pylist()
+#: A purpose's columns, the key `core.preferred_runs` is filed under.
+_PURPOSE = ["session_id", "activity_type", "scope_kind", "scope"]
+
+
+def _runs(packet: PacketLike) -> pa.Table:
+    """Read the run log; a packet may declare no runs at all, or runs without scopes."""
+    return read_optional(packet, CORE_PROCESSING_RUNS, ["processing_run_id", *_PURPOSE])
 
 
 def preferences(packet: PacketLike) -> dict[tuple[int | None, str, str, str], int]:
@@ -79,13 +87,9 @@ def preferences(packet: PacketLike) -> dict[tuple[int | None, str, str, str], in
         ``processing_run_id``. Empty
         when the packet declares no preferences, which is most of them.
     """
-    columns = ["session_id", "activity_type", "scope_kind", "scope", "processing_run_id"]
-    rows = _rows(packet, CORE_PREFERRED_RUNS, columns)
-    return {
-        (row["session_id"], row["activity_type"], row["scope_kind"], row["scope"]): row["processing_run_id"]
-        for row in rows
-        if row["processing_run_id"] is not None
-    }
+    table = read_optional(packet, CORE_PREFERRED_RUNS, [*_PURPOSE, "processing_run_id"])
+    table = table.filter(pc.is_valid(table.column("processing_run_id")))
+    return {tuple(row[c] for c in _PURPOSE): row["processing_run_id"] for row in table.to_pylist()}
 
 
 def ambiguities(packet: PacketLike) -> tuple[Ambiguity, ...]:
@@ -120,33 +124,31 @@ def ambiguities(packet: PacketLike) -> tuple[Ambiguity, ...]:
     if memo.ambiguities is not None:
         return memo.ambiguities
 
-    rows = _rows(
-        packet, CORE_PROCESSING_RUNS, ["processing_run_id", "session_id", "activity_type", "scope_kind", "scope"]
+    runs = _runs(packet)
+    if not runs.num_rows:
+        memo.ambiguities = ()
+        return ()
+    activity = plain(runs.column("activity_type"))
+    alternatives = pc.and_(
+        pc.is_valid(runs.column("processing_run_id")),
+        pc.invert(pc.fill_null(pc.equal(activity, pa.scalar(IMPORT, activity.type)), True)),
     )
-    declared = preferences(packet) if rows else {}
+    runs = runs.filter(alternatives)
+    declared = preferences(packet) if runs.num_rows else {}
+    scoped = pc.is_valid(runs.column("scope"))
 
-    grouped: dict[tuple[int | None, str, str | None, str | None], list[int]] = {}
-    unscoped: dict[tuple[int | None, str], list[int]] = {}
-    for row in rows:
-        if row["activity_type"] in (None, IMPORT) or row["processing_run_id"] is None:
-            continue
-        key = (row["session_id"], row["activity_type"], row["scope_kind"], row["scope"])
-        grouped.setdefault(key, []).append(row["processing_run_id"])
-        if row["scope"] is None:
-            unscoped.setdefault((row["session_id"], row["activity_type"]), []).append(row["processing_run_id"])
-
-    found = []
-    for (session_id, activity_type, scope_kind, scope), run_ids in grouped.items():
-        if scope is None:
-            # Every unscoped run of an activity landed in one group by accident of them all
-            # being keyed None, so the group size says nothing. What matters is whether the
-            # activity has more than one run at all: if it does, the packet cannot say whether
-            # they compete.
-            if len(unscoped[(session_id, activity_type)]) > 1:
-                found.append(Ambiguity(session_id, activity_type, None, None, tuple(run_ids)))
-            continue
-        if len(run_ids) > 1 and (session_id, activity_type, scope_kind, scope) not in declared:
-            found.append(Ambiguity(session_id, activity_type, scope_kind, scope, tuple(run_ids)))
+    found = [
+        Ambiguity(group["session_id"], group["activity_type"], group["scope_kind"], group["scope"], tuple(ids))
+        for group in _grouped(runs.filter(scoped), _PURPOSE)
+        if len(ids := group["processing_run_id_list"]) > 1 and tuple(group[c] for c in _PURPOSE) not in declared
+    ]
+    # Unscoped runs cannot be told apart, so an activity with more than one cannot say whether
+    # they compete.
+    found += [
+        Ambiguity(group["session_id"], group["activity_type"], None, None, tuple(ids))
+        for group in _grouped(runs.filter(pc.invert(scoped)), ["session_id", "activity_type"])
+        if len(ids := group["processing_run_id_list"]) > 1
+    ]
     out = tuple(sorted(found, key=lambda a: (a.activity_type, a.scope or "")))
     memo.ambiguities = out
     return out
@@ -189,17 +191,17 @@ def preferred_run(
     NotDeclared
         If no run matches the purpose at all.
     """
-    rows = _rows(
-        packet, CORE_PROCESSING_RUNS, ["processing_run_id", "session_id", "activity_type", "scope_kind", "scope"]
-    )
-    matching = [
-        row
-        for row in rows
-        if row["activity_type"] == activity_type
-        and row["scope_kind"] == scope_kind
-        and row["scope"] == scope
-        and (session_id is None or row["session_id"] == session_id)
-    ]
+    runs = _runs(packet)
+    asked: dict[str, Any] = {"activity_type": activity_type, "scope_kind": scope_kind, "scope": scope}
+    if session_id is not None:
+        asked["session_id"] = session_id
+    for name, value in asked.items():
+        column = plain(runs.column(name))
+        if pa.types.is_null(column.type):
+            runs = runs.slice(0, 0)
+            break
+        runs = runs.filter(pc.fill_null(pc.equal(column, pa.scalar(value, column.type)), False))
+    matching = runs.to_pylist()
     if not matching:
         raise NotDeclared(f"no {activity_type!r} run for scope {scope!r} in {scope_kind!r}")
 
@@ -215,6 +217,11 @@ def preferred_run(
         f"{len(matching)} runs produced {activity_type!r} for {scope!r} and none is preferred; "
         f"declare one in {CORE_PREFERRED_RUNS} (Part 05 §12)"
     )
+
+
+def _grouped(runs: pa.Table, keys: list[str]) -> list[dict[str, Any]]:
+    """Group runs by `keys`, each group's run IDs listed in log order."""
+    return runs.group_by(keys, use_threads=False).aggregate([("processing_run_id", "list")]).to_pylist()
 
 
 def check(packet: PacketLike, activities: Iterable[str] | None = None) -> None:
