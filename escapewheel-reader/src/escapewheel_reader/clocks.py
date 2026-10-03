@@ -28,7 +28,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, cast, overload
 
 import numpy as np
@@ -240,6 +240,8 @@ class ClockGraph:
     parents: Mapping[int, int]
     anchors: Mapping[int, tuple[NDArray[np.int64], NDArray[np.int64]]]
     transforms: Mapping[int, tuple[float, float]]
+    #: Each edge as built, by clock and bound, so a stream mapping batch by batch builds it once.
+    _edges: dict[tuple[int, float], _Map | _Linear] = field(default_factory=dict, compare=False, repr=False)
 
     def clocks(self) -> set[int]:
         """Every clock the graph knows of."""
@@ -266,11 +268,16 @@ class ClockGraph:
             raise type(refused)(f"{refused}{_STORED_HINT}") from refused
 
     def _edge(self, clock: int, bound: float) -> _Map | _Linear:
+        if (built := self._edges.get((clock, bound))) is not None:
+            return built
         if clock in self.transforms:
-            return _Linear(*self.transforms[clock])
-        if clock in self.anchors:
-            return _Map(*self.anchors[clock], bound)
-        raise NotAligned(f"{clock} declares neither anchors nor a transform onto its parent {self.parents[clock]}")
+            edge: _Map | _Linear = _Linear(*self.transforms[clock])
+        elif clock in self.anchors:
+            edge = _Map(*self.anchors[clock], bound)
+        else:
+            raise NotAligned(f"{clock} declares neither anchors nor a transform onto its parent {self.parents[clock]}")
+        self._edges[(clock, bound)] = edge
+        return edge
 
 
 def clock_graph(packet: PacketLike) -> ClockGraph:
@@ -1247,6 +1254,25 @@ def _over_sessions(
     return _each(data, split)
 
 
+#: Rows a stream is gathered into before a transform runs: a Parquet batch is about 130,000 rows,
+#: too few for the kernel's threads, and this many holds a few hundred MB.
+_STREAM_ROWS = 1 << 22
+
+
+def _coalesced(reader: pa.RecordBatchReader) -> Iterator[pa.Table]:
+    """Yield `reader`'s batches gathered into tables of about :data:`_STREAM_ROWS` rows."""
+    held: list[pa.RecordBatch] = []
+    count = 0
+    for batch in reader:
+        held.append(batch)
+        count += batch.num_rows
+        if count >= _STREAM_ROWS:
+            yield pa.Table.from_batches(held, schema=reader.schema)
+            held, count = [], 0
+    if held:
+        yield pa.Table.from_batches(held, schema=reader.schema)
+
+
 #: What a transform takes: one in memory, or a stream it maps batch by batch.
 Stream = pa.RecordBatchReader | pads.Scanner | pads.Dataset
 Arrow = pa.Table | pa.RecordBatch | Stream
@@ -1266,7 +1292,7 @@ def _each(data: Arrow, transform: Callable[[pa.Table], pa.Table]) -> Arrow:
         raise TypeError(
             f"expected a pyarrow Table, RecordBatch, RecordBatchReader, Scanner or Dataset, not {type(data)}"
         )
-    tables = (transform(pa.Table.from_batches([batch], schema=reader.schema)) for batch in reader)
+    tables = (transform(table) for table in _coalesced(reader))
     # The first batch fixes the schema; an empty stream takes it from an empty table.
     first = next(tables, None)
     if first is None:

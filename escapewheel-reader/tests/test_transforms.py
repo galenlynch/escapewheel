@@ -5,7 +5,7 @@ import pyarrow.dataset as pads
 import pytest
 from packet_fixture import CLOCK_BEHAVIOUR
 
-from escapewheel_reader import attach_clocks, on_clock, open_packet, seconds
+from escapewheel_reader import attach_clocks, clocks, on_clock, open_packet, seconds
 from escapewheel_reader.clocks import seconds_expression
 
 SPIKES = "core.spike_events"
@@ -79,3 +79,20 @@ def test_seconds_projected_in_a_scan_equal_seconds_after_it(packet):
     projected = pads.dataset(events).to_table(columns={"t_second": seconds_expression(packet)})
     assert events.column("clock_id").to_pylist() == [CLOCK_BEHAVIOUR]
     assert projected.column("t_second").equals(expected)
+
+
+def test_a_stream_builds_each_clock_map_once(packet, monkeypatch):
+    """A stream maps batch by batch; rebuilding every clock's map per batch cost more than mapping."""
+    built = []
+    original = clocks._Map.__init__
+
+    def counted(self, *args, **kwargs):
+        built.append(1)
+        original(self, *args, **kwargs)
+
+    monkeypatch.setattr(clocks._Map, "__init__", counted)
+    table = packet.table(SPIKES)
+    for _ in range(2):
+        batches = pa.RecordBatchReader.from_batches(table.schema, table.to_batches(max_chunksize=1))
+        on_clock(packet, batches, resource_id=SPIKES).read_all()
+    assert 0 < len(built) <= len(clocks.clock_graph(packet).anchors)
