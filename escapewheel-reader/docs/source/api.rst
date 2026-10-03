@@ -182,8 +182,10 @@ the module that defines it.
 
    protocols.PacketLike
    protocols.Memo
+   clocks.ClockGraph
    clocks.anchors
    clocks.clock_columns
+   clocks.clock_graph
    clocks.declared_bound
    clocks.extrapolation_error
    clocks.mapped

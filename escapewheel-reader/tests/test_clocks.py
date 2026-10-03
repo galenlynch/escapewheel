@@ -5,8 +5,18 @@ import pyarrow as pa
 import pytest
 
 from escapewheel_reader import ResourceNotFoundError
-from escapewheel_reader.clocks import BOUND, align, anchors, declared_bound, extrapolation_error, rate
-from escapewheel_reader.errors import Unanchored
+from escapewheel_reader.clocks import (
+    BOUND,
+    ClockGraph,
+    align,
+    anchors,
+    declared_bound,
+    extrapolation_error,
+    mapped,
+    rate,
+    stored_span,
+)
+from escapewheel_reader.errors import NotAligned, Unanchored
 
 AP, HARP = 30000, 31250
 
@@ -223,3 +233,54 @@ def test_a_packet_without_anchors_has_none():
             raise ResourceNotFoundError(resource_id)
 
     assert anchors(_NoAnchors()) == {}
+
+
+# -- parent chains --------------------------------------------------------------------------
+
+#: Clock 2 is anchored onto the root, clock 1, two root ticks per tick; clock 3 halves onto clock 2
+#: by a transform; clock 4 is clock 2's sibling; clock 5 reaches the root by a transform alone.
+CHAIN = ClockGraph(
+    parents={2: 1, 3: 2, 4: 1, 5: 1},
+    anchors={
+        2: (np.arange(8, dtype=np.int64) * 1000, 10_000 + np.arange(8, dtype=np.int64) * 2000),
+        4: (np.arange(8, dtype=np.int64) * 1000, 10_000 + np.arange(8, dtype=np.int64) * 2000),
+    },
+    transforms={3: (2.0, 0.0), 5: (2.0, 100.0)},
+)
+
+
+def _on(clock, ticks, target=1):
+    batch = pa.record_batch(
+        {"t_tick": pa.array(ticks, pa.int64()), "clock_id": pa.array([clock] * len(ticks), pa.int32())}
+    )
+    return mapped(batch, target, CHAIN, BOUND)
+
+
+def test_a_tick_climbs_every_clock_in_its_chain():
+    """5 on clock 3 is 10 on clock 2, which is 10,020 on the root; reading clock 2's tick as the root's gives 10."""
+    parent, keep = _on(3, [5])
+    assert keep.tolist() == [True]
+    assert parent.tolist() == [10_020]
+
+
+def test_a_transform_alone_reaches_the_parent():
+    parent, keep = _on(5, [10])
+    assert (parent.tolist(), keep.tolist()) == ([120], [True])
+
+
+def test_a_tick_beyond_any_edge_bound_is_not_placed():
+    """Clock 3's tick 20,000 is clock 2's 40,000, far past its last anchor at 7,000."""
+    _, keep = _on(3, [5, 20_000])
+    assert keep.tolist() == [True, False]
+
+
+def test_a_sibling_clock_is_refused_with_the_way_to_stored_ticks():
+    """Clock 4 is not an ancestor of clock 2; reaching it would need an inverse no part defines."""
+    with pytest.raises(NotAligned, match="not an ancestor.*clock=STORED"):
+        _on(2, [500], target=4)
+
+
+def test_a_range_widens_down_every_chain_onto_the_stored_ticks():
+    """A root range around 10,020 has to reach clock 3's stored tick 5 for that row group to be read."""
+    lo, hi = stored_span(CHAIN, 1, (10_020, 10_020))
+    assert lo <= 5 <= hi

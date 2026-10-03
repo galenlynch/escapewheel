@@ -21,7 +21,7 @@ from typing import Any
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
-from escapewheel_reader.clocks import anchors, declared_bound, mapped, reference_clock
+from escapewheel_reader.clocks import clock_graph, declared_bound, mapped, reference_clock
 from escapewheel_reader.errors import NotAligned
 from escapewheel_reader.resource_ids import (
     ANALYSIS_SPIKE_EVENTS,
@@ -295,7 +295,7 @@ def spike_events(
     bound = declared_bound(packet) if bound is None else bound
     width = bucket_seconds * _tick_rate(packet, reference)
     dropped = {} if dropped is None else dropped
-    by_clock = anchors(packet)
+    graph = clock_graph(packet)
     handle = packet.table_resource(CORE_SPIKE_EVENTS)
     columns = ["session_id", "unit_id", "t_tick"]
     # `t_tick` reaches its clock by a `clock_from` hop to `core.units.clock_id`, so a
@@ -323,7 +323,7 @@ def spike_events(
                 )
             clocks = on_clock[units]
             timed = pa.record_batch({"t_tick": batch.column("t_tick"), "clock_id": pa.array(clocks)})
-            parent, keep = mapped(timed, reference, by_clock, bound)
+            parent, keep = mapped(timed, reference, graph, bound)
             # Counted per clock whether or not any are dropped. A recorded zero is
             # the evidence that clock's bound was sufficient; silence is what let a reader and
             # this writer disagree about which spikes exist without either noticing.

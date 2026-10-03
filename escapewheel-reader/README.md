@@ -66,6 +66,12 @@ Where a table has several coordinates, a tick the anchors cannot place becomes a
 row stays. Where it has one, as spikes and events do, the row is dropped. The
 [design notes](docs/source/design.md#clocks) give the naming rule for the added clock columns.
 
+A tick reaches the reference by climbing its clock's parent chain, through each clock's anchors or
+linear transform. A clock that is not on that chain is refused rather than reached some other way.
+Where mapping is refused, or a synchronization looks wrong, read the ticks as stored:
+`clock=STORED` on an accessor, or `on_clock` left unset on `Packet.table`. Each row keeps the
+`clock_id` it was counted on, so ticks from different clocks are never mistaken for one another.
+
 The functions are free rather than methods because the table belongs to PyArrow and cannot carry
 methods of ours. `rate_of(packet, table)` is the one that returns a number: the rows' rate over
 the span they were observed for.

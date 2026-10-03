@@ -38,6 +38,7 @@ class Fake:
                 "clock_id": pa.array([REF, PROBE], type=pa.int32()),
                 "clock_name": ["harp", "probe.samples"],
                 "tick_rate_hz": [float(HARP), float(AP)],
+                "parent_clock_id": pa.array([None, REF], type=pa.int32()),
             }
         )
         unit_of = unit_of or (lambda i: i % 2)

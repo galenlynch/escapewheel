@@ -55,6 +55,15 @@ The mask matters because the first sync pulse commonly arrives a second or more 
 starts. The spikes before it have no defined parent tick, and they are exactly the ones a caller
 would otherwise misplace.
 
+Each of those rules maps one clock onto its parent. A tick reaches a further clock by climbing
+`core.clocks.parent_clock_id`, one edge at a time, each edge either the clock's anchors or its
+linear transform and each bounded in its own clock's median interval (Part 01 §3.9).
+`clocks.clock_graph` reads the chain once per packet. A target that is not an ancestor is refused:
+the specification defines no mapping from a parent back down to a child, so two sibling probes
+meet only on a clock above both. Where a packet declares no reference, rows on one clock stay on
+it and rows on several meet on the root their clocks share. Every refusal names the way back to
+the stored ticks, which stay readable whatever the synchronization says.
+
 `spike_times` and `events` return ticks on the packet's reference clock by default, with
 `clock_id` alongside, because a stored tick from one probe compared with another's is the easy
 wrong answer. `clock=STORED` asks for the ticks as stored.
@@ -81,8 +90,8 @@ first. `on_clock` maps each coordinate through its own clock column and leaves t
 the target. A tick the anchors cannot place, or one whose clock is null, is handled by how many
 coordinates the resource has. With one coordinate the tick is the row's whole content, so the row
 is dropped, as `analysis.spike_events` drops it. With several, as for intervals, trials and sites,
-only that cell becomes null and the row's other times are kept. A clock with no anchors still
-raises `NotAligned`. `seconds` adds `<name>_second` beside each `<name>_tick`. `Packet.table` takes
+only that cell becomes null and the row's other times are kept. A clock with no path to the
+target raises `NotAligned`. `seconds` adds `<name>_second` beside each `<name>_tick`. `Packet.table` takes
 `on_clock=True` (or a clock ID) and `seconds=True` to do the three steps eagerly in one read,
 because a packet that keeps each table on its own clock should not make synchronising it the
 caller's work. `Packet.scanner` stays lazy and leaves the ticks as stored.

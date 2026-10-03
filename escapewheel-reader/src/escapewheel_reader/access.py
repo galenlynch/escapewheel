@@ -351,7 +351,7 @@ def _span(
         target = clocks.reference_clock(packet) if clock is None else int(clock)
     except NotAligned:
         return span
-    return clocks.stored_span(clocks.anchors(packet), target, span)
+    return clocks.stored_span(clocks.clock_graph(packet), target, span)
 
 
 def _finish(

@@ -297,13 +297,23 @@ def test_a_packet_with_one_clock_needs_no_declaration(packet_root):
     assert set(access.spike_times(pkt, UNITS[0]).to_pydict()["clock_id"]) == {CLOCK_PROBE}
 
 
-def test_rows_spanning_clocks_with_no_reference_are_refused(two_clock_packet, monkeypatch):
-    """Returning these as stored would invite a comparison that means nothing."""
+def test_rows_spanning_clocks_with_no_reference_meet_on_their_root(two_clock_packet, monkeypatch):
+    """The probe's parent is the behaviour clock, so with no reference declared that is where both meet."""
     pkt = open_packet(two_clock_packet)
     spanning = access.spike_times(pkt, units=access.units(pkt), clock=STORED)
     monkeypatch.setattr(clocks, "reference_clock", _raise_unaligned)
     assert sorted(set(spanning.to_pydict()["clock_id"])) == [CLOCK_BEHAVIOUR, CLOCK_PROBE]
-    with pytest.raises(NotAligned):
+    assert set(clocks.on_clock(pkt, spanning).to_pydict()["clock_id"]) == {CLOCK_BEHAVIOUR}
+
+
+def test_rows_on_clocks_with_different_roots_are_refused(two_clock_packet, monkeypatch):
+    """Returning these as stored would invite a comparison that means nothing, so the refusal says how to ask."""
+    pkt = open_packet(two_clock_packet)
+    spanning = access.spike_times(pkt, units=access.units(pkt), clock=STORED)
+    monkeypatch.setattr(clocks, "reference_clock", _raise_unaligned)
+    unparented = clocks.ClockGraph({}, clocks.anchors(pkt), {})
+    monkeypatch.setattr(clocks, "clock_graph", lambda packet: unparented)
+    with pytest.raises(NotAligned, match="different roots.*clock=STORED"):
         clocks.on_clock(pkt, spanning)
 
 

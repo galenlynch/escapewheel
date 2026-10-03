@@ -23,6 +23,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from duckdb import DuckDBPyConnection
     from numpy.typing import NDArray
 
+    from .clocks import ClockGraph
     from .manifest import Resource
     from .packet import Predicate
     from .resources import ArrayResource, TableResource
@@ -41,6 +42,8 @@ class Memo:
     ----------
     anchors : dict or None
         :func:`~escapewheel_reader.clocks.anchors`: each clock's anchor ticks and their parents.
+    clock_graph : ClockGraph or None
+        :func:`~escapewheel_reader.clocks.clock_graph`: each clock's parent and alignment onto it.
     bound : float or None
         :func:`~escapewheel_reader.clocks.declared_bound`. Unset while the sessions table cannot
         be read.
@@ -57,6 +60,7 @@ class Memo:
     """
 
     anchors: dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]] | None = None
+    clock_graph: ClockGraph | None = None
     bound: float | None = None
     reference_clock: int | None = None
     origins: dict[int | None, tuple[int, int, int]] = field(default_factory=dict)

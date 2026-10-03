@@ -292,7 +292,7 @@ def test_coordinates_on_different_clocks_meet_on_one(resolved_packet):
 def test_a_clock_with_no_path_is_refused(resolved_packet):
     """Harp has no anchors onto the probe, so a harp-timed trial cannot be put on it."""
     trials = resolved_packet.table("dynamic_foraging.trials")
-    with pytest.raises(NotAligned, match="carries no anchors"):
+    with pytest.raises(NotAligned, match="not an ancestor"):
         on_clock(resolved_packet, trials, CLOCK_PROBE, resource_id="dynamic_foraging.trials")
 
 

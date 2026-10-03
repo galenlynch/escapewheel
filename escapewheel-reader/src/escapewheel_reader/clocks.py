@@ -8,6 +8,7 @@ Over a packet:
 - :func:`clock_columns` -- the column that holds each coordinate's clock.
 - :func:`reference_clock` -- the clock a packet reports times on.
 - :func:`origin` -- a session's time origin and the reference clock's rational rate.
+- :func:`clock_graph` -- each clock's alignment onto its parent, which a tick climbs to its target.
 - :func:`anchors`, :func:`declared_bound`, :func:`tick_rate` -- what those are computed from.
 
 Over arrays:
@@ -24,8 +25,9 @@ The writer maps with these functions too, so ticks mapped at write time and at r
 from __future__ import annotations
 
 import os
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from typing import Any, cast
 
 import numpy as np
@@ -43,6 +45,9 @@ from .resource_ids import CORE_CLOCK_ANCHORS, CORE_CLOCKS, CORE_SESSIONS
 #: unanchored ends -- the bound and the region it has to cover are the same quantity, because
 #: a free-running sync pulse leaves less than one interval at each end by construction.
 BOUND = 1.0
+
+#: Ends every refusal to map: the stored ticks stay readable, each with the clock it was counted on.
+_STORED_HINT = "; to read the ticks as stored, pass clock=STORED to an accessor or leave on_clock unset"
 
 
 def rate(anchor_t: NDArray[np.int64], anchor_p: NDArray[np.int64]) -> tuple[float, float]:
@@ -106,8 +111,11 @@ class _Map:
             raise Unanchored(f"{anchor_t.size} anchors define no median interval to bound by")
         if not ((np.diff(anchor_t) > 0).all() and (np.diff(anchor_p) > 0).all()):
             raise ValueError("anchors do not increase together, so interpolation between them is undefined")
-        self.anchor_t, self.anchor_p = anchor_t, anchor_p
+        self.anchor_t, self.anchor_p, self.bound = anchor_t, anchor_p, bound
         self.span = float(np.median(np.diff(anchor_t))) * bound
+        # A median interval on the parent: what rounding and the fitted ends can move a mapped
+        # range by, so :func:`stored_span` widens by it.
+        self.slack = float(np.median(np.diff(anchor_p)))
         self.slope, _ = rate(anchor_t, anchor_p)
         # The distance to the nearest anchor, which is what the bound is on, is piecewise linear:
         # zero at each anchor, rising with slope one to the midpoint and falling back. Knots at
@@ -145,6 +153,139 @@ class _Map:
                 offsets = (ticks[end] - tick).astype(np.float64)
                 parent[end] = parent_tick + np.rint(self.slope * offsets).astype(np.int64)
         return parent, np.interp(ticks, self.knots, self.distance) <= self.span
+
+    def inverse(self) -> _Map:
+        """Read the same anchors from parent to child, for widening a range and never for placing a tick."""
+        return _Map(self.anchor_p, self.anchor_t, self.bound)
+
+
+class _Linear:
+    """A clock's declared linear transform onto its parent, defined at every tick (Part 01 §3.9)."""
+
+    slack = 1.0
+
+    def __init__(self, slope: float, offset: float) -> None:
+        self.slope, self.offset = slope, offset
+
+    def __call__(self, ticks: NDArray[np.int64]) -> tuple[NDArray[np.int64], NDArray[np.bool_]]:
+        """Return the parent ticks, every one defined."""
+        parent = np.rint(self.offset + self.slope * ticks.astype(np.float64)).astype(np.int64)
+        return parent, np.ones(ticks.shape, dtype=bool)
+
+    def inverse(self) -> _Linear:
+        """Return the transform from parent to child, for widening a range."""
+        return _Linear(1.0 / self.slope, -self.offset / self.slope)
+
+
+class _Path:
+    """The edges from one clock up its parent chain to a target, applied in turn.
+
+    Each edge rounds to its parent's tick, as a writer mapping one hop at a time does, and a tick
+    is placed only where every edge places it: how far a hop reaches is counted in that clock's
+    own median anchor interval (Part 01 §3.9).
+    """
+
+    def __init__(self, edges: Sequence[_Map | _Linear]) -> None:
+        self.edges = list(edges)
+
+    def __call__(self, ticks: NDArray[np.int64]) -> tuple[NDArray[np.int64], NDArray[np.bool_]]:
+        """Return the target's ticks and which of them every edge placed."""
+        first, *rest = self.edges
+        ticks, keep = first(ticks)
+        for edge in rest:
+            ticks, placed = edge(ticks)
+            keep &= placed
+        return ticks, keep
+
+
+@dataclass(frozen=True)
+class ClockGraph:
+    """Each clock's parent, and the anchors or linear transform that map it there (Part 01 §3.9).
+
+    A tick reaches another clock only by climbing its parent chain: the specification defines
+    each mapping onto a parent and none back down, so a target that is not an ancestor is refused
+    rather than reached through an inverse.
+
+    Attributes
+    ----------
+    parents : Mapping
+        `clock_id` to `parent_clock_id`, for each clock declaring one.
+    anchors : Mapping
+        `clock_id` to its anchor ticks and their parent ticks, as :func:`anchors` returns them.
+    transforms : Mapping
+        `clock_id` to `(transform_slope, transform_offset)`.
+    """
+
+    parents: Mapping[int, int]
+    anchors: Mapping[int, tuple[NDArray[np.int64], NDArray[np.int64]]]
+    transforms: Mapping[int, tuple[float, float]]
+
+    def clocks(self) -> set[int]:
+        """Every clock the graph knows of."""
+        return {*self.parents, *self.parents.values(), *self.anchors, *self.transforms}
+
+    def ancestry(self, clock: int) -> list[int]:
+        """Return the clock, its parent, and so on to the root, stopping where a cycle would repeat."""
+        chain = [clock]
+        while (parent := self.parents.get(chain[-1])) is not None and parent not in chain:
+            chain.append(parent)
+        return chain
+
+    def path(self, clock: int, target: int, bound: float) -> _Path:
+        """Return the edges from `clock` up to `target`, refusing a target that is not an ancestor."""
+        chain = self.ancestry(clock)
+        if target not in chain:
+            raise NotAligned(
+                f"clock {target} is not an ancestor of clock {clock}, whose parent chain is {chain}, and a "
+                f"mapping is defined only onto a parent (Part 01 §3.9){_STORED_HINT}"
+            )
+        try:
+            return _Path([self._edge(child, bound) for child in chain[: chain.index(target)]])
+        except ValueError as refused:  # NotAligned and Unanchored are both ValueErrors
+            raise type(refused)(f"{refused}{_STORED_HINT}") from refused
+
+    def _edge(self, clock: int, bound: float) -> _Map | _Linear:
+        if clock in self.transforms:
+            return _Linear(*self.transforms[clock])
+        if clock in self.anchors:
+            return _Map(*self.anchors[clock], bound)
+        raise NotAligned(f"{clock} declares neither anchors nor a transform onto its parent {self.parents[clock]}")
+
+
+def clock_graph(packet: PacketLike) -> ClockGraph:
+    """Read each clock's parent and alignment from `core.clocks` and `core.clock_anchors`.
+
+    Kept in the packet's memo, for the same reason :func:`anchors` is. A packet without
+    `core.clocks` declares no parents, so its clocks reach nothing but themselves.
+    """
+    memo = Memo.of(packet)
+    if memo.clock_graph is not None:
+        return memo.clock_graph
+    parents: dict[int, int] = {}
+    transforms: dict[int, tuple[float, float]] = {}
+    try:
+        table = packet.table(CORE_CLOCKS)
+    except ResourceNotFoundError:
+        table = pa.table({"clock_id": pa.array([], pa.int32())})
+
+    def column(name: str) -> list[Any]:
+        return _plain(table.column(name)).to_pylist() if name in table.column_names else [None] * table.num_rows
+
+    # A dozen rows, read into the mappings this returns.
+    for clock, parent, slope, offset in zip(
+        column("clock_id"),
+        column("parent_clock_id"),
+        column("transform_slope"),
+        column("transform_offset"),
+        strict=True,
+    ):
+        if parent is not None:
+            parents[int(clock)] = int(parent)
+        if slope is not None and offset is not None:
+            transforms[int(clock)] = (float(slope), float(offset))
+    graph = ClockGraph(parents, anchors(packet), transforms)
+    memo.clock_graph = graph
+    return graph
 
 
 def extrapolation_error(
@@ -299,15 +440,20 @@ def reference_clock(packet: PacketLike, *, session_id: int | None = None) -> int
     return named[0]
 
 
-def mapped(batch: pa.RecordBatch, reference: Any, anchors: Any, bound: float) -> tuple[Any, Any]:
-    """Map one batch's ticks onto the reference clock, returning the ticks and what to keep."""
+def mapped(batch: pa.RecordBatch, target: Any, graph: ClockGraph, bound: float) -> tuple[Any, Any]:
+    """Map one batch's ticks onto `target` up each clock's parent chain, returning the ticks and what to keep."""
     ticks = np.asarray(batch.column("t_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
     clocks = _clock_ids(batch.column("clock_id"))
     parent = np.empty(ticks.size, dtype=np.int64)
     keep = np.zeros(ticks.size, dtype=bool)
-    # Every clock with anchors, prepared before the workers start: a dozen at most, each cheap.
-    maps: dict[int, _Map | None] = {int(name): _Map(pair[0], pair[1], bound) for name, pair in anchors.items()}
-    maps[int(reference)] = None
+    # Every clock's path, prepared before the workers start: a dozen at most, each cheap. A clock
+    # that cannot reach the target keeps its refusal, raised only if a row is on it.
+    paths: dict[int, _Path | Exception] = {}
+    for name in graph.clocks() | {int(target)}:
+        try:
+            paths[name] = graph.path(name, int(target), bound)
+        except (NotAligned, ValueError) as refused:  # Unanchored is a ValueError
+            paths[name] = refused
 
     def run(lo: int, hi: int) -> None:
         chunk = clocks[lo:hi]
@@ -321,10 +467,10 @@ def mapped(batch: pa.RecordBatch, reference: Any, anchors: Any, bound: float) ->
         for name, rows in groups:
             if name == _NULL_CLOCK:  # a null clock places nothing
                 continue
-            if name not in maps:
-                raise NotAligned(f"{name} carries no anchors, so its ticks reach no reference clock")
-            prepared = maps[name]
-            if prepared is None:
+            prepared = paths[name] if name in paths else graph.path(name, int(target), bound)
+            if isinstance(prepared, Exception):
+                raise prepared
+            if not prepared.edges:
                 parent[rows], keep[rows] = ticks[rows], True
             else:
                 parent[rows], keep[rows] = prepared(ticks[rows])
@@ -361,11 +507,7 @@ def _clock_ids(column: Any) -> NDArray[np.int64]:
     return np.asarray(column.to_numpy(zero_copy_only=False), dtype=np.int64)
 
 
-def stored_span(
-    by_clock: dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]],
-    target: int,
-    span: tuple[int, int],
-) -> tuple[int, int]:
+def stored_span(graph: ClockGraph, target: int, span: tuple[int, int]) -> tuple[int, int]:
     """Widen a range on `target` into one that covers it on every stored clock.
 
     A constraint a caller states on the reference clock has to reach the file as a constraint
@@ -376,15 +518,21 @@ def stored_span(
     """
     lo, hi = span
     lows, highs = [lo], [hi]
-    for anchor_t, anchor_p in by_clock.values():
-        if anchor_t.size < 2:
-            continue
-        # The inverse of the same piecewise map: the anchor pairs, read the other way.
-        ends = np.interp([lo, hi], anchor_p, anchor_t)
-        # One anchor interval of slack each way, which is the bound the forward map allows.
-        slack = float(np.median(np.diff(anchor_t)))
-        lows.append(int(np.floor(ends[0] - slack)))
-        highs.append(int(np.ceil(ends[1] + slack)))
+    for clock in graph.clocks() - {target}:
+        try:
+            path = graph.path(clock, target, BOUND)
+        except (NotAligned, ValueError):
+            continue  # its rows cannot reach the target, and mapping them refuses
+        ends = np.array([lo, hi], dtype=np.int64)
+        # Down the chain through each edge read the other way, widening by a median interval
+        # per hop: that covers the rounding and the fitted ends the forward map applies.
+        for edge in reversed(path.edges):
+            inverse = edge.inverse()
+            ends = inverse(ends)[0]
+            slack = int(np.ceil(inverse.slack))
+            ends = np.array([ends[0] - slack, ends[1] + slack], dtype=np.int64)
+        lows.append(int(ends[0]))
+        highs.append(int(ends[1]))
     return min(lows), max(highs)
 
 
@@ -421,17 +569,23 @@ def _flat(column: Any) -> pa.Array[Any]:
 def default_clock(packet: PacketLike, present: list[int]) -> int:
     """Return the clock to map onto when the caller named none.
 
-    The declared reference, or -- where a packet declares none -- the one clock the rows are
-    already on, since there is then nothing to reconcile and nothing to get wrong. Rows spanning
-    clocks with no reference declared are refused: that is exactly the case where returning them
-    as stored invites a comparison that means nothing.
+    The declared reference. Where a packet declares none: the one clock the rows are already on,
+    since there is then nothing to reconcile; else the root every row's clock climbs to, the one
+    clock they all reach. Rows whose clocks reach different roots are refused: returning them as
+    stored invites a comparison that means nothing.
     """
     try:
         return reference_clock(packet)
-    except NotAligned:
+    except NotAligned as undeclared:
         if len(present) == 1:
             return present[0]
-        raise
+        graph = clock_graph(packet)
+        roots = sorted({graph.ancestry(clock)[-1] for clock in present})
+        if len(roots) == 1:
+            return roots[0]
+        raise NotAligned(
+            f"{undeclared}, and the rows' clocks {present} climb to different roots {roots}{_STORED_HINT}"
+        ) from undeclared
 
 
 def tick_rate(packet: PacketLike, clock_id: int) -> tuple[int, int]:
@@ -652,7 +806,7 @@ def _plain(column: Any) -> Any:
 
 
 def _placed(
-    ticks: Any, clock: Any, target: int, by_clock: Any, bound: float
+    ticks: Any, clock: Any, target: int, graph: ClockGraph, bound: float
 ) -> tuple[pa.Array[Any], NDArray[np.bool_]]:
     """Map one coordinate onto `target`, nulling what cannot be placed.
 
@@ -666,11 +820,11 @@ def _placed(
     rows = np.flatnonzero(known)
     if rows.size == len(ticks):
         # Nothing null, so nothing to gather around.
-        parent, placed = mapped(pa.record_batch({"t_tick": ticks, "clock_id": clock}), target, by_clock, bound)
+        parent, placed = mapped(pa.record_batch({"t_tick": ticks, "clock_id": clock}), target, graph, bound)
         return pa.array(parent, mask=~placed).cast(ticks.type), placed
     if rows.size:
         batch = pa.record_batch({"t_tick": ticks.take(rows), "clock_id": clock.take(rows)})
-        parent[rows], placed[rows] = mapped(batch, target, by_clock, bound)
+        parent[rows], placed[rows] = mapped(batch, target, graph, bound)
     absent = pc.is_null(ticks).to_numpy(zero_copy_only=False)
     return pa.array(parent, mask=~placed).cast(ticks.type), placed | absent
 
@@ -698,9 +852,9 @@ def _resource_on_clock(
         clock_column = _flat(table.column(column))
         if _present(clock_column) == [target] and not clock_column.null_count:
             continue
-        by_clock = anchors(packet)
+        graph = clock_graph(packet)
         for coordinate in coordinates:
-            ticks, placed = _placed(table.column(coordinate), clock_column, target, by_clock, limit)
+            ticks, placed = _placed(table.column(coordinate), clock_column, target, graph, limit)
             if drop:
                 keep &= placed
             table = table.set_column(table.column_names.index(coordinate), coordinate, ticks)
@@ -770,7 +924,7 @@ def on_clock(
         # packet with no anchors readable.
         return table
     limit = declared_bound(packet) if bound is None else bound
-    ticks, keep = mapped(pa.record_batch(columns), target, anchors(packet), limit)
+    ticks, keep = mapped(pa.record_batch(columns), target, clock_graph(packet), limit)
     if keep.all():
         keep = None
     names = table.column_names
@@ -855,10 +1009,12 @@ def seconds(
 
 __all__ = [
     "BOUND",
+    "ClockGraph",
     "align",
     "anchors",
     "attach_clocks",
     "clock_columns",
+    "clock_graph",
     "declared_bound",
     "extrapolation_error",
     "mapped",
