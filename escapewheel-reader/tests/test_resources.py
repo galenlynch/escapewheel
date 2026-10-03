@@ -39,8 +39,10 @@ def test_a_table_read_allocates_from_the_read_pool(packet_root):
     from escapewheel_reader.resources import read_pool
 
     assert read_pool().backend_name in {"jemalloc", "system"}
-    open_packet(packet_root).table("core.intervals")
-    assert read_pool().bytes_allocated() > 0
+    before = read_pool().bytes_allocated()
+    table = open_packet(packet_root).table("core.intervals")
+    assert read_pool().bytes_allocated() > before
+    del table
 
 
 def test_register_returns_the_view_name(packet_root):
