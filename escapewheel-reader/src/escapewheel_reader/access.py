@@ -19,6 +19,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from . import clocks
+from .dictionaries import key_filter, within
 from .errors import NotAligned, NotDeclared
 from .observation import attach_support, unit_windows
 from .protocols import Memo, PacketLike
@@ -249,23 +250,14 @@ def spike_times(
     missing = [k for k in keys if k not in units.schema.names]
     if missing:
         raise ValueError(f"units is missing {missing}, which identify a unit in this packet")
-    # The values must match the type the scan produces. A caller may hand in a table
-    # whose key columns are dictionary-encoded, and Arrow will not compare a dictionary
-    # array against a plain column, so take the dictionary's values instead.
-    tests = []
-    for key in keys:
-        values = units.column(key).unique()
-        if pa.types.is_dictionary(values.type):
-            values = values.cast(pa.string())
-        tests.append(pc.field(key).isin(values))
-    wanted = tests[0]
-    for test in tests[1:]:
-        wanted = wanted & test
+    wanted, exact = key_filter(units, keys)
     if session_id is not None:
         wanted = wanted & (pc.field("session_id") == session_id)
     if (pushed := _span(packet, t_tick, clock)) is not None:
         wanted = wanted & (pc.field("t_tick") >= pushed[0]) & (pc.field("t_tick") <= pushed[1])
     found = packet.scan(CORE_SPIKE_EVENTS).to_table(columns=["t_tick", *keys], filter=wanted, memory_pool=read_pool())
+    if not exact:
+        found = within(found, units, keys)
     found = clocks.attach_clocks(packet, CORE_SPIKE_EVENTS, found)
     return _finish(packet, found.select([*keys, "t_tick", "clock_id"]), t_tick, clock, seconds, session_id)
 

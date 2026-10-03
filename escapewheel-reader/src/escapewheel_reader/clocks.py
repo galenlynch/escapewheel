@@ -35,7 +35,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 from numpy.typing import NDArray
 
-from .dictionaries import values
+from .dictionaries import lookup, values
 from .errors import NotAligned, NotDeclared, NoTimeOrigin, Refused, ResourceNotFoundError, Unanchored
 from .optional import read_optional
 from .protocols import Memo, PacketLike
@@ -773,20 +773,10 @@ def _clock_of(packet: PacketLike, resource_id: str, declared: Mapping[str, Any],
         for name, column in zip(target_keys, local, strict=True)
     }
     found = packet.table(target_resource, columns=list(dict.fromkeys([*target_keys, target])), **narrow)
-    local = [column.cast(found.column(name).type) for column, name in zip(local, target_keys, strict=True)]
-    if len(keys) == 1:
-        position = pc.index_in(local[0], value_set=_flat(found.column(target_keys[0])))
-        return pc.take(found.column(target), position)
-    # Composite keys: a left join keeps every row and an unmatched one null, and the row number
-    # restores the order the join does not keep.
-    joined_on = [f"k{i}" for i in range(len(keys))]
-    left = pa.table({**dict(zip(joined_on, local, strict=True)), "row": pa.array(np.arange(table.num_rows))})
-    parent = {k: found.column(name) for k, name in zip(joined_on, target_keys, strict=True)}
-    right = pa.table({**parent, "clock": found.column(target)})
-    joined = left.join(right, keys=joined_on, join_type="left outer").sort_by("row")
-    if joined.num_rows != table.num_rows:
-        raise Refused(f"{target_resource} holds a key {resource_id} references more than once")
-    return joined.column("clock")
+    try:
+        return lookup(local, found, target_keys, target)
+    except ValueError:
+        raise Refused(f"{target_resource} holds a key {resource_id} references more than once") from None
 
 
 def _plain(column: Any) -> Any:

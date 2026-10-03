@@ -3,14 +3,21 @@
 - :func:`values` -- a column's distinct values, from its dictionary where it has one.
 - :func:`where` -- offsets where a column equals a value, comparing codes where it is a dictionary.
 - :func:`constant` -- one repeated value as codes into a one-entry dictionary.
+- :func:`decoded` -- a table with its dictionary columns decoded.
+- :func:`join` -- an Arrow join on keys that may be dictionaries or differ in width.
+- :func:`lookup` -- the parent value each row's key names, in the rows' order.
+- :func:`key_filter` / :func:`within` -- rows whose keys together match a wanted row.
 
 Arrow cannot sort a dictionary column, and `group_by` fails across row groups until
-`Table.unify_dictionaries` reconciles them.
+`Table.unify_dictionaries` reconciles them. Its joins take no dictionary key and no keys of
+different widths, and the helpers below decode and cast so a caller need not.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Sequence
+from functools import reduce
+from typing import Any, Literal
 
 import numpy as np
 import pyarrow as pa
@@ -48,6 +55,79 @@ def where(column: Any, value: Any) -> NDArray[np.int64]:
     else:
         matches = pc.equal(column, pa.scalar(value, column.type))
     return np.flatnonzero(pc.fill_null(matches, False).to_numpy(zero_copy_only=False))
+
+
+def plain(column: Any) -> Any:
+    """Decode a dictionary column, leaving any other as it is."""
+    return column.cast(column.type.value_type) if pa.types.is_dictionary(column.type) else column
+
+
+def decoded(table: pa.Table) -> pa.Table:
+    """Decode every dictionary column of a table."""
+    return table.cast(
+        pa.schema(pa.field(f.name, f.type.value_type) if pa.types.is_dictionary(f.type) else f for f in table.schema)
+    )
+
+
+def join(
+    left: pa.Table,
+    right: pa.Table,
+    keys: Sequence[str],
+    join_type: Literal["inner", "left outer", "left semi", "left anti"] = "inner",
+) -> pa.Table:
+    """Join on `keys`, decoded and cast to the left's types. Row order is not kept."""
+    left, right = decoded(left), decoded(right)
+    for key in keys:
+        right = right.set_column(
+            right.column_names.index(key), key, right.column(key).cast(left.schema.field(key).type)
+        )
+    return left.join(right, keys=list(keys), join_type=join_type)
+
+
+def lookup(keys: Sequence[Any], parent: pa.Table, parent_keys: Sequence[str], column: str) -> Any:
+    """Return `column` of the parent row each position of `keys` names, null where none does.
+
+    Raises
+    ------
+    ValueError
+        Where the parent holds one key on several rows, which would give a row several answers.
+    """
+    parent = decoded(parent)
+    if parent.group_by(list(parent_keys)).aggregate([]).num_rows != parent.num_rows:
+        raise ValueError("the parent holds a key on more than one row")
+    local = [plain(key).cast(parent.schema.field(name).type) for key, name in zip(keys, parent_keys, strict=True)]
+    if len(local) == 1:
+        return pc.take(
+            parent.column(column), pc.index_in(local[0], value_set=parent.column(parent_keys[0]).combine_chunks())
+        )
+    # A left join keeps every row, and the row number restores the order the join does not.
+    named = [f"k{i}" for i in range(len(local))]
+    rows = pa.table({**dict(zip(named, local, strict=True)), "row": pa.array(np.arange(len(local[0])))})
+    values = pa.table(
+        {**{k: parent.column(n) for k, n in zip(named, parent_keys, strict=True)}, "value": parent.column(column)}
+    )
+    return rows.join(values, keys=named, join_type="left outer").sort_by("row").column("value")
+
+
+def key_filter(wanted: pa.Table, keys: Sequence[str]) -> tuple[pc.Expression, bool]:
+    """Return a scan filter keeping rows whose every key is among `wanted`'s, and whether it is exact.
+
+    Per-key membership is what a Parquet scan can push down, and it admits a row matching each
+    key on a different wanted row. It is exact where the wanted keys are every combination of
+    their values, which one key, or one session, always is.
+    """
+    wanted = decoded(wanted.select(list(keys)))
+    tests = [pc.field(key).isin(pc.unique(wanted.column(key).drop_null())) for key in keys]
+    combinations = reduce(lambda n, key: n * len(pc.unique(wanted.column(key))), keys, 1)
+    exact = combinations == wanted.group_by(list(keys)).aggregate([]).num_rows
+    return reduce(lambda a, b: a & b, tests), exact
+
+
+def within(table: pa.Table, wanted: pa.Table, keys: Sequence[str]) -> pa.Table:
+    """Keep the rows of `table` whose keys together match a row of `wanted`, in their order."""
+    numbered = table.append_column("__row", pa.array(np.arange(table.num_rows)))
+    kept = join(numbered, wanted.select(list(keys)), keys, "left semi").sort_by("__row")
+    return kept.drop_columns("__row").select(table.column_names)
 
 
 __all__: list[str] = []
