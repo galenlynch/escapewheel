@@ -340,6 +340,7 @@ A NaN is therefore a value only of a float column declaring `finite: false`. An 
 null under [Part 03 §5.6](03_portable_physical_profile.md#ew-one-null), so a source's NaN or
 infinity meaning that a value was not recorded or not computable becomes null in any float column.
 
+<a id="ew-column-presence" data-spec-anchor="canonical"></a>
 ## 6. Presence
 
 A column is `required`, `nullable` or `optional`:
