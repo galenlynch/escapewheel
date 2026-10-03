@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R167 accepted. R42 and R73 withdrawn. 2 change documents, 2 Open and 0 Ready. None of them is binding, and none takes a number until it is accepted.
+R1–R41, R43–R72 and R74–R167 accepted. R42 and R73 withdrawn. 2 change documents, 1 Open and 1 Ready. None of them is binding, and none takes a number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 91 Tier 2 rules (2 advisory)
@@ -136,7 +136,7 @@ already solves that this code solves again.
 
 ## 3a. Two change documents are open
 
-Both are Open under `revisions/changes/`:
+Both are under `revisions/changes/`, whose README gives each one's status:
 
 - a null identifier says only that a row names nothing, as the default reading of every nullable
   naming column, with `label_id` padding and the axis-form columns as the exceptions; and

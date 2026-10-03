@@ -24,4 +24,4 @@ Dependencies run downward, so a document may depend on the ones above it and on 
 | order | document | status | placement |
 |---:|---|---|---|
 | 1 | [A null identifier says only that a row names nothing](a-null-identifier-says-only-that-a-row-names-nothing.md) | Open | ordinary: a new subsection at the end of Part 02 §6, after §6.1; three core descriptions; a core minor version |
-| 2 | [A frame's pts and dropped flag each have one meaning](a-frames-pts-and-dropped-flag-each-have-one-meaning.md) | Open | ordinary: Part 01 §3.18; the `core.media_frames` descriptions and one new rule; a core minor version |
+| 2 | [A frame's pts and dropped flag each have one meaning](a-frames-pts-and-dropped-flag-each-have-one-meaning.md) | Ready | structural: Part 01 §3.18 in place; Part 02 §9.2; three `core.media_frames` descriptions and one new rule; a core minor version |
