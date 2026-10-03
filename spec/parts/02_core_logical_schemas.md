@@ -369,6 +369,27 @@ whatever its values, every value null included, and whatever wrote it.
 [Part 05 §3.5](05_validation_and_import.md#ew-recipe-check) has an amending build refuse or drop one
 a held table carries.
 
+<a id="ew-null-naming-columns" data-spec-anchor="canonical"></a>
+### 6.2 Nulls in naming columns
+
+A null in a column whose role is `identifier` or `discriminator` states only that the row names
+nothing in that column. It states neither that nothing exists to name nor that something exists
+that the row does not name, and a consumer MUST NOT conclude either from the null. A consumer that
+reports what such a column names MUST report, for a null, that the packet names nothing there. A
+consumer that does not report what the column names owes only the first of these. No checker
+verifies either.
+
+This reading holds for such a column whatever registry declares it, except where a numbered part
+gives a null in that column another reading.
+[Part 03 §6.3](03_portable_physical_profile.md#ew-array-axis-coordinates) gives the only other
+readings: a null `label_id` on `core.array_labels` or `analysis.array_labels` states padding, and a
+null `coordinate_resource`, `coordinate_array_asset_id` or `clock_id` on `core.array_dimensions` or
+`analysis.array_dimensions` says the axis does not take that coordinate form. A consequence a
+numbered part attaches to a row that names nothing, such as an undeterminable discriminator row
+([§8.3](#ew-discriminator-semantics)), an undeterminable run scope (Part 01 §2.6) or an unrecorded media device
+([Part 01 §3.18](01_semantic_standard.md#ew-media-asset-concept)), is not another reading and
+stands.
+
 <a id="ew-logical-references" data-spec-anchor="canonical"></a>
 ## 7. References
 
@@ -668,7 +689,7 @@ The incorporated registry meta-schema has `$id`
 schema MUST carry that value in `$schema`. A registry document SHOULD carry `$schema` as its first
 member, so that the head of the file shows which meta-schema governs it; member order carries no
 other meaning, and no checker verifies it. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.19.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.20.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 

@@ -661,3 +661,10 @@ locations = [
 
 [target."R168 §3.6"]
 locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.media_frames/table/rules/2/id", equals = "core.media_frames.t_tick_nondecreasing_with_frame_index" }]
+
+[target."R169 §3.3"]
+locations = [
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.devices/table/columns/8/name", equals = "parent_device_id" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.sessions/table/columns/9/name", equals = "source_session_id" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.processing_runs/table/columns/6/name", equals = "supersedes_run_id" },
+]

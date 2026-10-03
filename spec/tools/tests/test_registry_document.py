@@ -730,6 +730,35 @@ def test_core_declares_every_owned_identifiers_name_required():
                 assert column["presence"] == "required", (resource, column["name"])
 
 
+@pytest.mark.parametrize(
+    ("resource", "name", "description", "references"),
+    [
+        (
+            "core.devices",
+            "parent_device_id",
+            "The device this one was attached to -- a probe's headstage, a headstage's connect board.",
+            "core.devices",
+        ),
+        ("core.sessions", "source_session_id", "Source-system session ID.", None),
+        ("core.processing_runs", "supersedes_run_id", "The run this one replaces.", "core.processing_runs"),
+    ],
+)
+def test_a_naming_columns_description_gives_a_null_no_reading_of_its_own(resource, name, description, references):
+    """Part 02 §6.2 owns what a null in a naming column says, so these descriptions say nothing of one."""
+    table = CORE["resources"][resource]["table"]
+    (column,) = [c for c in table["columns"] if c["name"] == name]
+    assert column == {
+        "name": name,
+        "type": "int32",
+        "presence": "nullable",
+        "role": "identifier",
+        "identity": "assigned",
+        "description": description,
+    }
+    named = [r["resource"] for r in table["references"] if r["columns"] == [name]]
+    assert named == ([references] if references else [])
+
+
 def test_determinants_resolve_locally():
     document = _document()
     _table(document)["columns"][2]["determined_by"] = ["missing_id"]

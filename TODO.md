@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R168 accepted. R42 and R73 withdrawn. 1 change document, 0 Open and 1 Ready. None of them is binding, and none takes a number until it is accepted.
+R1–R41, R43–R72 and R74–R169 accepted. R42 and R73 withdrawn. No change document is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 92 Tier 2 rules (2 advisory)
@@ -134,12 +134,12 @@ read what each target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. One change document is open
+## 3a. No change document is open
 
-It is under `revisions/changes/`, whose README gives its status: Ready, a null identifier says only
-that a row names nothing, as the default reading of every naming column, with `label_id` padding
-and the axis-form columns as the exceptions, and a writer writes a null `label_id` only for
-padding.
+`revisions/changes/` holds none. One question an accepted record left open is a change of its own:
+`core.sessions.source_session_id` is declared `assigned` while its description names a source
+system's identifier, which Part 01 §2.1 calls `carried`; no writer fills it, and `session_name`
+already holds the identifier a source used. It wants retyping or removing.
 
 **Accepted as R165, 2026-10-02:** Part 11 §4 states the ISO meaning of `BETWEEN` and `IN`, Part
 11 §8 makes a valid rule that a validator cannot evaluate with Part 11's semantics incomplete, Part
@@ -164,6 +164,12 @@ presents, so a stored frame its edit list excludes has no row and one presented 
 frame's `pts` is its time on the container's presentation timeline; and `dropped` is true, false or
 null as the writer knows of a loss. A frame's tick does not decrease in presentation order on one
 clock, which `core.media_frames.t_tick_nondecreasing_with_frame_index` checks. Core is 0.19.0.
+
+**Accepted as R169, 2026-10-02:** Part 02 §6.2 has a null in an `identifier` or `discriminator`
+column state only that the row names nothing, neither that nothing exists to name nor that
+something does, except where a numbered part gives another reading, as Part 03 §6.3 does for label
+padding and the axis forms. A writer writes a null `label_id` only for padding. Three core
+descriptions stop giving a null a reading of their own. Core is 0.20.0.
 
 ## 3b. Sidecars are declared, and video is not yet packet-owned
 

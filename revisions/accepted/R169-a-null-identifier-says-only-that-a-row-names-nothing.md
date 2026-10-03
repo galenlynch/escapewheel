@@ -2,9 +2,10 @@
 
 | | |
 |---|---|
-| **Status** | **Ready** |
+| **Status** | **Accepted** 2026-10-02 |
 | **Opened** | 2026-10-02 |
 | **Based on** | `04da4ef50a6e4066520778be78eaeedce41e7804` |
+| **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §6, by a new subsection at its end; Part 02 §9.2; Part 03 §6.3; Part 08 §§2 and 3; the core registry |
 | **Depends on** | R161 §3.1 and R161 §3.2 (the readings of a null producing run this generalises); R166 §3.1 (the subsection of Part 02 §6 the new one follows); R164 §3.5 (the core registry version at the baseline) |

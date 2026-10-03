@@ -63,7 +63,7 @@ presence = "nullable"
 role = "identifier"
 identity = "assigned"
 references = { resource = "core.processing_runs", column = "processing_run_id" }
-description = "The run this one replaces, if any."
+description = "The run this one replaces."
 
 [[columns]]
 name = "software_name"

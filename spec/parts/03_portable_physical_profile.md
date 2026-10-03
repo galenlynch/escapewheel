@@ -360,7 +360,9 @@ then stands for the row its label names, or for none. Its labels are rows of the
 `coordinate_resource`'s `discriminates_via` names: `core.array_labels` for a core array and
 `analysis.array_labels` for an analysis one. A label's `label_id` is the identifier of the row its
 position stands for, in the resource `coordinate_resource` names, and a null `label_id` stands for
-no row, which is how a packet states padding.
+no row, which is how a packet states padding. A writer MUST NOT write a null `label_id` for a
+position of a labelled axis whose row it could not determine. No checker verifies this, since a
+packet holds nothing that separates such a position from padding.
 
 An axis is **dependent** where its row declares `depends_on_axis_index`: which row each of its
 positions stands for changes along the axis `depends_on_axis_index` names, and each label row's

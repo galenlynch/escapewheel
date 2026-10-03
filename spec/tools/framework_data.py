@@ -24,7 +24,7 @@ IDENTIFIERS = {
         "ew-core-logical-schema-scope",
     ),
     "registry_id": ("core", "02", "ew-registry-self-description"),
-    "registry_version": ("0.19.0", "02", "ew-registry-self-description"),
+    "registry_version": ("0.20.0", "02", "ew-registry-self-description"),
 }
 
 #: Text found in the normative-reference entry of each external authority.

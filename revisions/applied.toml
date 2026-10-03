@@ -4617,5 +4617,20 @@ where = [{ part = "01", anchor = "ew-media-asset-concept" }]
 disposition = "registry"
 
 [clause."R168 §3.7"]
+disposition = "superseded"
+by = "R169"
+
+[clause."R169 §3.1"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-null-naming-columns" }]
+
+[clause."R169 §3.2"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-array-axis-coordinates" }]
+
+[clause."R169 §3.3"]
+disposition = "registry"
+
+[clause."R169 §3.4"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-self-description" }]

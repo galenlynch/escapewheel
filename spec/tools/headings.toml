@@ -95,6 +95,7 @@
 "5.4" = "Finite values"
 "6" = "Presence"
 "6.1" = "Undeclared columns"
+"6.2" = "Nulls in naming columns"
 "7" = "References"
 "7.1" = "Session scope"
 "8" = "Column semantics"
@@ -955,6 +956,12 @@ aliases = []
 part = "00"
 section = "9"
 title = "Normative-reference policy and shared references"
+aliases = []
+
+[anchor.ew-null-naming-columns]
+part = "02"
+section = "6.2"
+title = "Nulls in naming columns"
 aliases = []
 
 [anchor.ew-numbered-part-ownership]

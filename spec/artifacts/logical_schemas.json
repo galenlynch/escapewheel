@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.12.0",
   "registry_id": "core",
-  "registry_version": "0.19.0",
+  "registry_version": "0.20.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.2",
@@ -2592,7 +2592,7 @@
             "presence": "nullable",
             "role": "identifier",
             "identity": "assigned",
-            "description": "The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it."
+            "description": "The device this one was attached to -- a probe's headstage, a headstage's connect board."
           },
           {
             "name": "parent_port",
@@ -4140,7 +4140,7 @@
             "presence": "nullable",
             "role": "identifier",
             "identity": "assigned",
-            "description": "The run this one replaces, if any."
+            "description": "The run this one replaces."
           },
           {
             "name": "software_name",
@@ -4416,7 +4416,7 @@
             "presence": "nullable",
             "role": "identifier",
             "identity": "assigned",
-            "description": "Source-system session ID if different."
+            "description": "Source-system session ID."
           },
           {
             "name": "t_zero_tick",

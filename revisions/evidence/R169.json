@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "revision": "R169",
+  "based_on": "04da4ef50a6e4066520778be78eaeedce41e7804",
+  "clauses": {
+    "R169 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-null-naming-columns"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "No packet separates the readings the clause rules out: a consumer's conclusion about a null is not in the packet."
+      },
+      "implementations": {
+        "unchanged": "The reference reader draws no conclusion from a null naming column."
+      },
+      "documentation": {
+        "unchanged": "The rule is stated once in Part 02, and no package guide reads a null otherwise."
+      }
+    },
+    "R169 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-array-axis-coordinates"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_attachments.py::test_a_label_is_numbered_as_the_row_its_axis_names_and_padding_stays_null"
+          }
+        ]
+      },
+      "implementations": {
+        "unchanged": "Every writer path already writes a null label only past a unit's contacts."
+      },
+      "documentation": {
+        "unchanged": "The writer's guide does not describe label padding beyond Part 03."
+      }
+    },
+    "R169 §3.3": {
+      "owners": [
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.devices/table/columns/8"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.sessions/table/columns/9"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.processing_runs/table/columns/6"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_a_naming_columns_description_gives_a_null_no_reading_of_its_own[core.devices-parent_device_id-The device this one was attached to -- a probe's headstage, a headstage's connect board.-core.devices]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/core.devices.toml",
+          "spec/source/core/core.sessions.toml",
+          "spec/source/core/core.processing_runs.toml"
+        ]
+      },
+      "documentation": {
+        "unchanged": "The descriptions are their own documentation."
+      }
+    },
+    "R169 §3.4": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/registry_version"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/artifacts/logical_schemas.json",
+          "spec/parts/08_example_packet.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: structural checks",
+            "id": "core registry version is 0.20.0"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_an_amending_build_adds_sidecars_to_a_packet_bound_to_the_earlier_registry"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/registry.toml",
+          "spec/tools/check.py",
+          "spec/tools/framework_data.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "spec/README.md"
+        ]
+      }
+    }
+  }
+}

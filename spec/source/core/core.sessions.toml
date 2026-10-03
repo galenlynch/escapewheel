@@ -84,7 +84,7 @@ type = "int32"
 presence = "nullable"
 role = "identifier"
 identity = "assigned"
-description = "Source-system session ID if different."
+description = "Source-system session ID."
 
 [[columns]]
 name = "t_zero_tick"

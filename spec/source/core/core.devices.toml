@@ -78,7 +78,7 @@ presence = "nullable"
 role = "identifier"
 identity = "assigned"
 references = { resource = "core.devices", column = "device_id" }
-description = "The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it."
+description = "The device this one was attached to -- a probe's headstage, a headstage's connect board."
 
 [[columns]]
 name = "parent_port"

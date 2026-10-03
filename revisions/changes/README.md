@@ -23,4 +23,3 @@ Dependencies run downward, so a document may depend on the ones above it and on 
 
 | order | document | status | placement |
 |---:|---|---|---|
-| 1 | [A null identifier says only that a row names nothing](a-null-identifier-says-only-that-a-row-names-nothing.md) | Ready | structural: a new subsection at the end of Part 02 §6, after §6.1; Part 03 §6.3 in place; three core descriptions; a core minor version |

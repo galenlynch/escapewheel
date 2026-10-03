@@ -8,7 +8,7 @@ This generated rendering is not a standalone specification. See
 
 ```text
 51 resources, 47 tables, 367 columns, 117 references, 92 Tier 2 rules
-registry 0.19.0   logical standard escapewheel-logical-v0.1
+registry 0.20.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -537,7 +537,7 @@ registry 0.19.0   logical standard escapewheel-logical-v0.1
 | `firmware_version` | string | nullable | free | The firmware the instrument was running, verbatim as its source stated it. |
 | `hardware_version` | string | nullable | free | The instrument's hardware revision, verbatim as its source stated it. |
 | `serial_number` | string | nullable | free | Serial number. |
-| `parent_device_id` | int32 | nullable | — | The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it. |
+| `parent_device_id` | int32 | nullable | — | The device this one was attached to -- a probe's headstage, a headstage's connect board. |
 | `parent_port` | string | nullable | open | Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (Part 01 §3.5). |
 | `device_kind` | string | nullable | resolves optional | The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is Part 02 §8.3's shared-key join. Core declares no such table (Part 02 §8.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (Part 02 §8.3). |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
@@ -865,7 +865,7 @@ registry 0.19.0   logical standard escapewheel-logical-v0.1
 | `activity_type` | string | **required** | open | What kind of work the run did: `import`, `validation`, `sorting`, `curation`, `materialization`. A pipeline names its own. |
 | `scope` | string | nullable | free | What this run is about: the scoped row's key where that key is carried, and its `*_name` where it is assigned, such as a probe's `probe_name`. Read only with the `scope_kind` beside it. |
 | `scope_kind` | string | nullable | resolves optional | The resource holding the row `scope` names, as a dotted resource ID -- `core.probes`, `core.array_assets`. A value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all. |
-| `supersedes_run_id` | int32 | nullable | — | The run this one replaces, if any. |
+| `supersedes_run_id` | int32 | nullable | — | The run this one replaces. |
 | `software_name` | string | nullable | free | Software name. |
 | `software_version` | string | nullable | free | Software version. |
 | `code_uri` | string | nullable | free | Code reference. |
@@ -922,7 +922,7 @@ registry 0.19.0   logical standard escapewheel-logical-v0.1
 | `session_description` | string | nullable | free | Human-readable session description. |
 | `institution` | string | nullable | free | Institution/lab. |
 | `task_name` | string | nullable | free | Task/protocol name. |
-| `source_session_id` | int32 | nullable | — | Source-system session ID if different. |
+| `source_session_id` | int32 | nullable | — | Source-system session ID. |
 | `t_zero_tick` | int64 | nullable | — | Earliest observed tick, on `reference_clock_id`; the origin seconds count from. |
 | `alignment_bound` | float64 | nullable | finite | How far past its anchors the writer mapped, in median anchor intervals (Part 01 §3.9). Null means the default of one. |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |

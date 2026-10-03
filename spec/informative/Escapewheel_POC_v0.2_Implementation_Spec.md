@@ -81,11 +81,11 @@ candidate is versioned independently of the identifiers a packet records.
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](../parts/01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](../parts/02_core_logical_schemas.md#ew-core-logical-schema-scope) |
 | `registry_id` | `core` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
-| `registry_version` | `0.19.0` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
+| `registry_version` | `0.20.0` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
 
 Part 02 §9.2 defines registry self-description and compatibility. A manifest records the core
 registry's `registry_id` and `registry_version` as the member name and `version` of its descriptor
-in `registries` (Part 04 §8). Current development packets use core registry `0.19.0` and are
+in `registries` (Part 04 §8). Current development packets use core registry `0.20.0` and are
 regenerated rather than treated as compatible with the earlier development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
 Part 04 §§3 and 8 define the manifest fields that record these identifiers.
@@ -1363,6 +1363,27 @@ whatever its values, every value null included, and whatever wrote it.
 [Part 05 §3.5](../parts/05_validation_and_import.md#ew-recipe-check) has an amending build refuse or drop one
 a held table carries.
 
+<a id="ew-null-naming-columns" data-spec-anchor="canonical"></a>
+### 6.2 Nulls in naming columns
+
+A null in a column whose role is `identifier` or `discriminator` states only that the row names
+nothing in that column. It states neither that nothing exists to name nor that something exists
+that the row does not name, and a consumer MUST NOT conclude either from the null. A consumer that
+reports what such a column names MUST report, for a null, that the packet names nothing there. A
+consumer that does not report what the column names owes only the first of these. No checker
+verifies either.
+
+This reading holds for such a column whatever registry declares it, except where a numbered part
+gives a null in that column another reading.
+[Part 03 §6.3](../parts/03_portable_physical_profile.md#ew-array-axis-coordinates) gives the only other
+readings: a null `label_id` on `core.array_labels` or `analysis.array_labels` states padding, and a
+null `coordinate_resource`, `coordinate_array_asset_id` or `clock_id` on `core.array_dimensions` or
+`analysis.array_dimensions` says the axis does not take that coordinate form. A consequence a
+numbered part attaches to a row that names nothing, such as an undeterminable discriminator row
+([§8.3](#ew-discriminator-semantics)), an undeterminable run scope (Part 01 §2.6) or an unrecorded media device
+([Part 01 §3.18](../parts/01_semantic_standard.md#ew-media-asset-concept)), is not another reading and
+stands.
+
 <a id="ew-logical-references" data-spec-anchor="canonical"></a>
 ## 7. References
 
@@ -1662,7 +1683,7 @@ The incorporated registry meta-schema has `$id`
 schema MUST carry that value in `$schema`. A registry document SHOULD carry `$schema` as its first
 member, so that the head of the file shows which meta-schema governs it; member order carries no
 other meaning, and no checker verifies it. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.19.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.20.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 
@@ -2688,7 +2709,9 @@ then stands for the row its label names, or for none. Its labels are rows of the
 `coordinate_resource`'s `discriminates_via` names: `core.array_labels` for a core array and
 `analysis.array_labels` for an analysis one. A label's `label_id` is the identifier of the row its
 position stands for, in the resource `coordinate_resource` names, and a null `label_id` stands for
-no row, which is how a packet states padding.
+no row, which is how a packet states padding. A writer MUST NOT write a null `label_id` for a
+position of a labelled axis whose row it could not determine. No checker verifies this, since a
+packet holds nothing that separates such a position from padding.
 
 An axis is **dependent** where its row declares `depends_on_axis_index`: which row each of its
 positions stands for changes along the axis `depends_on_axis_index` names, and each label row's
@@ -4950,7 +4973,7 @@ Two files are 97.6% of what the packet owns: `core.spike_events` at 345 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.19.0.json.gz
+    core/             0.20.0.json.gz
     aind_opto/        0.13.0.json.gz
     aind_unit_qc/     0.14.0.json.gz
     dynamic_foraging/ 0.16.0.json.gz
@@ -4989,7 +5012,7 @@ The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one 
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": {"role": "core", "version": "0.19.0", "path": "registries/core/0.19.0.json.gz", "sha256": "…"},
+    "core": {"role": "core", "version": "0.20.0", "path": "registries/core/0.20.0.json.gz", "sha256": "…"},
     "aind_opto": {"role": "extension", "version": "0.13.0", "path": "registries/aind_opto/0.13.0.json.gz", "sha256": "…"},
     "aind_unit_qc": {"role": "extension", "version": "0.14.0", "path": "registries/aind_unit_qc/0.14.0.json.gz", "sha256": "…"},
     "dynamic_foraging": {"role": "extension", "version": "0.16.0", "path": "registries/dynamic_foraging/0.16.0.json.gz", "sha256": "…"},

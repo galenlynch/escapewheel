@@ -68,8 +68,8 @@ def identity_checks(check: Reporter, registry_bytes: bytes, registry: dict) -> N
         [] if meta_id == "https://escapewheel.org/schemas/registry/0.12.0" else [meta_id],
     )
     check(
-        "core registry version is 0.19.0",
-        [] if registry.get("registry_version") == "0.19.0" else [registry.get("registry_version")],
+        "core registry version is 0.20.0",
+        [] if registry.get("registry_version") == "0.20.0" else [registry.get("registry_version")],
     )
     check(
         "the core registry selects the incorporated rule language",
