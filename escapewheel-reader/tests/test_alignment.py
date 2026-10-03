@@ -230,3 +230,19 @@ def test_alignment_never_correlates_different_sessions(aligned_packet):
         (other, 100, 100),
     }
     assert [row[0] for row in aligned_spikes(packet, "cue", 0, session_id=other).fetchall()] == [other]
+
+
+@pytest.mark.parametrize("half", [30, 60])
+def test_adjacent_tick_ranges_add_up_to_the_whole(aligned_packet, half):
+    """A spike is read in one range only, and still meets an event outside it."""
+    whole = sorted(aligned_spikes(aligned_packet, "cue", half).fetchall())
+    for cut in range(min(SPIKES), max(SPIKES) + 1):
+        lower = aligned_spikes(aligned_packet, "cue", half, t_tick=(min(SPIKES), cut)).fetchall()
+        upper = aligned_spikes(aligned_packet, "cue", half, t_tick=(cut + 1, max(SPIKES))).fetchall()
+        assert sorted(lower + upper) == whole
+
+
+def test_a_tick_range_narrows_assignment_to_its_spikes(aligned_packet):
+    whole = assigned_spikes(aligned_packet, "cue", to="nearest", half_window=60).fetchall()
+    ranged = assigned_spikes(aligned_packet, "cue", to="nearest", half_window=60, t_tick=(95, 205)).fetchall()
+    assert sorted(ranged) == sorted(row for row in whole if 95 <= row[2] <= 205)

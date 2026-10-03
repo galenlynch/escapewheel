@@ -114,6 +114,35 @@ they do, a spike belongs to both windows and the ASOF join keeps only the later 
 windows need the range join. `windows_disjoint(packet, event_type, half_window)` checks this, and
 `aligned_spikes` uses it to choose between the two joins.
 
+The ASOF join sorts every spike before it pairs any, so the query above peaks at 21 GiB. Run over
+slices of time, one query at a time, it holds only a slice's spikes: 16 slices took 6.9 s and
+peaked at 2.0 GiB, with the same counts. Each slice is joined against every cue, so a spike near a
+slice's edge still finds its window, and a unit's totals add across slices:
+
+```python
+import numpy as np
+import pyarrow as pa
+
+QUERY = """
+    SELECT s.unit_id, count(*) AS spikes, sum(s.t_tick - t.go_cue_start_tick) AS ticks_from_cue
+    FROM (SELECT * FROM analysis_spike_events WHERE t_tick >= {lo} AND t_tick < {hi}) s
+    ASOF JOIN dynamic_foraging_trials t ON s.t_tick + 31250 >= t.go_cue_start_tick
+    WHERE s.t_tick <= t.go_cue_start_tick + 62500
+    GROUP BY s.unit_id
+"""
+span = packet.sql("SELECT min(t_tick) AS lo, max(t_tick) AS hi FROM analysis_spike_events").to_pylist()[0]
+edges = np.linspace(span["lo"], span["hi"] + 1, 17).astype(np.int64)  # 16 slices
+slices = [packet.sql(QUERY.format(lo=lo, hi=hi)) for lo, hi in zip(edges[:-1], edges[1:])]
+per_unit = pa.concat_tables(slices).group_by("unit_id").aggregate([("spikes", "sum"), ("ticks_from_cue", "sum")])
+```
+
+The slices must be separate queries. Joined into one with `UNION ALL`, DuckDB runs them together
+and the peak returns to 13 GiB. DuckDB's own `SET memory_limit` also bounds the join, by spilling
+to disk, but took twice as long at 4 GB.
+
+`aligned_spikes` and `assigned_spikes` take a slice as `t_tick=(lo, hi)`. The range is closed,
+so adjacent slices are `(lo, next_lo - 1)`.
+
 ## Reading checks only what reading needs
 
 Opening a packet checks that the manifest decodes, repeats no member or resource ID, and has the
