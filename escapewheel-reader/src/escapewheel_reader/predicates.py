@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pyarrow as pa
@@ -22,6 +22,9 @@ from . import clocks
 from .dictionaries import decoded
 from .errors import NotAligned, NotDeclared
 from .protocols import PacketLike
+
+if TYPE_CHECKING:
+    from .packet_set import PacketSet
 
 #: One column's constraint: a scalar is equality, a two-item tuple a closed range, a list or set
 #: membership, and None no constraint.
@@ -66,7 +69,7 @@ def where(**constraints: Predicate) -> pads.Expression:
 
 
 def tick_range(
-    packet: PacketLike,
+    packet: PacketLike | PacketSet,
     resource_id: str,
     span: tuple[int, int],
     *,
@@ -85,8 +88,10 @@ def tick_range(
 
     Parameters
     ----------
-    packet : PacketLike
-        The packet whose clocks and declarations the expression is built from.
+    packet : PacketLike or PacketSet
+        The packet whose clocks and declarations the expression is built from. Over a packet set,
+        each packet's expression is tested under its `session_key` values, since a clock ID is
+        unique only within its packet, and `clock` is an identifier within each packet.
     resource_id : str
         The table the expression filters, whose declaration says where each coordinate's clock is.
     span : tuple of int
@@ -107,7 +112,14 @@ def tick_range(
     --------
     >>> packet.scanner("core.events", filter=tick_range(packet, "core.events", (lo, hi)))  # doctest: +SKIP
     """
-    reach = _reach(packet, resource_id, span, clock, column)
+    if (members := clocks._members(packet)) is not None:
+        return _any(
+            [
+                pads.field("session_key").isin(keys) & tick_range(member, resource_id, span, clock=clock, column=column)
+                for member, keys in members._keyed(resource_id)
+            ]
+        )
+    reach = _reach(cast("PacketLike", packet), resource_id, span, clock, column)
     ticks = pads.field(reach.coordinate)
     terms: list[pads.Expression] = []
     if reach.parent is None:
@@ -129,7 +141,7 @@ def tick_range(
 
 
 def tick_bounds(
-    packet: PacketLike,
+    packet: PacketLike | PacketSet,
     resource_id: str,
     span: tuple[int, int],
     *,
@@ -145,9 +157,17 @@ def tick_bounds(
     -------
     pyarrow.Table
         `clock_id`, `lo` and `hi`, int64, one row per closed interval: a stored tick on `clock_id`
-        lands in `span` if and only if it lies in one of its clock's intervals.
+        lands in `span` if and only if it lies in one of its clock's intervals. Over a packet set,
+        `session_key` first, since a clock ID is unique only within its packet.
     """
-    reach = _reach(packet, resource_id, span, clock, column)
+    if (members := clocks._members(packet)) is not None:
+        parts = []
+        for member, keys in members._keyed(resource_id):
+            bounds = tick_bounds(member, resource_id, span, clock=clock, column=column)
+            for key in keys:
+                parts.append(bounds.add_column(0, "session_key", pa.array([key] * bounds.num_rows, pa.int32())))
+        return pa.concat_tables(parts)
+    reach = _reach(cast("PacketLike", packet), resource_id, span, clock, column)
     every = np.iinfo(np.int64)
     names: list[int] = []
     lows: list[int] = []

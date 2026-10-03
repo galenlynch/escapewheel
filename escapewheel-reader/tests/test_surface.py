@@ -153,14 +153,16 @@ def test_every_exception_class_is_in_the_user_tier():
 
 
 def test_a_function_taking_a_packet_is_typed_against_the_protocol():
-    """So each accepts whatever resolves and reads as a packet does, not only `Packet`."""
+    """So each accepts whatever reads as a packet does, not only `Packet`; a transform also takes a packet set."""
     for module_name, module in _own().items():
         for name, function in inspect.getmembers(module, inspect.isfunction):
             if function.__module__ != module.__name__:
                 continue
             parameter = inspect.signature(function).parameters.get("packet")
             if parameter is not None:
-                assert parameter.annotation == PacketLike.__name__, f"{module_name}.{name}"
+                assert parameter.annotation in (PacketLike.__name__, f"{PacketLike.__name__} | PacketSet"), (
+                    f"{module_name}.{name}"
+                )
 
 
 def test_no_packet_method_mirrors_an_exported_function():

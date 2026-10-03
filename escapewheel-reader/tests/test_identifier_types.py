@@ -9,6 +9,7 @@ import duckdb
 from escapewheel_reader import (
     Discriminator,
     Manifest,
+    PacketSet,
     Resource,
     Session,
     aligned_spikes,
@@ -41,7 +42,7 @@ def _column_type(registry: dict[str, Any], resource: str, column: str) -> type[A
 def _hints(symbol: Any) -> dict[str, Any]:
     """Resolve postponed annotations, including optional DuckDB annotations."""
     namespace = dict(vars(sys.modules[symbol.__module__]))
-    namespace.update({"duckdb": duckdb, "DuckDBPyConnection": duckdb.DuckDBPyConnection})
+    namespace.update({"duckdb": duckdb, "DuckDBPyConnection": duckdb.DuckDBPyConnection, "PacketSet": PacketSet})
     return get_type_hints(symbol, globalns=namespace)
 
 

@@ -29,7 +29,7 @@ import os
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Any, cast, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import numpy as np
 import pyarrow as pa
@@ -42,6 +42,9 @@ from .errors import NotAligned, NotDeclared, NoTimeOrigin, Refused, ResourceNotF
 from .optional import read_optional
 from .protocols import Memo, PacketLike
 from .resource_ids import CORE_CLOCK_ANCHORS, CORE_CLOCKS, CORE_SESSIONS
+
+if TYPE_CHECKING:
+    from .packet_set import PacketSet
 
 #: How far from an anchor the mapping stays defined, as a multiple of the median anchor
 #: interval (Part 01 §3.9). One, so that the same threshold covers a gap between anchors and the
@@ -741,12 +744,12 @@ def clock_columns(packet: PacketLike, resource_id: str) -> dict[str, str]:
 
 
 @overload
-def attach_clocks(packet: PacketLike, data: pa.Table, resource_id: str) -> pa.Table: ...
+def attach_clocks(packet: PacketLike | PacketSet, data: pa.Table, resource_id: str) -> pa.Table: ...
 @overload
-def attach_clocks(packet: PacketLike, data: pa.RecordBatch, resource_id: str) -> pa.RecordBatch: ...
+def attach_clocks(packet: PacketLike | PacketSet, data: pa.RecordBatch, resource_id: str) -> pa.RecordBatch: ...
 @overload
-def attach_clocks(packet: PacketLike, data: Stream, resource_id: str) -> pa.RecordBatchReader: ...
-def attach_clocks(packet: PacketLike, data: Arrow, resource_id: str) -> Arrow:
+def attach_clocks(packet: PacketLike | PacketSet, data: Stream, resource_id: str) -> pa.RecordBatchReader: ...
+def attach_clocks(packet: PacketLike | PacketSet, data: Arrow, resource_id: str) -> Arrow:
     """Add the clock each coordinate column's ticks are counted on, as the declaration says.
 
     A coordinate's clock is its `clock_from` target where declared, else the row's `clock_id`
@@ -757,8 +760,9 @@ def attach_clocks(packet: PacketLike, data: Arrow, resource_id: str) -> Arrow:
 
     Parameters
     ----------
-    packet : PacketLike
-        The packet the rows came from.
+    packet : PacketLike or PacketSet
+        The packet the rows came from, or the packet set, whose rows each go to the packet their
+        `session_key` names.
     data : pyarrow.Table, RecordBatch, RecordBatchReader, or pyarrow.dataset Scanner or Dataset
         Rows of `resource_id`. Only coordinates they carry get a clock, and each needs the
         columns its clock is reached through.
@@ -778,8 +782,13 @@ def attach_clocks(packet: PacketLike, data: Arrow, resource_id: str) -> Arrow:
     ValueError
         If `table` lacks a column a clock is reached through.
     """
+    if (members := _members(packet)) is not None:
+        return _over_sessions(
+            members, data, lambda member, _, table, parents: _attach(member, resource_id, table, parents)
+        )
+    one = cast("PacketLike", packet)
     parents: dict[str, pa.Table] | None = None if isinstance(data, (pa.Table, pa.RecordBatch)) else {}
-    return _each(data, lambda table: _attach(packet, resource_id, table, parents))
+    return _each(data, lambda table: _attach(one, resource_id, table, parents))
 
 
 def _attach(packet: PacketLike, resource_id: str, table: pa.Table, parents: dict[str, pa.Table] | None) -> pa.Table:
@@ -922,7 +931,7 @@ def _on_target(
 
 @overload
 def on_clock(
-    packet: PacketLike,
+    packet: PacketLike | PacketSet,
     data: pa.Table,
     clock: int | None = ...,
     *,
@@ -931,7 +940,7 @@ def on_clock(
 ) -> pa.Table: ...
 @overload
 def on_clock(
-    packet: PacketLike,
+    packet: PacketLike | PacketSet,
     data: pa.RecordBatch,
     clock: int | None = ...,
     *,
@@ -940,7 +949,7 @@ def on_clock(
 ) -> pa.RecordBatch: ...
 @overload
 def on_clock(
-    packet: PacketLike,
+    packet: PacketLike | PacketSet,
     data: Stream,
     clock: int | None = ...,
     *,
@@ -948,7 +957,7 @@ def on_clock(
     bound: float | None = ...,
 ) -> pa.RecordBatchReader: ...
 def on_clock(
-    packet: PacketLike,
+    packet: PacketLike | PacketSet,
     data: Arrow,
     clock: int | None = None,
     *,
@@ -971,8 +980,10 @@ def on_clock(
 
     Parameters
     ----------
-    packet : PacketLike
-        The packet the rows came from, for its anchors and its declared bound.
+    packet : PacketLike or PacketSet
+        The packet the rows came from, for its anchors and its declared bound, or the packet set,
+        whose rows each map in the packet their `session_key` names; `clock` is then an
+        identifier within each packet.
     data : pyarrow.Table, RecordBatch, RecordBatchReader, or pyarrow.dataset Scanner or Dataset
         Rows carrying `t_tick` and `clock_id`, or with `resource_id` rows of that resource. A
         stream is mapped batch by batch, so narrow it first: what comes back takes no pushdown.
@@ -997,17 +1008,34 @@ def on_clock(
     NotAligned
         If a clock the rows are on has no anchors, so no path reaches `clock`.
     """
+    if (members := _members(packet)) is not None:
+        return _over_sessions(
+            members,
+            data,
+            lambda member, _, table, parents: _mapped_table(
+                member,
+                table,
+                _stream_clock(member) if clock is None and parents is not None else clock,
+                resource_id,
+                bound,
+                parents,
+            ),
+        )
+    one = cast("PacketLike", packet)
     parents: dict[str, pa.Table] | None = None
     if not isinstance(data, (pa.Table, pa.RecordBatch)):
         parents = {}
         if clock is None:
-            try:
-                clock = reference_clock(packet)
-            except NotAligned as undeclared:
-                raise NotAligned(
-                    f"{undeclared}; name the clock, since a stream's clocks are not known in advance"
-                ) from None
-    return _each(data, lambda table: _mapped_table(packet, table, clock, resource_id, bound, parents))
+            clock = _stream_clock(one)
+    return _each(data, lambda table: _mapped_table(one, table, clock, resource_id, bound, parents))
+
+
+def _stream_clock(packet: PacketLike) -> int:
+    """Return the clock a stream maps onto by default, which must be declared rather than found."""
+    try:
+        return reference_clock(packet)
+    except NotAligned as undeclared:
+        raise NotAligned(f"{undeclared}; name the clock, since a stream's clocks are not known in advance") from None
 
 
 def _mapped_table(
@@ -1032,17 +1060,19 @@ def _mapped_table(
 
 @overload
 def seconds(
-    packet: PacketLike, data: pa.Table, *, resource_id: str | None = ..., session_id: int | None = ...
+    packet: PacketLike | PacketSet, data: pa.Table, *, resource_id: str | None = ..., session_id: int | None = ...
 ) -> pa.Table: ...
 @overload
 def seconds(
-    packet: PacketLike, data: pa.RecordBatch, *, resource_id: str | None = ..., session_id: int | None = ...
+    packet: PacketLike | PacketSet, data: pa.RecordBatch, *, resource_id: str | None = ..., session_id: int | None = ...
 ) -> pa.RecordBatch: ...
 @overload
 def seconds(
-    packet: PacketLike, data: Stream, *, resource_id: str | None = ..., session_id: int | None = ...
+    packet: PacketLike | PacketSet, data: Stream, *, resource_id: str | None = ..., session_id: int | None = ...
 ) -> pa.RecordBatchReader: ...
-def seconds(packet: PacketLike, data: Arrow, *, resource_id: str | None = None, session_id: int | None = None) -> Arrow:
+def seconds(
+    packet: PacketLike | PacketSet, data: Arrow, *, resource_id: str | None = None, session_id: int | None = None
+) -> Arrow:
     """Add a `t_second` column to rows whose ticks are on the reference clock.
 
     Part 01 §2.2: `(t_tick - t_zero_tick) / reference_tick_rate`, taking the rate as the declared
@@ -1060,8 +1090,9 @@ def seconds(packet: PacketLike, data: Arrow, *, resource_id: str | None = None, 
 
     Parameters
     ----------
-    packet : PacketLike
-        The packet the rows came from, for its origin and reference rate.
+    packet : PacketLike or PacketSet
+        The packet the rows came from, for its origin and reference rate, or the packet set, whose
+        rows each take the origin of the session their `session_key` names.
     data : pyarrow.Table, RecordBatch, RecordBatchReader, or pyarrow.dataset Scanner or Dataset
         Rows carrying `t_tick` and `clock_id`, or with `resource_id` rows of that resource. Rows
         already known to be on the reference clock can stay a scan through
@@ -1069,7 +1100,7 @@ def seconds(packet: PacketLike, data: Arrow, *, resource_id: str | None = None, 
     resource_id : str, optional
         The resource the rows are of, whose declaration says which columns are coordinates.
     session_id : int, optional
-        Which session's origin to use.
+        Which session's origin to use. Ignored over a packet set, where `session_key` says.
 
     Returns
     -------
@@ -1087,10 +1118,27 @@ def seconds(packet: PacketLike, data: Arrow, *, resource_id: str | None = None, 
     Refused
         If a seconds column's name is already taken.
     """
+    if (members := _members(packet)) is not None:
+        return _over_sessions(
+            members,
+            data,
+            lambda member, session, table, parents: _seconds_of(member, session, table, resource_id, parents),
+        )
+    one = cast("PacketLike", packet)
+    parents: dict[str, pa.Table] | None = None if isinstance(data, (pa.Table, pa.RecordBatch)) else {}
+    return _each(data, lambda table: _seconds_of(one, session_id, table, resource_id, parents))
+
+
+def _seconds_of(
+    packet: PacketLike,
+    session_id: int | None,
+    table: pa.Table,
+    resource_id: str | None,
+    parents: dict[str, pa.Table] | None,
+) -> pa.Table:
     start, num, den = origin(packet, session_id)
     reference = reference_clock(packet, session_id=session_id)
-    parents: dict[str, pa.Table] | None = None if isinstance(data, (pa.Table, pa.RecordBatch)) else {}
-    return _each(data, lambda table: _with_seconds(packet, table, resource_id, start, num / den, reference, parents))
+    return _with_seconds(packet, table, resource_id, start, num / den, reference, parents)
 
 
 def seconds_expression(packet: PacketLike, column: str = "t_tick", *, session_id: int | None = None) -> pc.Expression:
@@ -1135,6 +1183,44 @@ def _with_seconds(
         offset = pc.subtract(table.column(coordinate), pa.scalar(start, pa.int64()))
         table = table.append_column(name, pc.divide(pc.cast(offset, pa.float64()), rate))
     return table
+
+
+def _members(source: PacketLike | PacketSet) -> PacketSet | None:
+    """Return `source` where it is a packet set, whose rows a transform dispatches by `session_key`."""
+    from .packet_set import PacketSet
+
+    return source if isinstance(source, PacketSet) else None
+
+
+def _over_sessions(
+    members: PacketSet,
+    data: Arrow,
+    transform: Callable[[PacketLike, int, pa.Table, dict[str, pa.Table] | None], pa.Table],
+) -> Arrow:
+    """Apply a per-packet transform to each session's rows of a packet set, by their `session_key`.
+
+    A stream keeps one cache of referenced tables per packet, so each is read once. Rows come back
+    grouped by session.
+    """
+    caches: dict[str, dict[str, pa.Table]] | None = None if isinstance(data, (pa.Table, pa.RecordBatch)) else {}
+
+    def split(table: pa.Table) -> pa.Table:
+        if "session_key" not in table.column_names:
+            raise ValueError("rows read from a packet set need session_key to say which packet each came from")
+        keys = table.column("session_key")
+        present = sorted(cast("list[int]", pc.unique(keys).drop_null().to_pylist()))
+        if not present:
+            # No row says which packet: the first session's maps nothing and gives the schema.
+            present, table = [members.sessions[0].session_key], table.slice(0, 0)
+        parts = []
+        for key in present:
+            packet, session = members._located(key)
+            rows = table if len(present) == 1 else table.filter(pc.equal(keys, pa.scalar(key, keys.type)))
+            parents = None if caches is None else caches.setdefault(session.packet_id, {})
+            parts.append(transform(packet, session.session_id, rows, parents))
+        return pa.concat_tables(parts, promote_options="permissive")
+
+    return _each(data, split)
 
 
 #: What a transform takes: one in memory, or a stream it maps batch by batch.

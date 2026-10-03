@@ -80,8 +80,9 @@ Narwhals needed three workarounds to express the mapping, and its PyArrow backen
 
 `PacketSet.scan` makes each packet's files fragments of one dataset, with `session_key` and
 `session_name` as partition fields, so a filter on either skips other packets' files unopened. A
-multi-session packet's fragments cannot carry one constant; there `session_key` is projected from
-`session_id`, and a filter on it is translated into `session_id` values before the scan.
+multi-session packet's fragments cannot carry one constant, so `scan` refuses a session-scoped
+resource there; `scanner` and `table` project `session_key` from `session_id`, and translate a
+filter on it into `session_id` values before the scan.
 
 ### 3.2 Predicates
 
@@ -179,6 +180,6 @@ Each step holds `spike_times` over every unit at 4.7 s and `on_clock` at 2.6 s.
 - [x] 3. `attach_clocks`, `on_clock` and `seconds` over every Arrow form; `seconds_expression`.
 - [x] 4. Rebuild `Packet.table`, `spike_times`, `events`, `intervals` and `units` on these, with
   the reference-clock default and spike routing.
-- [ ] 5. `PacketSet.scan`, `PacketSet.scanner` and `PacketSet.table`.
+- [x] 5. `PacketSet.scan`, `PacketSet.scanner` and `PacketSet.table`.
 - [ ] 6. The README's lazy-reading section; the inverse and its monotonicity in `design.md`; the
   support tier in `api.rst`; the spike's entry in `bench/results/history.md` corrected per §1.
