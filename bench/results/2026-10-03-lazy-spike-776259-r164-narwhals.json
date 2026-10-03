@@ -1,0 +1,183 @@
+{
+  "environment": {
+    "date": "2026-10-03",
+    "commit": "3cd086d4+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      3.18,
+      8.72,
+      9.4
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r164/776259/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "/home/galen.lynch/bench-cold/r164/776259/packet",
+    "scratch": "/home/galen.lynch/.cache/lazy-spike/scratch",
+    "clock": 12,
+    "rate": 31250,
+    "t_zero": 361746131863,
+    "bound": 2.0,
+    "declared_bound": 2.0,
+    "trials": "dynamic_foraging.trials",
+    "slice": [
+      361802381863,
+      361804256862
+    ],
+    "stored_slice": [
+      53965808,
+      361804256862
+    ],
+    "region_aws": "us-west-2",
+    "anonymous": true,
+    "duckdb_memory": "40GB",
+    "dump": true,
+    "rows": 286896563,
+    "row_groups": 293,
+    "row_groups_overlapping_stored_slice": 293
+  },
+  "core_version": "0.18.0",
+  "memory_max": "60G",
+  "cells": [
+    {
+      "arm": "map kernel",
+      "warm": false,
+      "load_average": [
+        4.93,
+        8.99,
+        9.49
+      ],
+      "seconds": 5.01276685402263,
+      "peak_mib": 17298.9375,
+      "received_bytes": 13055,
+      "value": {
+        "rows": 286896563,
+        "placed": 286896563,
+        "sum_from_zero": 30906132753007665
+      },
+      "dump": "/home/galen.lynch/.cache/lazy-spike/scratch/dumps/map_kernel.npy"
+    },
+    {
+      "arm": "map kernel",
+      "warm": true,
+      "load_average": [
+        4.77,
+        8.89,
+        9.45
+      ],
+      "seconds": 4.918213141034357,
+      "peak_mib": 17293.87109375,
+      "received_bytes": 7055,
+      "value": {
+        "rows": 286896563,
+        "placed": 286896563,
+        "sum_from_zero": 30906132753007665
+      },
+      "dump": "/home/galen.lynch/.cache/lazy-spike/scratch/dumps/map_kernel.npy"
+    },
+    {
+      "arm": "map narwhals duckdb",
+      "warm": false,
+      "load_average": [
+        7.99,
+        9.43,
+        9.62
+      ],
+      "seconds": 13.568267123016994,
+      "peak_mib": 21720.5078125,
+      "received_bytes": 41708,
+      "value": {
+        "rows": 286896563,
+        "placed": 286896563,
+        "sum_from_zero": 30906132753007665
+      },
+      "dump": "/home/galen.lynch/.cache/lazy-spike/scratch/dumps/map_narwhals_duckdb.npy",
+      "mismatch": {
+        "placement": 0,
+        "value": 0,
+        "max_abs": 0
+      }
+    },
+    {
+      "arm": "map narwhals duckdb",
+      "warm": true,
+      "load_average": [
+        13.01,
+        10.48,
+        9.96
+      ],
+      "seconds": 13.533768624009099,
+      "peak_mib": 22437.73828125,
+      "received_bytes": 47056,
+      "value": {
+        "rows": 286896563,
+        "placed": 286896563,
+        "sum_from_zero": 30906132753007665
+      },
+      "dump": "/home/galen.lynch/.cache/lazy-spike/scratch/dumps/map_narwhals_duckdb.npy"
+    },
+    {
+      "arm": "map narwhals polars",
+      "warm": false,
+      "load_average": [
+        12.0,
+        10.4,
+        9.95
+      ],
+      "seconds": 18.88542743999278,
+      "peak_mib": 26609.44921875,
+      "received_bytes": 167714,
+      "value": {
+        "rows": 286896563,
+        "placed": 286896563,
+        "sum_from_zero": 30906132753007665
+      },
+      "dump": "/home/galen.lynch/.cache/lazy-spike/scratch/dumps/map_narwhals_polars.npy",
+      "mismatch": {
+        "placement": 0,
+        "value": 0,
+        "max_abs": 0
+      }
+    },
+    {
+      "arm": "map narwhals polars",
+      "warm": true,
+      "load_average": [
+        11.7,
+        10.43,
+        9.96
+      ],
+      "seconds": 18.889124433975667,
+      "peak_mib": 26231.33203125,
+      "received_bytes": 58954,
+      "value": {
+        "rows": 286896563,
+        "placed": 286896563,
+        "sum_from_zero": 30906132753007665
+      },
+      "dump": "/home/galen.lynch/.cache/lazy-spike/scratch/dumps/map_narwhals_polars.npy"
+    }
+  ]
+}

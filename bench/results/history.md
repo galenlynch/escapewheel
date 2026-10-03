@@ -12,6 +12,122 @@ region operation were committed after they ran.
 does not reach the block device's buffer cache. "NVMe" is a WD SN850X under btrfs, where a cold
 read is checked by `mincore`.
 
+## What a reader function returns: the clock mapping as a relation
+
+`lazy_spike.py` on 2026-10-03, 776259 `packet-r164` from the NVMe, at a dirty `3cd086d4` whose
+uncommitted change is the script; load average 8 to 11 on 24 threads from other work. Each cell is
+one run in its own process under a 60 GiB cap, cold after eviction; a warm rerun of every local
+cell was within 0.2 s and is in the JSON (`2026-10-03-lazy-spike-776259-r164.json`, the Narwhals
+DuckDB arm from `*-narwhals.json`). DuckDB 1.5.6, Polars 1.44.2, Narwhals 2.26.0, PyArrow 25.0.1.
+Seconds, then peak RSS in MiB.
+
+**The mapping is relational, exactly.** Every spike of `core.spike_events`, 286,896,563 on 12 probe
+clocks with about 6,387 anchors each, was mapped onto the 31,250 Hz harp clock by an ASOF join of
+spike to preceding anchor with the next anchor alongside, then `p0 + (p1 - p0) / (t1 - t0) *
+(t - t0)` in doubles, as NumPy's `interp` evaluates it, rounded half to even. Beyond the ends it is
+`p_end + rint(slope * (t - t_end))` with `clocks.rate`'s slope; a row is placed where its distance
+to the nearer anchor is within the bound times the median interval. Each arm's output was dumped by
+stored row and compared with `clocks.mapped` on every row:
+
+| arm | seconds (MiB) | rows differing from the kernel |
+|---|---|---|
+| `clocks.mapped` over the whole column (reference) | 5.15 (17,292) | |
+| `spike_times(units=every unit)` | 5.07 (13,605) | 0 |
+| DuckDB ASOF join, rate and span from the reader | 12.25 (23,039) | 0 |
+| DuckDB ASOF join, rate and span fitted in SQL | 12.17 (23,251) | 0 |
+| DuckDB ASOF join with `round` in place of `round_even` | 11.65 (24,256) | 2,792,142, each by one tick |
+| DuckDB, to a count and sum only | 8.34 (10,962) | sums equal |
+| Polars `join_asof`, after sorting the spikes by tick | 14.23 (19,505) | 0 |
+| Polars `search_sorted` on a (clock, tick) key, no sort | 16.41 (12,786) | 0 |
+| Polars `search_sorted`, to a count and sum only | 13.20 (7,139) | sums equal |
+| Narwhals over DuckDB | 13.57 (21,721) | 0 |
+| Narwhals over Polars | 18.75 (24,413) | 0 |
+
+The packet declares a bound of 2 and every spike is placed at it, so the mapping arms were rerun at
+bound 0.5, where 36,139 spikes before the first anchors go unplaced, and at 0.1, where 229,484,782
+inside the anchor span do (`*-bound-0.5.json`, `*-bound-0.1.json`). No arm differed from the kernel
+on any row at either bound, in tick or in placement. Rounding is the one trap: 5,583,095 spikes
+interpolate to exactly half a tick, and SQL's `round`, half away from zero, moves about half of
+them. DuckDB's `round_even` and Polars' `round(mode="half_to_even")` match `np.rint`; Narwhals'
+`round` takes no mode and rounds as its backend does, so its arms round by `floor` and a tie test.
+A rate and span fitted in SQL from `core.clock_anchors` alone changed no row on this packet, though
+SQL's summation order is not NumPy's, so equality there is measured, not guaranteed. Every clock
+here is one hop from the reference; a chain is the same join once per edge, not measured.
+
+Narwhals needed three workarounds: no rounding mode; its DuckDB `join_asof` queries through
+DuckDB's default connection, so a relation from any other connection is refused; and it keeps the
+right-hand join key on Polars but drops it on DuckDB. Its PyArrow backend has no `join_asof`.
+
+**The go-cue analysis**, `trials.py`'s spikes within [-1, +2] s of each of 708 cues, from
+`core.spike_events` mapped on the way. Every arm found 99,453,482 pairs over 6,774 units, a sum of
+squared per-unit pairs of 9,120,651,850,060 and 1,514,726,240,589 summed ticks from cue, the
+figures the section below found from `analysis.spike_events`. S3 is the packet under the prefix
+named below, read unsigned over the same 1 Gbit/s link at load average 6 to 10
+(`*-r164-s3.json`); every S3 cell received 483 to 528 MB.
+
+| arm | NVMe | S3 |
+|---|---|---|
+| `spike_times` into a `pa.Table`, then the streaming Polars window plan | 15.72 (17,503) | 30.41 (17,061) |
+| DuckDB: the lazy mapping, then the ASOF join to cues | 14.03 (30,876) | 19.33 (31,104) |
+| Polars: the lazy mapping, then the same window plan | 23.21 (9,394) | 28.12 (9,391) |
+| `Packet.scanner(...).to_reader()`, each batch through `clocks.mapped`, summed per unit | 16.26 (963) | 16.32 (926) |
+
+The stream held 0.9 GiB where the eager table held 17 and DuckDB 30, in about the same time
+locally and the least time from S3. Neither engine pushed anything from the window into the
+spike scan: DuckDB's plan projects `t_tick` and filters nothing, and Polars' scan carries no
+selection. The window is on the mapped tick, which the file does not hold.
+
+**A range on the reference clock**: 60 s from 1,800 s after the origin, 2,468,375 spikes in every
+arm.
+
+| arm | seconds (MiB) |
+|---|---|
+| `spike_times(units=..., t_tick=...)`, widened by `stored_span` and pushed | 4.09 (10,836) |
+| DuckDB, the range after the lazy mapping | 8.41 (10,807) |
+| DuckDB, the same with the widened stored range added to the scan by hand | 6.24 (9,110) |
+| Polars, the range after the lazy mapping | 13.19 (7,437) |
+| `analysis.spike_events` read by range | 0.07 (353) |
+
+No engine pruned on its own: the range is on a computed column, and neither plan put a predicate
+on the scan. Given the stored range by hand, DuckDB pushed it, but it could not prune either.
+`stored_span` widens to the union over clocks, here probe ticks from 53,965,808 to the harp clock's
+361,804,256,862, and `core.spike_events` is ordered by unit, so each of its 293 row groups spans
+nearly the whole session; all 293 overlap the widened range. A time range on this table reads
+everything whatever returns it. `analysis.spike_events`, stored on the reference clock by time
+bucket, answered in 0.07 s.
+
+**What each contract would cost the reader.** The operations that touch a tick are the mapping,
+seconds, `attach_clocks`, the range filter with its widening, and each accessor's filters:
+
+| contract | implementations of each | DuckDB required |
+|---|---|---|
+| eager `pa.Table` | one, NumPy and PyArrow; filters are accessor arguments | no |
+| `RecordBatchReader` | the same one applied per batch; filters are accessor arguments | no |
+| DuckDB relation | a SQL one, plus the PyArrow one that reading without DuckDB keeps, and a test that they agree; the widening stays the reader's | yes, for that path |
+| Polars `LazyFrame` | as DuckDB, with Polars in place of SQL | Polars instead |
+| Narwhals over both | one expression set for DuckDB and Polars, plus the PyArrow one, since its PyArrow backend has no ASOF join | one of the two |
+
+`CONTRIBUTING.md` requires a complete PyArrow read path, so every lazy contract doubles the time
+operations. The spike's SQL mapping is about 25 lines and the Polars one about 60, against about
+120 for the kernel, `_Map` and `mapped`.
+
+**Recommendation: keep the eager `pa.Table` and add a streaming form, not a lazy relation.** The
+relational mapping matches the kernel on every row, so exactness does not decide it. What does:
+
+- A lazy relation buys pushdown, and here there is none to buy. A filter on the mapped tick
+  reaches no scan in either engine, so the reader would still own the widening and the pushdown,
+  which is what accessor arguments are.
+- Materialised, the relational mapping took 2.4 to 3.6 times the kernel's 5.15 s, at 0.7 to 1.4
+  times its memory. Its one advantage is aggregating without materialising, and the stream has it
+  too: 0.9 GiB for the go-cue analysis against 31 GiB in DuckDB.
+- It doubles every time operation and makes DuckDB or Polars part of reading.
+
+A `RecordBatchReader` keeps one implementation, needs no engine, bounds memory, and was fastest
+from S3. It is single pass and cannot be filtered after the fact, so it complements the table for
+whole-session reads rather than replacing it. A caller who wants a relation over reference-clock
+spikes already has one: `analysis.spike_events` through `Packet.duckdb` or `scan_polars`, mapped
+at write time by the same kernel.
+
 ## Packet spike arms from `analysis.spike_events`
 
 `trials.py` on 2026-10-03, go-cue spikes on 776259 from the NVMe, one cold run per cell, at a

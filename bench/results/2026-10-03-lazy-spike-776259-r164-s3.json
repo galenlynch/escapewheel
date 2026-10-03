@@ -1,0 +1,177 @@
+{
+  "environment": {
+    "date": "2026-10-03",
+    "commit": "3cd086d4+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      10.36,
+      11.01,
+      10.38
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+    "scratch": "/home/galen.lynch/.cache/lazy-spike/scratch",
+    "clock": 12,
+    "rate": 31250,
+    "t_zero": 361746131863,
+    "bound": 2.0,
+    "declared_bound": 2.0,
+    "trials": "dynamic_foraging.trials",
+    "slice": [
+      361802381863,
+      361804256862
+    ],
+    "stored_slice": [
+      53965808,
+      361804256862
+    ],
+    "region_aws": "us-west-2",
+    "anonymous": true,
+    "duckdb_memory": "40GB",
+    "dump": false,
+    "rows": 286896563
+  },
+  "core_version": "0.18.0",
+  "memory_max": "60G",
+  "cells": [
+    {
+      "arm": "cue eager",
+      "warm": false,
+      "load_average": [
+        7.49,
+        10.25,
+        10.14
+      ],
+      "seconds": 30.410307687008753,
+      "peak_mib": 17061.36328125,
+      "received_bytes": 484708112,
+      "value": {
+        "pairs": 99453482,
+        "units": 6774,
+        "sum_sq": 9120651850060,
+        "offset_ticks": 1514726240589
+      },
+      "dump": null
+    },
+    {
+      "arm": "cue stream",
+      "warm": false,
+      "load_average": [
+        6.21,
+        9.83,
+        10.0
+      ],
+      "seconds": 16.32385887100827,
+      "peak_mib": 925.65625,
+      "received_bytes": 485729548,
+      "value": {
+        "pairs": 99453482,
+        "units": 6774,
+        "sum_sq": 9120651850060,
+        "offset_ticks": 1514726240589
+      },
+      "dump": null
+    },
+    {
+      "arm": "cue duckdb",
+      "warm": false,
+      "load_average": [
+        8.73,
+        10.11,
+        10.09
+      ],
+      "seconds": 19.325003970996477,
+      "peak_mib": 31104.203125,
+      "received_bytes": 528322845,
+      "value": {
+        "pairs": 99453482,
+        "units": 6774,
+        "sum_sq": 9120651850060,
+        "offset_ticks": 1514726240589,
+        "scan": [
+          "t_tick Projections:"
+        ]
+      },
+      "dump": null
+    },
+    {
+      "arm": "cue polars",
+      "warm": false,
+      "load_average": [
+        7.53,
+        9.67,
+        9.94
+      ],
+      "seconds": 28.123400960001163,
+      "peak_mib": 9391.29296875,
+      "received_bytes": 485417223,
+      "value": {
+        "pairs": 99453482,
+        "units": 6774,
+        "sum_sq": 9120651850060,
+        "offset_ticks": 1514726240589
+      },
+      "dump": null
+    },
+    {
+      "arm": "map reader",
+      "warm": false,
+      "load_average": [
+        6.15,
+        9.27,
+        9.81
+      ],
+      "seconds": 15.091627842979506,
+      "peak_mib": 13633.84765625,
+      "received_bytes": 483277728,
+      "value": {
+        "rows": 286896563,
+        "placed": 286896563,
+        "sum_from_zero": 30906132753007665
+      },
+      "dump": null
+    },
+    {
+      "arm": "map duckdb, aggregate",
+      "warm": false,
+      "load_average": [
+        8.85,
+        9.68,
+        9.93
+      ],
+      "seconds": 12.695097010990139,
+      "peak_mib": 11250.890625,
+      "received_bytes": 528343422,
+      "value": {
+        "rows": 286896563,
+        "placed": 286896563,
+        "sum_from_zero": 30906132753007665
+      },
+      "dump": null
+    }
+  ]
+}
