@@ -16,8 +16,8 @@ Opening packets
 
    open_packet
    Packet
-   open_dataset
-   Dataset
+   open_packets
+   PacketSet
    Session
 
 Reading tables
@@ -31,6 +31,7 @@ Reading tables
    events
    spike_times
    distinct
+   where
    STORED
 
 Clocks and seconds
@@ -192,6 +193,7 @@ the module that defines it.
    optional.held
    optional.read_optional
    ordering.stored_order
+   predicates.Predicate
    profile.PROFILE_ID
    profile.physical_profile
    profile.parquet_floor
@@ -234,10 +236,11 @@ A module's page carries its docstring; its public names are documented above.
    axes
    channels
    clocks
-   dataset
    discriminators
    observation
    packet
+   packet_set
+   predicates
    runs
    manifest
    resources

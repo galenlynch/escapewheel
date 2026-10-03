@@ -8,8 +8,8 @@ import pyarrow.parquet as pq
 import pytest
 from packet_fixture import SESSION, SESSION_NAME, install_registry, read_registry
 
-from escapewheel_reader import Dataset, MultiSessionUnresolved, ResourceNotFoundError, open_dataset, open_packet
-from escapewheel_reader.dataset import session_scoped
+from escapewheel_reader import MultiSessionUnresolved, PacketSet, ResourceNotFoundError, open_packet, open_packets
+from escapewheel_reader.packet_set import session_scoped
 
 SECOND_SESSION = SESSION  # deliberately the same number in the other packet
 SECOND_NAME = "s002"
@@ -41,7 +41,7 @@ def _second(packet_root, tmp_path):
 
 @pytest.fixture
 def two(packet_root, tmp_path):
-    return open_dataset([packet_root, _second(packet_root, tmp_path)])
+    return open_packets([packet_root, _second(packet_root, tmp_path)])
 
 
 # -- a table is session-scoped where it reaches core.sessions ---------------------------
@@ -163,20 +163,20 @@ def test_an_unscoped_table_carries_no_discriminator(packet_root, tmp_path):
             },
         }
         install_registry(root, registry)
-    data = open_dataset([packet_root, tmp_path / "session_002"])
+    data = open_packets([packet_root, tmp_path / "session_002"])
     assert "core.subjects" not in data.scoped
     assert set(data.table("core.subjects").column_names) == {"subject_id", "subject_name"}
 
 
 def test_one_packet_gets_the_same_shape_as_many(packet_root):
     """Part 05 §13.1: one or many sessions expose the same relation shape."""
-    one = open_dataset([packet_root])
+    one = open_packets([packet_root])
     assert one.table("core.units").column("session_key").to_pylist() == [0, 0]
 
 
-def test_a_dataset_needs_a_packet():
+def test_a_packet_set_needs_a_packet():
     with pytest.raises(ValueError, match="at least one packet"):
-        Dataset([])
+        PacketSet([])
 
 
 # -- the identity is projected, not joined for ------------------------------------------
@@ -309,7 +309,7 @@ def test_a_multi_session_packet_refuses_a_table_that_cannot_say_which(packet_roo
     }
     install_registry(root, registry)
 
-    data = open_dataset([root])
+    data = open_packets([root])
     assert len(data.sessions) == 2
     assert data.table("core.units").column("session_key").to_pylist() == [0, 0]
     with pytest.raises(MultiSessionUnresolved, match="core.clock_anchors"):
@@ -317,4 +317,4 @@ def test_a_multi_session_packet_refuses_a_table_that_cannot_say_which(packet_roo
 
 
 def test_an_already_opened_packet_may_be_handed_over(packet_root):
-    assert open_dataset([open_packet(packet_root)]).sessions[0].session_name == SESSION_NAME
+    assert open_packets([open_packet(packet_root)]).sessions[0].session_name == SESSION_NAME

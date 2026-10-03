@@ -25,7 +25,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from .clocks import ClockGraph
     from .manifest import Resource
-    from .packet import Predicate
+    from .predicates import Predicate
     from .resources import ArrayResource, TableResource
     from .runs import Ambiguity
 

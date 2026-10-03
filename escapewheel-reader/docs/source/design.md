@@ -27,8 +27,8 @@ the only spelling of that read. `Packet.table`'s `on_clock` and `seconds` option
 exception. They apply the semantics functions to the read rather than adding methods that mirror
 them, so a table is never one call away from being on its own clock (see [Clocks](#clocks)).
 
-`open_dataset` is the second entry point, for many packets at once (see
-[Datasets of many packets](#datasets-of-many-packets)).
+`open_packets` is the second entry point, for many packets at once (see
+[Many packets as one relation](#many-packets-as-one-relation)).
 
 ## Clocks
 
@@ -202,11 +202,11 @@ paired value resolves in the kind of its own row, so `resolved` and `specialised
 `unresolved` reports a kind the packet names and does not hold at the level Part 02 §8.3 assigns: a
 defect where `resolves` is `required`, a fact where it is `optional`.
 
-## Datasets of many packets
+## Many packets as one relation
 
 A writer assigns identifiers packet-wide (Part 05 §4.3), so an identifier means nothing outside
 its packet: two packets both hold `unit_id` 0 and neither names the other's unit, and concatenating
-their tables conflates them. `open_dataset` gives every session a `session_key` drawn from provenance rather
+their tables conflates them. `open_packets` gives every session a `session_key` drawn from provenance rather
 than a label, and presents each session-scoped table as the union of every packet's rows with that
 key alongside (Part 05 §13.1). The relation has the same shape for one packet or twenty, so an
 analysis written against one session runs unchanged against many.

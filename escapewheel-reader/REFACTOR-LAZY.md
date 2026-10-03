@@ -169,7 +169,7 @@ Each step holds `spike_times` over every unit at 4.7 s and `on_clock` at 2.6 s.
 
 ## 6. Order of work
 
-- [ ] 1. Rename `Dataset` to `PacketSet` and `open_dataset` to `open_packets`; add `filter=` to
+- [x] 1. Rename `Dataset` to `PacketSet` and `open_dataset` to `open_packets`; add `filter=` to
   `Packet.scanner`; make `where` public.
 - [ ] 2. `tick_range` and `tick_bounds` with the exact inverse, the monotonicity check and the
   property test; remove the union in `stored_span`.

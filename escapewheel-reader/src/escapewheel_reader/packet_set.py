@@ -1,9 +1,9 @@
 """Many packets presented as one relation (Part 05 §13.1).
 
-- :func:`open_dataset` -- open several packets as a :class:`Dataset`.
-- :class:`Dataset` -- each session-scoped table as the union of every packet's rows, by
-  :meth:`~Dataset.table` or as DuckDB views from :meth:`~Dataset.duckdb`.
-- :class:`Session` -- one packet's session, and the ``session_key`` the dataset gave it.
+- :func:`open_packets` -- open several packets as a :class:`PacketSet`.
+- :class:`PacketSet` -- each session-scoped table as the union of every packet's rows, by
+  :meth:`~PacketSet.table` or as DuckDB views from :meth:`~PacketSet.duckdb`.
+- :class:`Session` -- one packet's session, and the ``session_key`` the packet set gave it.
 - :func:`session_scoped` -- the tables a registry scopes to a session.
 
 An identifier is assigned within its packet, so rows from two packets are told apart by
@@ -34,13 +34,13 @@ from .sql import sql_name
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from duckdb import DuckDBPyConnection
 
-#: The columns a dataset projects onto every session-scoped table. `session_key` is the
+#: The columns a packet set projects onto every session-scoped table. `session_key` is the
 #: session discriminator; `session_name` is the label permitted beside one, and promises nothing
 #: about what two packets' matching labels denote.
 PROJECTED = ("session_key", "session_name")
 
-#: What :func:`duck.connect` says of a dataset where DuckDB is absent.
-READS_WITHOUT_SQL = "A dataset is readable without it through table(), which goes through PyArrow."
+#: What :func:`duck.connect` says of a packet set where DuckDB is absent.
+READS_WITHOUT_SQL = "A packet set is readable without it through table(), which goes through PyArrow."
 
 
 def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
@@ -77,13 +77,13 @@ def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
 
 @dataclass(frozen=True)
 class Session:
-    """One session of one packet, and the number a dataset gave it.
+    """One session of one packet, and the number a packet set gave it.
 
     Attributes
     ----------
     session_key : int
-        The discriminator. Numbered by the dataset as it opened the packets, so it is stable
-        for one dataset and means nothing outside it, as an assigned identifier means nothing
+        The discriminator. Numbered by the packet set as it opened the packets, so it is stable
+        for one packet set and means nothing outside it, as an assigned identifier means nothing
         outside its packet.
     packet_id : str
         The packet this session was read from.
@@ -99,7 +99,7 @@ class Session:
     session_name: str | None
 
 
-class Dataset:
+class PacketSet:
     """Several packets, presented as one relation per resource.
 
     The discriminator is **the packet a row came from together with the row's `session_id`**.
@@ -114,7 +114,7 @@ class Dataset:
     """
 
     def __init__(self, packets: Sequence[Packet]) -> None:
-        """Open a dataset over packets already opened, numbering every session they hold.
+        """Open a packet set over packets already opened, numbering every session they hold.
 
         Parameters
         ----------
@@ -127,7 +127,7 @@ class Dataset:
             If no packets were given.
         """
         if not packets:
-            raise ValueError("a dataset needs at least one packet")
+            raise ValueError("a packet set needs at least one packet")
         self._packets = tuple(packets)
         self._sessions = tuple(self._number(self._packets))
         self._scoped = self._scope(self._packets)
@@ -173,7 +173,7 @@ class Dataset:
 
     @property
     def packets(self) -> tuple[Packet, ...]:
-        """The packets this dataset presents, in the order given."""
+        """The packets this packet set presents, in the order given."""
         return self._packets
 
     @property
@@ -188,7 +188,7 @@ class Dataset:
 
     def __repr__(self) -> str:
         """Return a short representation naming the packet and session counts."""
-        return f"<Dataset of {len(self._packets)} packet(s), {len(self._sessions)} session(s)>"
+        return f"<PacketSet of {len(self._packets)} packet(s), {len(self._sessions)} session(s)>"
 
     # -- SQL ------------------------------------------------------------------------
 
@@ -304,7 +304,7 @@ class Dataset:
         """Read one resource across every packet that holds it, as one Arrow table.
 
         The identity is appended the same way the SQL view projects it, so the two agree. Goes
-        through PyArrow, so a dataset stays readable with the ``sql`` extra absent.
+        through PyArrow, so a packet set stays readable with the ``sql`` extra absent.
 
         Parameters
         ----------
@@ -324,7 +324,7 @@ class Dataset:
         MultiSessionUnresolved
             If a packet holds several sessions and the resource does not carry `session_id`.
         ResourceNotFoundError
-            If no packet of the dataset holds the resource.
+            If no packet of the packet set holds the resource.
         """
         parts = []
         for packet in self._packets:
@@ -340,7 +340,7 @@ class Dataset:
                 part = self._stamp(packet, resource_id, part)
             parts.append(part)
         if not parts:
-            raise ResourceNotFoundError(f"no packet in this dataset declares {resource_id}", resource_id=resource_id)
+            raise ResourceNotFoundError(f"no packet in this packet set declares {resource_id}", resource_id=resource_id)
         return pa.concat_tables(parts, promote_options="permissive")
 
     def _stamp(self, packet: Packet, resource_id: str, table: pa.Table) -> pa.Table:
@@ -381,10 +381,10 @@ def _column_names(packet: PacketLike, resource_id: str) -> list[str]:
     return list(packet.table_resource(resource_id).schema().names)
 
 
-def open_dataset(
+def open_packets(
     paths: Iterable[str | Path | Location | Packet],
     **options: Any,
-) -> Dataset:
+) -> PacketSet:
     """Open several packets and present them as one relation.
 
     Parameters
@@ -397,16 +397,16 @@ def open_dataset(
 
     Returns
     -------
-    Dataset
-        The opened dataset.
+    PacketSet
+        The opened packet set.
 
     Examples
     --------
-    >>> data = open_dataset(["/data/ecephys_776259", "/data/ecephys_786867"])  # doctest: +SKIP
+    >>> data = open_packets(["/data/ecephys_776259", "/data/ecephys_786867"])  # doctest: +SKIP
     >>> con = data.duckdb(tables=["core.units", "core.electrode_coordinates"])  # doctest: +SKIP
     """
     opened = [p if isinstance(p, Packet) else open_packet(p, **options) for p in paths]
-    return Dataset(opened)
+    return PacketSet(opened)
 
 
-__all__ = ["Dataset", "Session", "open_dataset"]
+__all__ = ["PacketSet", "Session", "open_packets"]

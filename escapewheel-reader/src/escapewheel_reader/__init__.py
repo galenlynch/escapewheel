@@ -1,6 +1,6 @@
 """Read Escapewheel packets: Parquet tables, Zarr arrays, and the JSON manifest binding them.
 
-Open a packet with :func:`open_packet`, or several as one relation with :func:`open_dataset`, then
+Open a packet with :func:`open_packet`, or several as one relation with :func:`open_packets`, then
 pass it to the functions below. An access function takes ``(packet, ...)`` and returns a
 `pyarrow.Table`; a semantics function such as :func:`on_clock` takes ``(packet, table)`` and returns
 a table, so the two compose. `Packet` has no method doing what one of them does. The
@@ -22,14 +22,14 @@ channels
     The electrode a sorter's channel index names.
 clocks
     Ticks onto one clock, and ticks to seconds.
-dataset
-    Many packets as one relation.
 discriminators
     The rows a discriminator's kind names.
 observation
     When something was observing, and rates over that span.
 packet
     Opening one packet and reading its resources.
+packet_set
+    Many packets as one relation.
 runs
     Which of several coexisting sortings or curations to read.
 manifest, resources, location
@@ -65,7 +65,6 @@ from .axes import (
 )
 from .channels import ChannelsUndeclared, electrode_at, kept_channels, runs_without_channels
 from .clocks import BOUND, align, attach_clocks, on_clock, origin, reference_clock, seconds
-from .dataset import Dataset, Session, open_dataset
 from .discriminators import (
     Discriminator,
     Unresolved,
@@ -114,6 +113,8 @@ from .observation import (
     unit_windows,
 )
 from .packet import Packet, open_packet
+from .packet_set import PacketSet, Session, open_packets
+from .predicates import where
 from .resources import ArrayResource, TableResource, read_pool
 from .runs import Ambiguity, ambiguities, preferred_run
 from .sql import quote, sql_name
@@ -131,7 +132,6 @@ __all__ = [
     "AxisFault",
     "ChannelsUndeclared",
     "ClockMismatch",
-    "Dataset",
     "Discriminator",
     "EscapewheelError",
     "IrregularAxis",
@@ -146,6 +146,7 @@ __all__ = [
     "NumericAxis",
     "Packet",
     "PacketError",
+    "PacketSet",
     "PhysicalProfileError",
     "Refused",
     "RegistryBinding",
@@ -186,8 +187,8 @@ __all__ = [
     "observed_seconds",
     "observed_ticks",
     "on_clock",
-    "open_dataset",
     "open_packet",
+    "open_packets",
     "origin",
     "preferred_run",
     "quote",
@@ -207,5 +208,6 @@ __all__ = [
     "unit_windows",
     "units",
     "unresolved",
+    "where",
     "windows_disjoint",
 ]

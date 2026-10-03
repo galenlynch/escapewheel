@@ -82,16 +82,16 @@ one. The [design notes](docs/source/design.md) explain each.
 
 ## Reading many packets
 
-`open_dataset` opens several packets and presents each table as one relation over all of them.
+`open_packets` opens several packets and presents each table as one relation over all of them.
 An identifier is assigned within its packet, so every row of a session-scoped table carries a
 `session_key` saying which session it came from:
 
 ```python
-from escapewheel_reader import open_dataset
+from escapewheel_reader import open_packets
 
-dataset = open_dataset(["packet_a/", "packet_b/"])
-every_unit = dataset.table("core.units")  # rows of both, with session_key and session_name
-dataset.duckdb(tables=["core.units"]).sql("SELECT session_key, count(*) FROM core_units GROUP BY 1")
+packets = open_packets(["packet_a/", "packet_b/"])
+every_unit = packets.table("core.units")  # rows of both, with session_key and session_name
+packets.duckdb(tables=["core.units"]).sql("SELECT session_key, count(*) FROM core_units GROUP BY 1")
 ```
 
 ## Joining spikes to events in SQL
@@ -167,7 +167,7 @@ readable with no SQL engine. Each extra adds a capability:
 
 | extra | provides |
 |---|---|
-| `sql` | SQL over a packet or dataset (`Packet.sql`, `Packet.duckdb`, `Dataset.duckdb`), and spike-to-event alignment |
+| `sql` | SQL over a packet or packet set (`Packet.sql`, `Packet.duckdb`, `PacketSet.duckdb`), and spike-to-event alignment |
 | `arrays` | an array's values; its shape, dtype, chunking and codecs need no extra |
 | `polars` | a table as a lazy Polars frame (`TableResource.scan_polars`) |
 

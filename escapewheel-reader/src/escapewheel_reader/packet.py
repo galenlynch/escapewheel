@@ -19,6 +19,7 @@ from . import clocks, duck
 from .errors import RegistryFault, RegistryUnavailable, ResourceNotFoundError
 from .location import Location, Rewrite, Sources, resolve_sources
 from .manifest import Manifest, Resource
+from .predicates import Predicate, both, expression
 from .protocols import Memo
 from .registries import acquire, parse
 from .resources import ArrayResource, TableResource, read_pool
@@ -27,10 +28,6 @@ if TYPE_CHECKING:  # pragma: no cover
     import duckdb
 
     from .protocols import PacketLike
-
-#: What a column constraint may be: a scalar for equality, a two-item tuple for a closed
-#: range, or None to leave the column unconstrained.
-Predicate = str | int | float | bool | tuple[Any, Any] | list[Any] | None
 
 
 class Packet:
@@ -397,7 +394,7 @@ class Packet:
         >>> packet.table("core.spike_events", t_tick=(30_000, 60_000))  # doctest: +SKIP
         >>> packet.table("dynamic_foraging.trials", on_clock=True, seconds=True)  # doctest: +SKIP
         """
-        table = self.scanner(resource_id, columns=columns, **where).to_table()
+        table = self._scanner(resource_id, columns, expression(where)).to_table()
         if on_clock is not False:
             table = clocks.on_clock(self, table, None if on_clock is True else int(on_clock), resource_id=resource_id)
         if seconds:
@@ -409,6 +406,7 @@ class Packet:
         resource_id: str,
         *,
         columns: list[str] | None = None,
+        filter: pads.Expression | None = None,
         **where: Predicate,
     ) -> pads.Scanner:
         """Narrow a table resource as :meth:`table` does, without reading it.
@@ -424,6 +422,9 @@ class Packet:
             Dotted resource ID.
         columns : list of str, optional
             Read only these columns. Reading every column is the default.
+        filter : pyarrow.dataset.Expression, optional
+            Any further expression, such as :func:`~escapewheel_reader.predicates.where` builds,
+            ANDed with `where`.
         **where : str, int, float, bool, tuple, list, set, or None
             Column constraints, as for :meth:`table`.
 
@@ -436,8 +437,16 @@ class Packet:
         --------
         >>> reader = packet.scanner("core.spike_events", columns=["t_tick"], unit_id=7).to_reader()  # doctest: +SKIP
         """
+        return self._scanner(resource_id, columns, both(expression(where), filter))
+
+    def _scanner(
+        self,
+        resource_id: str,
+        columns: list[str] | None,
+        filter: pads.Expression | None,
+    ) -> pads.Scanner:
         dataset = self.table_resource(resource_id).dataset()
-        return dataset.scanner(columns=columns, filter=self._predicate(where), memory_pool=read_pool())
+        return dataset.scanner(columns=columns, filter=filter, memory_pool=read_pool())
 
     def scan(self, resource_id: str) -> pads.Dataset:
         """Open a resource lazily, without reading it.
@@ -518,33 +527,6 @@ class Packet:
             The result.
         """
         return self.duckdb(for_query=query).sql(query).to_arrow_table()
-
-    @staticmethod
-    def _predicate(where: Mapping[str, Predicate]) -> pads.Expression | None:
-        """Build a dataset expression from column constraints.
-
-        A scalar means equality; a two-item tuple means a closed range; a list or set means
-        membership; ``None`` means the column is unconstrained. An unknown column raises when
-        the expression is applied, rather than silently matching nothing.
-
-        Membership exists because several streams may carry one kind of event: resolving a type
-        gives a set of keys, and pushing them down is what lets row-group statistics prune rather
-        than reading and filtering.
-        """
-        expression: pads.Expression | None = None
-        for column, value in where.items():
-            if value is None:
-                continue
-            field = pads.field(column)
-            if isinstance(value, tuple):
-                low, high = value
-                term = (field >= low) & (field <= high)
-            elif isinstance(value, (list, set, frozenset)):
-                term = field.isin(list(value))
-            else:
-                term = field == value
-            expression = term if expression is None else expression & term
-        return expression
 
 
 def open_packet(
