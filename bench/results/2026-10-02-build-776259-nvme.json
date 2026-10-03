@@ -1,0 +1,125 @@
+{
+  "environment": {
+    "date": "2026-10-03",
+    "commit": "50086c5b+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/mnt/Data/776259-packet",
+        "filesystem": "fuseblk",
+        "device": "/dev/sda1",
+        "model": "TOSHIBA MG09ACA18TE",
+        "rotational": true
+      },
+      {
+        "path": "/home/galen.lynch/escapewheel-build-bench",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "recipe": "/mnt/Data/776259-packet/recipe-r164.toml",
+  "cells": [
+    {
+      "workers": 1,
+      "out": "/home/galen.lynch/escapewheel-build-bench/packet-par-nvme-w1",
+      "log": "/home/galen.lynch/escapewheel-build-bench/packet-par-nvme-w1.log",
+      "exit": 0,
+      "wall_s": 795.3,
+      "peak_rss_gib": 3.89,
+      "committed": true,
+      "turns_s": {
+        "sorter": 0.0,
+        "openephys": 182.5,
+        "dynamic_foraging": 182.5,
+        "sync": 182.9,
+        "aind_nwb": 183.1,
+        "waveforms": 184.1,
+        "lfp": 265.8,
+        "aind_unit_qc": 266.2,
+        "session": 395.5
+      },
+      "steps": [
+        {
+          "at_s": 745.6,
+          "step": "staged 56 resources in 348.9 s"
+        },
+        {
+          "at_s": 745.6,
+          "step": "derived analysis.spike_events"
+        },
+        {
+          "at_s": 785.0,
+          "step": "staged 2 derived or updated resource(s) in 39.5 s"
+        },
+        {
+          "at_s": 794.0,
+          "step": "validated in 9.0 s"
+        },
+        {
+          "at_s": 794.0,
+          "step": "promoted in 0.0 s"
+        }
+      ]
+    },
+    {
+      "workers": 4,
+      "out": "/home/galen.lynch/escapewheel-build-bench/packet-par-nvme-w4",
+      "log": "/home/galen.lynch/escapewheel-build-bench/packet-par-nvme-w4.log",
+      "exit": 0,
+      "wall_s": 377.2,
+      "peak_rss_gib": 3.66,
+      "committed": true,
+      "turns_s": {
+        "sorter": 0.0,
+        "openephys": 143.6,
+        "dynamic_foraging": 143.6,
+        "sync": 144.1,
+        "aind_nwb": 144.1,
+        "waveforms": 145.1,
+        "lfp": 163.4,
+        "aind_unit_qc": 163.5,
+        "session": 190.4
+      },
+      "steps": [
+        {
+          "at_s": 327.3,
+          "step": "staged 56 resources in 136.9 s"
+        },
+        {
+          "at_s": 327.3,
+          "step": "derived analysis.spike_events"
+        },
+        {
+          "at_s": 366.9,
+          "step": "staged 2 derived or updated resource(s) in 39.5 s"
+        },
+        {
+          "at_s": 375.8,
+          "step": "validated in 9.0 s"
+        },
+        {
+          "at_s": 375.8,
+          "step": "promoted in 0.0 s"
+        }
+      ]
+    }
+  ]
+}

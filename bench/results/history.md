@@ -237,14 +237,22 @@ within 13 ms of reading a stored key up to a million trials.
 |---|---|---|---|---|
 | 2026-10-02 | 776259, rotational | `escapewheel import` of a 57-resource packet, core 0.18.0 | 806.8 s: sources 515.0, staging 227.7, derive 48.9, validate 15.2, promote 0.0 | the packet's build log |
 | 2026-10-02 | 786867, rotational | `escapewheel import` of a 58-resource packet with video, core 0.18.0 | 587.8 s: sources 404.6, staging 145.0, derive 28.5, validate 9.7, promote 0.0 | the packet's build log |
+| 2026-10-02 | 776259, rotational scratch | `escapewheel import`, 57 resources, core 0.18.0, four workers then one | 478.8 and 506.4 s; sources 232.0 and 258.4, staging 184.1 and 178.4; peak RSS 3.78 and 3.76 GiB | `build.py` |
+| 2026-10-02 | 776259, NVMe scratch | `escapewheel import`, 57 resources, core 0.18.0, one worker then four | 795.3 and 377.2 s; sources 396.7 and 190.4, staging 348.9 and 136.9; peak RSS 3.89 and 3.66 GiB | `build.py` |
+| 2026-10-02 | 776259, rotational scratch | `escapewheel import`, 57 resources, core 0.18.0, one worker then four | 425.6 and 448.9 s; sources 239.0 and 236.7, staging 131.1 and 156.5; peak RSS 3.55 and 3.65 GiB | `build.py` |
 | 2026-09-30 | 776259, rotational | `escapewheel import` of a 57-resource packet, core 0.14.0 | 630.1 s: sources 431.7, staging 146.6, derive 41.4, validate 9.5, promote 0.9 | the packet's build log |
-| 2026-08-30 | 776259, rotational | `escapewheel import` of a 23-resource packet | 105.1 s: sources 9.5, core 50.5, analysis 32.7, validate 12.5 | not kept; quoted in the writer's performance guide |
+| 2026-08-30 | 776259, rotational | `escapewheel import` of a 23-resource packet | 105.1 s: sources 9.5, core 50.5, analysis 32.7, validate 12.5 | not kept |
 | 2026-08-30 | 776259, rotational | `--sample 200000` import | 8.7 s | not kept; quoted in the writer's performance guide |
 
 The 2026-09-30 sources include the waveforms (217.5 s) and the unit QC metrics (62.6 s). The
 2026-08-30 import read neither, so the two totals are not comparable. The 2026-10-02 776259 build
 spent 215.8 s in the sorter source, 217.2 s in the waveforms and 62.1 s in the unit QC metrics, at a
 load average near 12 from unrelated work; the 2026-09-30 load was not recorded.
+
+The 2026-10-02 worker-count builds read their sources from the rotational disk and S3 through a
+warm source cache, and put only the packet and its staging on the disk named. Their waveforms
+source reads a slab's chunks concurrently and takes about 20 s, where the 2026-09-30 build's took
+217.5 s; the spread between cells is not yet explained.
 
 ## Listing and downloading a stored session
 

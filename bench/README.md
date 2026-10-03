@@ -38,6 +38,7 @@ are imported before the clock starts.
 | `readers.py` | One session read cold four ways: the packet through PyArrow and through DuckDB, and the NWB through pynwb and through lazynwb. The operations are opening the store, unit metadata, trials, every spike, a ten-second window, one unit's train, and the units in one region with their trains. | `--packet`, `--nwb`, either a path or an `s3://` URI |
 | `row_groups.py` | Cold reads of `analysis.spike_events` at several row-group sizes, for a one-second window and for one unit over the whole session, from local disk or from a store. | `--packet`, `--scratch`; for a store, `--store-packet`, `--store-scratch` |
 | `stores.py` | Listing a stored packet or NWB, and downloading it to local disk, in seconds and objects. | `--root NAME=URI`, `--stage-dir` |
+| `build.py` | What importing one recipe costs at several source-worker counts: wall time, peak RSS, and when each source's turn and each later step began. Each cell writes a fresh packet; the writer stages beside it, so `--out-root` is the scratch disk measured. | `--recipe`, `--out-root` |
 | `containment.py` | Which block holds each trial: a range join, an ASOF join, a binary search, or a stored key, at four scales. | none; the data is synthetic |
 | `benchkit.py` | Shared helpers: path resolution, eviction and its check, child processes, and the environment record. | |
 
@@ -51,6 +52,8 @@ uv run python readers.py --packet /nvme/bench/packet --nwb /nvme/bench/session.n
 uv run python row_groups.py --packet /nvme/bench/packet --scratch /nvme/bench/rowgroups \
     --json-out results/$(date +%F)-row-groups-<session>.json
 uv run python containment.py --json-out results/$(date +%F)-containment.json
+uv run python build.py --recipe /data/recipe.toml --out-root /nvme/bench/build --workers 1 4 \
+    --json-out results/$(date +%F)-build-<session>.json
 ```
 
 ## Reading from a store

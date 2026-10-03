@@ -1,0 +1,125 @@
+{
+  "environment": {
+    "date": "2026-10-03",
+    "commit": "50086c5b+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/mnt/Data/776259-packet",
+        "filesystem": "fuseblk",
+        "device": "/dev/sda1",
+        "model": "TOSHIBA MG09ACA18TE",
+        "rotational": true
+      },
+      {
+        "path": "/mnt/Data/776259-packet",
+        "filesystem": "fuseblk",
+        "device": "/dev/sda1",
+        "model": "TOSHIBA MG09ACA18TE",
+        "rotational": true
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "recipe": "/mnt/Data/776259-packet/recipe-r164.toml",
+  "cells": [
+    {
+      "workers": 4,
+      "out": "/mnt/Data/776259-packet/packet-par-hdd3-w4",
+      "log": "/mnt/Data/776259-packet/packet-par-hdd3-w4.log",
+      "exit": 0,
+      "wall_s": 478.8,
+      "peak_rss_gib": 3.78,
+      "committed": true,
+      "turns_s": {
+        "sorter": 0.0,
+        "openephys": 184.7,
+        "dynamic_foraging": 184.7,
+        "sync": 185.1,
+        "aind_nwb": 185.1,
+        "waveforms": 186.1,
+        "lfp": 206.3,
+        "aind_unit_qc": 206.4,
+        "session": 232.0
+      },
+      "steps": [
+        {
+          "at_s": 416.1,
+          "step": "staged 56 resources in 184.1 s"
+        },
+        {
+          "at_s": 416.1,
+          "step": "derived analysis.spike_events"
+        },
+        {
+          "at_s": 464.9,
+          "step": "staged 2 derived or updated resource(s) in 48.7 s"
+        },
+        {
+          "at_s": 475.1,
+          "step": "validated in 10.2 s"
+        },
+        {
+          "at_s": 477.5,
+          "step": "promoted in 2.4 s"
+        }
+      ]
+    },
+    {
+      "workers": 1,
+      "out": "/mnt/Data/776259-packet/packet-par-hdd3-w1",
+      "log": "/mnt/Data/776259-packet/packet-par-hdd3-w1.log",
+      "exit": 0,
+      "wall_s": 506.4,
+      "peak_rss_gib": 3.76,
+      "committed": true,
+      "turns_s": {
+        "sorter": 0.0,
+        "openephys": 186.1,
+        "dynamic_foraging": 186.1,
+        "sync": 186.5,
+        "aind_nwb": 186.7,
+        "waveforms": 187.6,
+        "lfp": 208.5,
+        "aind_unit_qc": 208.9,
+        "session": 257.4
+      },
+      "steps": [
+        {
+          "at_s": 436.8,
+          "step": "staged 56 resources in 178.4 s"
+        },
+        {
+          "at_s": 436.8,
+          "step": "derived analysis.spike_events"
+        },
+        {
+          "at_s": 491.2,
+          "step": "staged 2 derived or updated resource(s) in 54.4 s"
+        },
+        {
+          "at_s": 505.0,
+          "step": "validated in 13.8 s"
+        },
+        {
+          "at_s": 505.0,
+          "step": "promoted in 0.0 s"
+        }
+      ]
+    }
+  ]
+}
