@@ -1,6 +1,7 @@
 import json
 import shutil
 
+import numpy as np
 import pyarrow as pa
 import pytest
 from packet_fixture import (
@@ -140,3 +141,60 @@ def two_clock_packet(tmp_path, packet_root):
     manifest["resources"].append(resource_entry("core.clocks", write_table(root, "clocks", clocks)))
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
     return root
+
+
+@pytest.fixture
+def dense_root(two_clock_packet):
+    """`two_clock_packet` with spikes and events on every 7th tick across and past the probe's anchors.
+
+    The first two units and the second stream are on the probe, the third unit and the first stream
+    on the reference clock, and intervals sit on both, so a range selects differently on each clock.
+    """
+    i32 = pa.int32()
+    ticks = np.arange(-60_000, 300_000, 7, dtype=np.int64)
+    spikes = pa.table(
+        {
+            "session_id": pa.array([SESSION] * (3 * ticks.size), i32),
+            "unit_id": pa.array(np.repeat(np.array(UNITS, np.int32), ticks.size)),
+            "t_tick": pa.array(np.tile(ticks, 3) + np.repeat([0, 1_000_000, 1_000_000], ticks.size)),
+        }
+    )
+    events = pa.table(
+        {
+            "session_id": pa.array([SESSION] * (2 * ticks.size), i32),
+            "stream_id": pa.array(np.repeat(np.array(STREAMS, np.int32), ticks.size)),
+            "t_tick": pa.array(np.concatenate([ticks + 1_000_000, ticks])),
+        }
+    )
+    event_streams = pa.table(
+        {
+            "event_stream_id": pa.array(list(STREAMS), i32),
+            "session_id": pa.array([SESSION] * 2, i32),
+            "event_stream_name": pa.array(["go_cue", "lick"]),
+            "event_type": pa.array(["go_cue", "lick"]),
+            "clock_id": pa.array([CLOCK_BEHAVIOUR, CLOCK_PROBE], i32),
+        }
+    )
+    intervals = pa.table(
+        {
+            "session_id": pa.array([SESSION] * 4, i32),
+            "interval_id": pa.array([1, 2, 3, 4], i32),
+            "interval_name": pa.array(["a", "b", "c", "d"]),
+            "interval_kind": pa.array(["trial"] * 4),
+            "local_interval_label": pa.array(["a", "b", "c", "d"]),
+            "start_tick": pa.array([0, 90_000, 1_010_000, 1_100_000], pa.int64()),
+            "stop_tick": pa.array([30_000, 400_000, 1_040_000, 1_200_000], pa.int64()),
+            "clock_id": pa.array([CLOCK_PROBE, CLOCK_PROBE, CLOCK_BEHAVIOUR, CLOCK_BEHAVIOUR], i32),
+        }
+    )
+    manifest = json.loads((two_clock_packet / "packet.json").read_text())
+    by_id = {r["resource_id"]: r for r in manifest["resources"]}
+    for resource_id, name, table in (
+        ("core.spike_events", "spike_events", spikes),
+        ("core.events", "events", events),
+        ("core.event_streams", "event_streams", event_streams),
+        ("core.intervals", "intervals", intervals),
+    ):
+        by_id[resource_id]["uri"] = write_table(two_clock_packet, name, table)
+    (two_clock_packet / "packet.json").write_text(json.dumps(manifest, indent=2))
+    return two_clock_packet

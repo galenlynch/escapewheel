@@ -64,9 +64,9 @@ meet only on a clock above both. Where a packet declares no reference, rows on o
 it and rows on several meet on the root their clocks share. Every refusal names the way back to
 the stored ticks, which stay readable whatever the synchronization says.
 
-`spike_times` and `events` return ticks on the packet's reference clock by default, with
-`clock_id` alongside, because a stored tick from one probe compared with another's is the easy
-wrong answer. `clock=STORED` asks for the ticks as stored.
+`spike_times`, `events`, `intervals` and `units` return ticks on the packet's reference clock by
+default, with `clock_id` alongside, because a stored tick from one probe compared with another's
+is the easy wrong answer. `clock=STORED` asks for the ticks as stored.
 
 Any other table reaches the same answer through its declaration. Part 02 §8.4 says which clock
 each coordinate column is on. It is the column's `clock_from` target where one is declared, and

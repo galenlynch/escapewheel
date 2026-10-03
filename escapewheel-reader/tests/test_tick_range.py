@@ -1,11 +1,9 @@
 """A range on one clock, inverted onto the ticks each table stores."""
 
-import json
-
 import numpy as np
 import pyarrow as pa
 import pytest
-from packet_fixture import CLOCK_BEHAVIOUR, CLOCK_PROBE, SESSION, UNITS, write_table
+from packet_fixture import CLOCK_BEHAVIOUR, CLOCK_PROBE
 
 from escapewheel_reader import open_packet, tick_bounds, tick_range
 from escapewheel_reader.clocks import ClockGraph, attach_clocks, clock_graph, declared_bound, mapped, stored_intervals
@@ -63,38 +61,8 @@ def test_anchors_that_do_not_increase_refuse_the_inverse():
 
 
 @pytest.fixture
-def dense_packet(two_clock_packet):
-    """`two_clock_packet` with spikes on every 7th tick across and past the probe's anchors.
-
-    Its first two units are on the probe and its third on the reference clock, so a range selects
-    differently on each.
-    """
-    ticks = np.arange(-60_000, 300_000, 7, dtype=np.int64)
-    spikes = pa.table(
-        {
-            "session_id": pa.array([SESSION] * (3 * ticks.size), pa.int32()),
-            "unit_id": pa.array(np.repeat(np.array(UNITS, np.int32), ticks.size)),
-            "t_tick": pa.array(np.tile(ticks, 3) + np.repeat([0, 1_000_000, 1_000_000], ticks.size)),
-        }
-    )
-    intervals = pa.table(
-        {
-            "session_id": pa.array([SESSION] * 4, pa.int32()),
-            "interval_id": pa.array([1, 2, 3, 4], pa.int32()),
-            "interval_name": pa.array(["a", "b", "c", "d"]),
-            "interval_kind": pa.array(["trial"] * 4),
-            "local_interval_label": pa.array(["a", "b", "c", "d"]),
-            "start_tick": pa.array([0, 90_000, 1_010_000, 1_100_000], pa.int64()),
-            "stop_tick": pa.array([30_000, 200_000, 1_040_000, 1_200_000], pa.int64()),
-            "clock_id": pa.array([CLOCK_PROBE, CLOCK_PROBE, CLOCK_BEHAVIOUR, CLOCK_BEHAVIOUR], pa.int32()),
-        }
-    )
-    manifest = json.loads((two_clock_packet / "packet.json").read_text())
-    by_id = {r["resource_id"]: r for r in manifest["resources"]}
-    by_id["core.spike_events"]["uri"] = write_table(two_clock_packet, "spike_events", spikes)
-    by_id["core.intervals"]["uri"] = write_table(two_clock_packet, "intervals", intervals)
-    (two_clock_packet / "packet.json").write_text(json.dumps(manifest, indent=2))
-    return open_packet(two_clock_packet)
+def dense_packet(dense_root):
+    return open_packet(dense_root)
 
 
 def _in_span(packet, resource_id, column, clock_column, span):

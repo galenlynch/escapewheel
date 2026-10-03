@@ -19,7 +19,7 @@ from . import clocks, duck
 from .errors import RegistryFault, RegistryUnavailable, ResourceNotFoundError
 from .location import Location, Rewrite, Sources, resolve_sources
 from .manifest import Manifest, Resource
-from .predicates import Predicate, both, expression
+from .predicates import Predicate, both, expression, on_clock_constraints
 from .protocols import Memo
 from .registries import acquire, parse
 from .resources import ArrayResource, TableResource, read_pool
@@ -380,8 +380,11 @@ class Packet:
             Add a seconds column per coordinate, by :func:`~escapewheel_reader.clocks.seconds`.
             The coordinates must be on the reference clock, as `on_clock=True` leaves them.
         **where : str, int, float, bool, tuple, or None
-            Column constraints, on the values as stored. A scalar means equality, a two-item
-            tuple means a closed range, and ``None`` leaves the column unconstrained.
+            Column constraints. A scalar means equality, a two-item tuple means a closed range,
+            and ``None`` leaves the column unconstrained. A constraint applies to the values as
+            stored, except that with `on_clock` one on a coordinate applies on the output clock,
+            through :func:`~escapewheel_reader.predicates.tick_range`. Without it, a range on a
+            coordinate whose rows are on several clocks compares ticks of different clocks.
 
         Returns
         -------
@@ -394,7 +397,12 @@ class Packet:
         >>> packet.table("core.spike_events", t_tick=(30_000, 60_000))  # doctest: +SKIP
         >>> packet.table("dynamic_foraging.trials", on_clock=True, seconds=True)  # doctest: +SKIP
         """
-        table = self._scanner(resource_id, columns, expression(where)).to_table()
+        if on_clock is False:
+            wanted = expression(where)
+        else:
+            target = None if on_clock is True else int(on_clock)
+            wanted = on_clock_constraints(self, resource_id, where, target)
+        table = self._scanner(resource_id, columns, wanted).to_table()
         if on_clock is not False:
             table = clocks.on_clock(self, table, None if on_clock is True else int(on_clock), resource_id=resource_id)
         if seconds:

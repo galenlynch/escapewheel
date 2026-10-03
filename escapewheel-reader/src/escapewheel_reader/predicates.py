@@ -252,6 +252,30 @@ def _any(terms: Sequence[pads.Expression]) -> pads.Expression:
     return _any(terms[:middle]) | _any(terms[middle:])
 
 
+def on_clock_constraints(
+    packet: PacketLike, resource_id: str, constraints: Mapping[str, Predicate], clock: int | None
+) -> pads.Expression | None:
+    """Build `constraints` with each one on a coordinate stated on `clock` rather than as stored.
+
+    A scalar is the one-tick range and a list or set each of its ticks, so every form a stored
+    constraint takes means the same on the clock.
+    """
+    coordinates = set(clocks.clock_columns(packet, resource_id))
+    found = expression({name: value for name, value in constraints.items() if name not in coordinates})
+    for name, value in constraints.items():
+        if name not in coordinates or value is None:
+            continue
+        if isinstance(value, tuple):
+            spans = [(int(value[0]), int(value[1]))]
+        elif isinstance(value, (list, set, frozenset)):
+            spans = [(int(v), int(v)) for v in value]
+        else:
+            spans = [(int(value), int(value))]
+        terms = [tick_range(packet, resource_id, span, clock=clock, column=name) for span in spans]
+        found = both(found, _any(terms) if terms else pc.scalar(False))
+    return found
+
+
 def both(first: pads.Expression | None, second: pads.Expression | None) -> pads.Expression | None:
     """AND two optional expressions."""
     if first is None or second is None:

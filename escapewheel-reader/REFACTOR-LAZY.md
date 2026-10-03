@@ -64,6 +64,7 @@ Narwhals needed three workarounds to express the mapping, and its PyArrow backen
 | stored-value constraints | Without `on_clock`, a constraint on `Packet.table` applies to stored values, and the documentation says that across several clocks it compares ticks of different clocks. With `on_clock`, a coordinate constraint applies on the output clock. |
 | default clock | `spike_times`, `events`, `intervals` and `units` return ticks on the reference clock; `clock=STORED` returns them as stored. |
 | spike routing | Where the output clock is the reference and the packet carries `analysis.spike_events`, `spike_times` reads it. That table omits a spike the mapping cannot place, as the mapped path does. |
+| row order | No accessor promises one; a caller sorts or groups as the analysis needs. A routed `spike_times` comes back in `analysis.spike_events`' time order. |
 | rename | `Dataset` becomes `PacketSet`, `open_dataset` becomes `open_packets`, and the module `dataset` becomes `packet_set`. No alias, since nothing is released. |
 
 ## 3. Design
@@ -176,7 +177,7 @@ Each step holds `spike_times` over every unit at 4.7 s and `on_clock` at 2.6 s.
 - [x] 2. `tick_range` and `tick_bounds` with the exact inverse, the monotonicity check and the
   property test; remove the union in `stored_span`.
 - [x] 3. `attach_clocks`, `on_clock` and `seconds` over every Arrow form; `seconds_expression`.
-- [ ] 4. Rebuild `Packet.table`, `spike_times`, `events`, `intervals` and `units` on these, with
+- [x] 4. Rebuild `Packet.table`, `spike_times`, `events`, `intervals` and `units` on these, with
   the reference-clock default and spike routing.
 - [ ] 5. `PacketSet.scan`, `PacketSet.scanner` and `PacketSet.table`.
 - [ ] 6. The README's lazy-reading section; the inverse and its monotonicity in `design.md`; the

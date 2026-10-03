@@ -22,9 +22,17 @@ from . import clocks
 from .dictionaries import key_filter, within
 from .errors import NotAligned, NotDeclared
 from .observation import attach_support, unit_windows
-from .predicates import both, expression, tick_range
+from .optional import held
+from .predicates import both, expression, tick_range, where
 from .protocols import Memo, PacketLike
-from .resource_ids import CORE_EVENT_STREAMS, CORE_EVENTS, CORE_INTERVALS, CORE_SPIKE_EVENTS, CORE_UNITS
+from .resource_ids import (
+    ANALYSIS_SPIKE_EVENTS,
+    CORE_EVENT_STREAMS,
+    CORE_EVENTS,
+    CORE_INTERVALS,
+    CORE_SPIKE_EVENTS,
+    CORE_UNITS,
+)
 from .resources import read_pool
 from .runs import check as _check_runs
 
@@ -40,8 +48,15 @@ STORED = "stored"
 SORTING_ACTIVITIES = ("spike_sorting", "curation")
 
 
-def intervals(packet: PacketLike, *, session_id: int | None = None, interval_kind: str | None = None) -> pa.Table:
-    """Read ``core.intervals``, optionally filtered.
+def intervals(
+    packet: PacketLike,
+    *,
+    session_id: int | None = None,
+    interval_kind: str | None = None,
+    clock: int | Literal["stored"] | None = None,
+    seconds: bool = False,
+) -> pa.Table:
+    """Read ``core.intervals``, optionally filtered, on the packet's reference clock unless told otherwise.
 
     Filtering by kind prunes rather than scans: Part 02 §12.9 numbers each session's intervals
     of one kind consecutively, so each is a contiguous run in the file's order.
@@ -54,17 +69,31 @@ def intervals(packet: PacketLike, *, session_id: int | None = None, interval_kin
         Keep only this session.
     interval_kind : str, optional
         Keep only intervals of this kind, named as a dotted resource ID.
+    clock : int or 'stored', optional
+        The clock to return ticks on. Defaults to :func:`~escapewheel_reader.clocks.reference_clock`;
+        pass :data:`STORED` for the ticks the file holds. A start or stop the anchors cannot
+        place comes back null, and the interval stays.
+    seconds : bool, default False
+        Add `start_second` and `stop_second` from the packet's declared origin.
 
     Returns
     -------
     pyarrow.Table
-        Matching intervals.
+        Matching intervals, with `clock_id` naming the clock their ticks are on.
     """
-    return packet.table(CORE_INTERVALS, session_id=session_id, interval_kind=interval_kind)
+    found = packet.table(CORE_INTERVALS, session_id=session_id, interval_kind=interval_kind)
+    return _on(packet, found, CORE_INTERVALS, clock, seconds, session_id)
 
 
-def units(packet: PacketLike, *, session_id: int | None = None, quality_label: str | None = None) -> pa.Table:
-    """Read ``core.units``, optionally filtered.
+def units(
+    packet: PacketLike,
+    *,
+    session_id: int | None = None,
+    quality_label: str | None = None,
+    clock: int | Literal["stored"] | None = None,
+    seconds: bool = False,
+) -> pa.Table:
+    """Read ``core.units``, optionally filtered, on the packet's reference clock unless told otherwise.
 
     Parameters
     ----------
@@ -74,11 +103,17 @@ def units(packet: PacketLike, *, session_id: int | None = None, quality_label: s
         Keep only this session.
     quality_label : str, optional
         Keep only units with this curation label: ``sua``, ``mua``, or ``noise``.
+    clock : int or 'stored', optional
+        The clock to return `first_spike_tick` and `last_spike_tick` on. Defaults to
+        :func:`~escapewheel_reader.clocks.reference_clock`; pass :data:`STORED` for the ticks the
+        file holds and the probe clock each unit was recorded on.
+    seconds : bool, default False
+        Add `first_spike_second` and `last_spike_second` from the packet's declared origin.
 
     Returns
     -------
     pyarrow.Table
-        Matching units.
+        Matching units, with `clock_id` naming the clock their ticks are on.
 
     Raises
     ------
@@ -89,7 +124,8 @@ def units(packet: PacketLike, *, session_id: int | None = None, quality_label: s
         ``table("core.units")`` to get the rows anyway.
     """
     _check_runs(packet, SORTING_ACTIVITIES)
-    return packet.table(CORE_UNITS, session_id=session_id, quality_label=quality_label)
+    found = packet.table(CORE_UNITS, session_id=session_id, quality_label=quality_label)
+    return _on(packet, found, CORE_UNITS, clock, seconds, session_id)
 
 
 def events(
@@ -144,14 +180,13 @@ def events(
             .column("event_stream_id")
             .to_pylist()
         )
-    wanted = both(
-        expression({"session_id": session_id, "stream_id": streams}), _range(packet, CORE_EVENTS, t_tick, clock)
-    )
+    pushed, cut = _range(packet, CORE_EVENTS, t_tick, clock)
+    wanted = both(expression({"session_id": session_id, "stream_id": streams}), pushed)
     found = packet.scan(CORE_EVENTS).to_table(filter=wanted, memory_pool=read_pool())
     # A tick has no meaning without its clock, and every caller needs it either to convert or to
     # report, so the stream's clock comes back with each event.
     found = clocks.attach_clocks(packet, found, CORE_EVENTS)
-    return _finish(packet, found, t_tick, clock, seconds, session_id)
+    return _finish(packet, found, cut, clock, seconds, session_id)
 
 
 def spike_times(
@@ -185,6 +220,9 @@ def spike_times(
     work out which rows are wanted -- scans hundreds of millions of rows to answer a
     question thousands of rows already answer.
 
+    On the reference clock, a packet carrying `analysis.spike_events` is read from it: its ticks
+    are already mapped and it is laid out by time, so a range prunes and nothing is mapped.
+
     Parameters
     ----------
     packet : PacketLike
@@ -211,8 +249,8 @@ def spike_times(
     Returns
     -------
     pyarrow.Table
-        The columns identifying the unit, then ``t_tick`` and ``clock_id``, in stored order,
-        so a read of several units can be grouped by unit. When one `unit_id` is named and
+        The columns identifying the unit, then ``t_tick`` and ``clock_id``, in no promised
+        order: sort or group the result as the analysis needs. When one `unit_id` is named and
         no `t_tick` range is given, the result carries the unit's observation window in
         `schema.metadata`, so :func:`~escapewheel_reader.observation.rate_of` needs no
         second lookup. A range-narrowed read carries none: the span is the caller's
@@ -229,36 +267,49 @@ def spike_times(
     """
     if (unit_id is None) == (units is None):
         raise ValueError("name exactly one of unit_id or units")
-    if unit_id is not None:
-        wanted = both(
-            expression({"unit_id": unit_id, "session_id": session_id}), _range(packet, CORE_SPIKE_EVENTS, t_tick, clock)
-        )
-        found = packet.scan(CORE_SPIKE_EVENTS).to_table(
-            columns=["t_tick", "unit_id"], filter=wanted, memory_pool=read_pool()
-        )
-        found = clocks.attach_clocks(packet, found, CORE_SPIKE_EVENTS).select(["unit_id", "t_tick", "clock_id"])
-        found = _finish(packet, found, t_tick, clock, seconds, session_id)
-        if t_tick is None:
-            # Only for the unit's whole record. A range-narrowed read is a subset the
-            # caller chose, and the window it was observed over is no denominator for it.
-            found = attach_support(found, _unit_support(packet, unit_id, session_id))
-        return found
-
-    assert units is not None  # the exclusivity check above settles this
     keys = _reference_columns(packet, CORE_SPIKE_EVENTS, CORE_UNITS)
-    missing = [k for k in keys if k not in units.schema.names]
-    if missing:
-        raise ValueError(f"units is missing {missing}, which identify a unit in this packet")
-    wanted, exact = key_filter(units, keys)
-    if session_id is not None:
-        wanted = wanted & (pc.field("session_id") == session_id)
-    if (pushed := _range(packet, CORE_SPIKE_EVENTS, t_tick, clock)) is not None:
-        wanted = wanted & pushed
-    found = packet.scan(CORE_SPIKE_EVENTS).to_table(columns=["t_tick", *keys], filter=wanted, memory_pool=read_pool())
-    if not exact:
-        found = within(found, units, keys)
-    found = clocks.attach_clocks(packet, found, CORE_SPIKE_EVENTS)
-    return _finish(packet, found.select([*keys, "t_tick", "clock_id"]), t_tick, clock, seconds, session_id)
+    if units is None:
+        wanted, exact = expression({"unit_id": unit_id}), True
+    else:
+        missing = [k for k in keys if k not in units.schema.names]
+        if missing:
+            raise ValueError(f"units is missing {missing}, which identify a unit in this packet")
+        wanted, exact = key_filter(units, keys)
+    wanted = both(wanted, expression({"session_id": session_id}))
+    if _routed(packet, clock):
+        # Already on the reference clock and laid out by time, so a range prunes and nothing maps.
+        wanted = both(wanted, expression({"t_tick": t_tick}))
+        found = packet.scan(ANALYSIS_SPIKE_EVENTS).to_table(
+            columns=[*keys, "t_tick", "clock_id"], filter=wanted, memory_pool=read_pool()
+        )
+        if units is not None and not exact:
+            found = within(found, units, keys)
+        found = clocks.seconds(packet, found, session_id=session_id) if seconds else found
+    else:
+        pushed, cut = _range(packet, CORE_SPIKE_EVENTS, t_tick, clock)
+        found = packet.scan(CORE_SPIKE_EVENTS).to_table(
+            columns=["t_tick", *keys], filter=both(wanted, pushed), memory_pool=read_pool()
+        )
+        if units is not None and not exact:
+            found = within(found, units, keys)
+        found = clocks.attach_clocks(packet, found, CORE_SPIKE_EVENTS).select([*keys, "t_tick", "clock_id"])
+        found = _finish(packet, found, cut, clock, seconds, session_id)
+    if unit_id is not None and t_tick is None:
+        # Only for the unit's whole record. A range-narrowed read is a subset the caller chose,
+        # and the window it was observed over is no denominator for it.
+        found = attach_support(found, _unit_support(packet, unit_id, session_id))
+    return found
+
+
+def _routed(packet: PacketLike, clock: int | Literal["stored"] | None) -> bool:
+    """Whether `analysis.spike_events` holds the answer: spikes wanted on the reference clock, already mapped there."""
+    if clock == STORED or ANALYSIS_SPIKE_EVENTS not in held(packet):
+        return False
+    try:
+        reference = clocks.reference_clock(packet)
+    except NotAligned:
+        return False
+    return clock is None or int(clock) == reference
 
 
 def distinct(packet: PacketLike, resource_id: str, column: str) -> pa.ChunkedArray[Any]:
@@ -334,40 +385,50 @@ def _unit_support(packet: PacketLike, unit_id: int, session_id: int | None) -> p
 
 def _range(
     packet: PacketLike, resource_id: str, span: tuple[int, int] | None, clock: int | Literal["stored"] | None
-) -> pc.Expression | None:
-    """Turn a range stated on the result's clock into a filter on the ticks the file holds."""
+) -> tuple[pc.Expression | None, tuple[int, int] | None]:
+    """Turn a range stated on the result's clock into a filter on the ticks the file holds.
+
+    Returns the filter, and the range to cut by after mapping where no filter could be built:
+    a packet declaring no reference clock leaves the target to the rows read.
+    """
     if span is None:
-        return None
+        return None, None
     if clock == STORED:
-        return expression({"t_tick": span})
+        return expression({"t_tick": span}), None
     try:
-        return tick_range(packet, resource_id, span, clock=None if clock is None else int(clock))
+        return tick_range(packet, resource_id, span, clock=None if clock is None else int(clock)), None
     except NotAligned:
-        return None  # no clock to state it on; mapping refuses or decides, and the cut follows it
+        return None, span
 
 
 def _finish(
     packet: PacketLike,
     table: pa.Table,
-    span: tuple[int, int] | None,
+    cut: tuple[int, int] | None,
     clock: int | Literal["stored"] | None,
     seconds: bool,
     session_id: int | None,
 ) -> pa.Table:
-    """Map ticks onto the requested clock, apply the caller's range exactly, and add seconds."""
+    """Map ticks onto the requested clock, cut by a range no filter could carry, and add seconds."""
     if clock != STORED:
-        table = _narrowed(clocks.on_clock(packet, table, None if clock is None else int(clock)), span)
+        table = clocks.on_clock(packet, table, None if clock is None else int(clock))
+        if cut is not None:
+            table = table.filter(where(t_tick=cut))
     return clocks.seconds(packet, table, session_id=session_id) if seconds else table
 
 
-def _narrowed(table: pa.Table, span: tuple[int, int] | None) -> pa.Table:
-    """Apply the caller's range exactly, now that every row is on one clock."""
-    if span is None:
-        return table
-    ticks = table.column("t_tick")
-    lower = pa.scalar(span[0], type=ticks.type)
-    upper = pa.scalar(span[1], type=ticks.type)
-    return table.filter(pc.and_(pc.greater_equal(ticks, lower), pc.less_equal(ticks, upper)))
+def _on(
+    packet: PacketLike,
+    table: pa.Table,
+    resource_id: str,
+    clock: int | Literal["stored"] | None,
+    seconds: bool,
+    session_id: int | None,
+) -> pa.Table:
+    """Map every coordinate of `resource_id` onto the requested clock, and add seconds."""
+    if clock != STORED:
+        table = clocks.on_clock(packet, table, None if clock is None else int(clock), resource_id=resource_id)
+    return clocks.seconds(packet, table, resource_id=resource_id, session_id=session_id) if seconds else table
 
 
 __all__ = ["STORED", "distinct", "events", "intervals", "spike_times", "units"]
