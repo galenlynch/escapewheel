@@ -88,6 +88,32 @@ every_unit = dataset.table("core.units")  # rows of both, with session_key and s
 dataset.duckdb(tables=["core.units"]).sql("SELECT session_key, count(*) FROM core_units GROUP BY 1")
 ```
 
+## Joining spikes to events in SQL
+
+`analysis.spike_events` holds every spike already on the reference clock, so a query comparing
+spikes with behavioural events starts there rather than mapping `core.spike_events` itself.
+`aligned_spikes` and `assigned_spikes` answer the common questions; written by hand, the join to
+use is an **ASOF join** wherever each spike belongs to at most one event. DuckDB answers an ASOF
+join with one sorted pass, where a range join (`BETWEEN` two bounds) compares each spike against
+every window it might fall in. Counting 287 million spikes within −1 s to +2 s of 708 go cues took
+46 s as a range join and 5.4 s as the ASOF join below, with identical results:
+
+```python
+packet.sql("""
+    SELECT s.unit_id, count(*) AS spikes, sum(s.t_tick - t.go_cue_start_tick) AS ticks_from_cue
+    FROM analysis_spike_events s
+    ASOF JOIN dynamic_foraging_trials t ON s.t_tick + 31250 >= t.go_cue_start_tick  -- 1 s
+    WHERE s.t_tick <= t.go_cue_start_tick + 62500                                   -- 2 s
+    GROUP BY s.unit_id
+""")
+```
+
+The ASOF join pairs each spike with the latest cue whose window has opened, and the `WHERE` drops it
+if that window has already closed. That keeps every pair only while no two windows overlap; where
+they do, a spike belongs to both windows and the ASOF join keeps only the later one, so overlapping
+windows need the range join. `windows_disjoint(packet, event_type, half_window)` checks this, and
+`aligned_spikes` uses it to choose between the two joins.
+
 ## Reading checks only what reading needs
 
 Opening a packet checks that the manifest decodes, repeats no member or resource ID, and has the
