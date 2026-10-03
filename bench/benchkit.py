@@ -193,9 +193,19 @@ def cold_child(stores: Iterable[str | Path], operation: Callable[[], object]) ->
     print(json.dumps({"seconds": elapsed, "peak_mib": peak_mib(), "received_bytes": received, "value": str(value)}))
 
 
-def run_child(arguments: list[str]) -> dict:
-    """Run this interpreter on a child invocation and parse the JSON line it printed last."""
-    done = subprocess.run([sys.executable, *arguments], capture_output=True, text=True, check=False)
+def run_child(arguments: list[str], memory_max: str | None = None) -> dict:
+    """Run this interpreter on a child invocation and parse the JSON line it printed last.
+
+    `memory_max`, a systemd size such as `64G`, runs the child in a user scope that is killed
+    rather than swapped at that size, so one cell cannot take the host's memory.
+    """
+    command = [sys.executable, *arguments]
+    if memory_max:
+        limit = ["-p", f"MemoryMax={memory_max}", "-p", "MemorySwapMax=0"]
+        command = ["systemd-run", "--user", "--scope", "--quiet", *limit, "--", *command]
+    done = subprocess.run(command, capture_output=True, text=True, check=False)
+    if memory_max and done.returncode in (-9, 137):
+        return {"error": f"killed at the {memory_max} memory cap"}
     lines = done.stdout.strip().splitlines()
     try:
         return json.loads(lines[-1])
