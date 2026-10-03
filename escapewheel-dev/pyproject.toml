@@ -15,7 +15,11 @@ dependencies = [
     "jsonschema>=4.26.0",
     "pyarrow>=25.0.1",
     "sqlglot>=30.21",
+    "tyro>=1.0.16",
 ]
+
+[project.scripts]
+escapewheel-dev = "escapewheel_dev.cli:run"
 
 [dependency-groups]
 dev = [

@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass, field
 from functools import cache
 
+from ._record import Record
 from ._root import ROOT, spec_tool
 
 PARTS = ROOT / "spec" / "parts"
@@ -39,7 +40,7 @@ _CITATION = re.compile(
 
 
 @dataclass(frozen=True)
-class Citation:
+class Citation(Record):
     """A reference to section `section` of part `part`."""
 
     part: str
@@ -47,7 +48,7 @@ class Citation:
 
 
 @dataclass(frozen=True)
-class Section:
+class Section(Record):
     """One numbered section of a part, its text running to the next numbered heading at any depth."""
 
     part: str
@@ -66,8 +67,8 @@ class Section:
 
 
 @dataclass(frozen=True)
-class Requirement:
-    """One sentence carrying BCP 14 keywords."""
+class Requirement(Record):
+    """One sentence carrying BCP 14 keywords: its words are `sentence`, its section's are `section.text`."""
 
     section: Section
     keywords: tuple[str, ...]
@@ -126,7 +127,15 @@ def sections() -> tuple[Section, ...]:
 
 
 def section(part: str | int, number: str) -> Section:
-    """Return one section; `part` may be ``"02"`` or ``2``."""
+    """Return one numbered section of one part.
+
+    Parameters
+    ----------
+    part : str or int
+        The part, as ``"02"``, ``"2"`` or ``2``.
+    number : str
+        The section number without the section sign, such as ``"6"`` or ``"10.1"``.
+    """
     key = f"{int(part):02d}"
     for candidate in sections():
         if candidate.part == key and candidate.number == number:
@@ -135,7 +144,13 @@ def section(part: str | int, number: str) -> Section:
 
 
 def section_by_anchor(anchor: str) -> Section:
-    """Return the section a canonical or alias anchor names."""
+    """Return the section a canonical or alias anchor names.
+
+    Parameters
+    ----------
+    anchor : str
+        The anchor without its ``#``.
+    """
     for candidate in sections():
         if anchor == candidate.anchor or anchor in candidate.aliases:
             return candidate
@@ -147,6 +162,14 @@ def requirements(part: str | int | None = None, *, keyword: str | None = None) -
 
     Sentences are split at a full stop followed by a capital, so one holding an abbreviation such as
     `e.g. X` is split there.
+
+    Parameters
+    ----------
+    part : str or int or None
+        The part to read, as ``"02"`` or ``2``, or None for every part.
+    keyword : str or None
+        Keep only sentences carrying this keyword. ``MUST NOT`` is one keyword, so ``MUST`` does not
+        match a sentence whose only ``MUST`` is in ``MUST NOT``.
     """
     key = None if part is None else f"{int(part):02d}"
     found = []
@@ -183,7 +206,15 @@ def _paragraphs(text: str) -> list[str]:
 
 
 def cited_by(part: str | int, number: str) -> list[Section]:
-    """Return the sections, in any part, citing exactly `number` of `part`."""
+    """Return the sections, in any part, citing exactly `number` of `part`.
+
+    Parameters
+    ----------
+    part : str or int
+        The cited part, as ``"02"`` or ``2``.
+    number : str
+        The cited section number. A citation of a subsection does not count as one of its parent.
+    """
     target = Citation(f"{int(part):02d}", number)
     return [candidate for candidate in sections() if target in candidate.citations]
 

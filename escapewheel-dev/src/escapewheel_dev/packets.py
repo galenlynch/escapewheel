@@ -19,7 +19,15 @@ def corpus_packets() -> Mapping[str, Path]:
 
 
 def stored_columns(packet: Packet, resource_id: str) -> tuple[str, ...]:
-    """Return the column names a table resource stores, read from its schema without reading rows."""
+    """Return the column names a table resource stores, read from its schema without reading rows.
+
+    Parameters
+    ----------
+    packet : Packet
+        An open packet.
+    resource_id : str
+        A table resource the packet holds, such as ``core.units``.
+    """
     return tuple(packet.scan(resource_id).schema.names)
 
 

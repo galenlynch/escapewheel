@@ -7,6 +7,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
+from ._record import Record
 from ._root import ROOT
 
 #: The generated core registry.
@@ -16,7 +17,7 @@ EXTENSION_DIRECTORIES = (ROOT / "extensions", ROOT / "escapewheel-aind" / "exten
 
 
 @dataclass(frozen=True)
-class Column:
+class Column(Record):
     """One declared column, with the table and registry that declare it."""
 
     registry: str
@@ -32,7 +33,7 @@ class Column:
 
 
 @dataclass(frozen=True)
-class Reference:
+class Reference(Record):
     """A foreign key: `columns` of `table` resolve to `resource_columns` of `resource`."""
 
     registry: str
@@ -43,7 +44,7 @@ class Reference:
 
 
 @dataclass(frozen=True)
-class Rule:
+class Rule(Record):
     """One shipped Tier 2 rule, as the registry document carries it."""
 
     registry: str
@@ -56,7 +57,7 @@ class Rule:
 
 
 @dataclass(frozen=True)
-class Table:
+class Table(Record):
     """One table resource's declaration."""
 
     registry: str
@@ -77,7 +78,7 @@ class Table:
 
 
 @dataclass(frozen=True)
-class Registry:
+class Registry(Record):
     """One registry document and the tables it declares."""
 
     registry_id: str
@@ -166,18 +167,36 @@ def registries() -> Mapping[str, Registry]:
 
 
 def registry(registry_id: str = "core") -> Registry:
-    """Return one registry by its ID."""
+    """Return one registry by its ID.
+
+    Parameters
+    ----------
+    registry_id : str
+        ``core``, or an extension's registry ID as `registries` keys it.
+    """
     return registries()[registry_id]
 
 
 def tables(registry_id: str | None = None) -> list[Table]:
-    """Return every declared table, or one registry's."""
+    """Return every declared table, or one registry's.
+
+    Parameters
+    ----------
+    registry_id : str or None
+        The registry to read, or None for every registry.
+    """
     chosen = registries().values() if registry_id is None else [registry(registry_id)]
     return [table for document in chosen for table in document.tables.values()]
 
 
 def table(resource_id: str) -> Table:
-    """Return the table declared as `resource_id` in whichever registry declares it."""
+    """Return the table declared as `resource_id` in whichever registry declares it.
+
+    Parameters
+    ----------
+    resource_id : str
+        A table resource ID such as ``core.units``.
+    """
     for document in registries().values():
         if resource_id in document.tables:
             return document.tables[resource_id]
@@ -190,7 +209,17 @@ def columns(
     presence: str | None = None,
     roles: tuple[str, ...] | None = None,
 ) -> list[Column]:
-    """Return declared columns, filtered by registry, presence and role."""
+    """Return declared columns, filtered by registry, presence and role.
+
+    Parameters
+    ----------
+    registry_id : str or None
+        The registry to read, or None for every registry.
+    presence : str or None
+        Keep only columns of this presence: ``required``, ``nullable`` or ``optional``.
+    roles : tuple of str or None
+        Keep only columns whose role is one of these, such as ``identifier``.
+    """
     return [
         column
         for declared in tables(registry_id)
@@ -200,15 +229,41 @@ def columns(
 
 
 def references_to(resource_id: str) -> list[Reference]:
-    """Return every foreign key, across all registries, that resolves into `resource_id`."""
+    """Return every foreign key, across all registries, that resolves into `resource_id`.
+
+    Parameters
+    ----------
+    resource_id : str
+        The referenced table resource, such as ``core.sessions``.
+    """
     return [
         reference for declared in tables() for reference in declared.references if reference.resource == resource_id
     ]
 
 
 def rules(registry_id: str | None = None) -> list[Rule]:
-    """Return the shipped Tier 2 rules, or one registry's."""
+    """Return the shipped Tier 2 rules, or one registry's.
+
+    Parameters
+    ----------
+    registry_id : str or None
+        The registry to read, or None for every registry.
+    """
     return [rule for declared in tables(registry_id) for rule in declared.rules]
+
+
+def rule(rule_id: str) -> Rule:
+    """Return the shipped rule with ID `rule_id`, from whichever registry ships it.
+
+    Parameters
+    ----------
+    rule_id : str
+        A rule ID, which begins with the resource ID of the table it is declared on.
+    """
+    for candidate in rules():
+        if candidate.id == rule_id:
+            return candidate
+    raise KeyError(f"no registry ships a rule {rule_id!r}")
 
 
 __all__ = [
@@ -224,6 +279,7 @@ __all__ = [
     "references_to",
     "registries",
     "registry",
+    "rule",
     "rules",
     "table",
     "tables",

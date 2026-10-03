@@ -18,7 +18,15 @@ def parse(rule: Rule) -> exp.Expr:
 
 
 def node_counts(rules: Iterable[Rule], *nodes: type[exp.Expr]) -> Counter[type[exp.Expr]]:
-    """Count occurrences of each node type, such as ``exp.Between`` or ``exp.In``, across `rules`."""
+    """Count occurrences of each node type, such as ``exp.Between`` or ``exp.In``, across `rules`.
+
+    Parameters
+    ----------
+    rules : iterable of Rule
+        The rules whose queries are parsed.
+    *nodes : type
+        sqlglot expression classes to count.
+    """
     counts: Counter[type[exp.Expr]] = Counter()
     for rule in rules:
         tree = parse(rule)
@@ -35,7 +43,17 @@ def checked(rule: Rule) -> CheckedRule:
 
 
 def rules_reading(resource_id: str, column: str, candidates: Iterable[Rule]) -> list[Rule]:
-    """Return those of `candidates` whose query reads `column` of `resource_id`."""
+    """Return those of `candidates` whose query reads `column` of `resource_id`.
+
+    Parameters
+    ----------
+    resource_id : str
+        The table resource read, such as ``core.units``.
+    column : str
+        The column of `resource_id` read.
+    candidates : iterable of Rule
+        The rules to test, such as ``rules()``.
+    """
     return [rule for rule in candidates if (resource_id, column) in checked(rule).inputs]
 
 
@@ -48,7 +66,15 @@ def context(registry_id: str = "core") -> CheckedRegistryContext:
 
 
 def checks(registry_id: str = "core", *, advisory: bool = False) -> list[Check]:
-    """Return the checks the validator generates from one registry: Tier 1 derived, Tier 2 shipped."""
+    """Return the checks the validator generates from one registry: Tier 1 derived, Tier 2 shipped.
+
+    Parameters
+    ----------
+    registry_id : str
+        ``core`` or an extension, whose checks are generated against core.
+    advisory : bool
+        Include advisory rules, which the validator runs only when asked.
+    """
     return generate(context(registry_id), advisory=advisory)
 
 

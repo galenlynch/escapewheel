@@ -1,16 +1,7 @@
 import pyarrow as pa
 import pyarrow.parquet as pq
-import pytest
-from corpus_packets import VALID
 
 import escapewheel_dev as ew
-
-
-@pytest.fixture(scope="module")
-def valid(tmp_path_factory):
-    root = tmp_path_factory.mktemp("corpus") / VALID.name
-    VALID.build(root)
-    return root
 
 
 def test_the_valid_packet_stores_only_declared_columns(valid):

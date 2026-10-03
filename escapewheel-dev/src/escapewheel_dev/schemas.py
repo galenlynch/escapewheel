@@ -22,12 +22,26 @@ def schemas() -> Mapping[str, Mapping[str, Any]]:
 
 
 def schema(name: str) -> Mapping[str, Any]:
-    """Return one document schema by name."""
+    """Return one document schema by name.
+
+    Parameters
+    ----------
+    name : str
+        The schema file's stem without ``.schema``, such as ``manifest``.
+    """
     return schemas()[name]
 
 
 def schema_errors(name: str, document: Any) -> list[str]:
-    """Return each way `document` fails schema `name`, formats included, as ``/pointer: message``."""
+    """Return each way `document` fails schema `name`, formats included, as ``/pointer: message``.
+
+    Parameters
+    ----------
+    name : str
+        The schema, as `schemas` keys it.
+    document : Any
+        The parsed JSON document.
+    """
     validator = jsonschema.Draft202012Validator(schema(name), format_checker=jsonschema.FormatChecker())
     return [
         f"/{'/'.join(str(part) for part in error.absolute_path)}: {error.message}"
