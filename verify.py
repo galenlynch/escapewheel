@@ -23,7 +23,7 @@ Usage:
 The stages that write tracked files run first, alone and in the order declared. Every other stage
 only reads the tree, so the rest run together, up to `--jobs` at once.
 
-`--quick` runs none of the four package suites and not the integration tests, so it says nothing
+`--quick` runs none of the package suites and not the integration tests, so it says nothing
 about a package's behaviour beyond what the corpus and the conformance checks exercise.
 """
 
@@ -171,6 +171,7 @@ SUITES: list[Stage] = [
             ("escapewheel-validator", ("-n", "4")),
             ("escapewheel-writer", ("-n", "6")),
             ("escapewheel-aind", ()),
+            ("escapewheel-dev", ()),
         )
     ),
     Stage("integration: tests", ROOT / "integration", WRITER, ("pytest", "-vv")),

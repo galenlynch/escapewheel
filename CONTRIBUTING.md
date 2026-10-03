@@ -126,7 +126,7 @@ limit. A runner lacking those facilities is unsuitable for the full suite and fa
 generation or a package test can hang or be mistaken for an implementation defect. CI runs the
 same command and therefore exercises the same preflight.
 
-`--quick` runs every generator and check and skips the preflight, the four package suites and the
+`--quick` runs every generator and check and skips the preflight, the package suites and the
 integration tests. It runs no package suite at all, so after changing a package run that package's
 suite, and those of the packages depending on it, beside it.
 
@@ -288,7 +288,8 @@ and those checks:
 | `spec/tools/combine.py --check` | a single-file spec rendering that no longer matches its parts |
 | `tools/facts.py` | a count in a root document that no longer matches what it counts |
 | `verify.py`'s candidate-state comparison | a stale or hand-edited artifact changed by regeneration |
-| the four package test suites | asserted reference-implementation behavior outside the checks above |
+| the package test suites | asserted reference-implementation behavior outside the checks above |
+| `escapewheel-dev/` tests | a development query that no longer reads the current parts, registries, schemas or packets |
 | `integration/` | a writer, reader, and validator that disagree with one another, a Part 08 excerpt the writer no longer reproduces, or a Part 08 query that no longer runs |
 
 ## 9. Reading the result
