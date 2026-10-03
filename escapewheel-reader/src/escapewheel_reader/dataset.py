@@ -23,6 +23,7 @@ import pyarrow.compute as pc
 from . import duck
 from .errors import MultiSessionUnresolved, ResourceNotFoundError
 from .location import Location
+from .optional import held
 from .packet import Packet, open_packet
 from .protocols import PacketLike
 from .registries import declared_tables
@@ -327,7 +328,7 @@ class Dataset:
         """
         parts = []
         for packet in self._packets:
-            if resource_id not in {r.resource_id for r in packet.resources()}:
+            if resource_id not in held(packet):
                 continue
             wanted = columns
             if columns is not None and resource_id in self._scoped:

@@ -37,6 +37,7 @@ from numpy.typing import NDArray
 
 from .dictionaries import values
 from .errors import NotAligned, NotDeclared, NoTimeOrigin, Refused, ResourceNotFoundError, Unanchored
+from .optional import read_optional
 from .protocols import Memo, PacketLike
 from .resource_ids import CORE_CLOCK_ANCHORS, CORE_CLOCKS, CORE_SESSIONS
 
@@ -263,22 +264,10 @@ def clock_graph(packet: PacketLike) -> ClockGraph:
         return memo.clock_graph
     parents: dict[int, int] = {}
     transforms: dict[int, tuple[float, float]] = {}
-    try:
-        table = packet.table(CORE_CLOCKS)
-    except ResourceNotFoundError:
-        table = pa.table({"clock_id": pa.array([], pa.int32())})
-
-    def column(name: str) -> list[Any]:
-        return _plain(table.column(name)).to_pylist() if name in table.column_names else [None] * table.num_rows
-
+    names = ["clock_id", "parent_clock_id", "transform_slope", "transform_offset"]
+    table = read_optional(packet, CORE_CLOCKS, names)
     # A dozen rows, read into the mappings this returns.
-    for clock, parent, slope, offset in zip(
-        column("clock_id"),
-        column("parent_clock_id"),
-        column("transform_slope"),
-        column("transform_offset"),
-        strict=True,
-    ):
+    for clock, parent, slope, offset in zip(*(_plain(table.column(n)).to_pylist() for n in names), strict=True):
         if parent is not None:
             parents[int(clock)] = int(parent)
         if slope is not None and offset is not None:

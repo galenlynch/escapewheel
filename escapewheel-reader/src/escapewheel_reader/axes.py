@@ -21,6 +21,7 @@ from numpy.typing import NDArray
 
 from .discriminators import Discriminator, _one, _paired_target, registries
 from .errors import AxisFault, UnresolvableAxis
+from .optional import held
 from .protocols import PacketLike
 from .resource_ids import CORE_ARRAY_CHANNELS
 
@@ -135,10 +136,6 @@ class ArrayDescription:
     scaling: Scaling | None
 
 
-def _held(packet: PacketLike) -> set[str]:
-    return {r.resource_id for r in packet.resources()}
-
-
 def _catalog_row(packet: PacketLike, resource_id: str) -> tuple[dict[str, Any], dict[str, Any], str]:
     """Return the array's declaration, its catalog row, and the catalog's resource ID."""
     declaration = packet.resource(resource_id).declaration
@@ -166,7 +163,7 @@ def _label_rows(packet: PacketLike, axes_id: str, array_asset_id: int) -> tuple[
     finds it (Part 05 §5.3), since a core and an analysis array keep their labels apart.
     """
     found = _one(packet, axes_id, "coordinate_resource")
-    if found.specialised not in _held(packet):
+    if found.specialised not in held(packet):
         raise UnresolvableAxis(
             AxisFault.LABELS_ABSENT, f"{axes_id} labels an axis and the packet holds no {found.specialised}"
         )
@@ -205,7 +202,7 @@ def _labelled(
             AxisFault.LABEL_COUNT,
             f"axis {name!r} has {ours.num_rows} label rows for its {extent * length} positions, not one at each",
         )
-    if kind not in _held(packet):
+    if kind not in held(packet):
         raise UnresolvableAxis(
             AxisFault.LABELS_ABSENT, f"axis {name!r} stands for rows of {kind}, which the packet does not hold"
         )
@@ -281,7 +278,7 @@ def _channel_scaling(packet: PacketLike, array_asset_id: int, axes_id: str) -> p
     numbered apart from a core one, and a channel row for a core array with its number is not its.
     """
     references = registries(packet).get(CORE_ARRAY_CHANNELS, {}).get("references", [])
-    if CORE_ARRAY_CHANNELS not in _held(packet) or not any(r.get("resource") == axes_id for r in references):
+    if CORE_ARRAY_CHANNELS not in held(packet) or not any(r.get("resource") == axes_id for r in references):
         return None
     table: pa.Table = packet.table(CORE_ARRAY_CHANNELS)
     return table.filter((pc.field("array_asset_id") == array_asset_id) & pc.field("conversion").is_valid())

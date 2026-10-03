@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .errors import AmbiguousRun, NotDeclared
+from .optional import read_optional
 from .protocols import Memo, PacketLike
 from .resource_ids import CORE_PREFERRED_RUNS, CORE_PROCESSING_RUNS
 
@@ -59,18 +60,8 @@ class Ambiguity:
 
 
 def _rows(packet: PacketLike, resource_id: str, columns: list[str]) -> list[dict[str, Any]]:
-    """Read named columns from a resource, or nothing when the packet lacks it or them.
-
-    Every column here is optional, so absence is the normal case rather than an error: a packet
-    may declare no runs at all, or runs without scopes.
-    """
-    if resource_id not in {r.resource_id for r in packet.resources()}:
-        return []
-    present = [c for c in columns if c in packet.table_resource(resource_id).schema().names]
-    if not present:
-        return []
-    rows = packet.table(resource_id, columns=present).to_pylist()
-    return [{c: row.get(c) for c in columns} for row in rows]
+    """Read named columns as rows; a packet may declare no runs at all, or runs without scopes."""
+    return read_optional(packet, resource_id, columns).to_pylist()
 
 
 def preferences(packet: PacketLike) -> dict[tuple[int | None, str, str, str], int]:

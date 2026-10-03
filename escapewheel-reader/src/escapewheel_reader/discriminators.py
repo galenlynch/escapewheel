@@ -18,6 +18,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from .errors import NotDeclared
+from .optional import held
 from .protocols import PacketLike
 from .registries import declared_tables
 
@@ -236,7 +237,7 @@ def resolved(packet: PacketLike, resource_id: str, kind: str, *, column: str | N
         If the resource declares no such discriminator, or the packet does not hold the kind.
     """
     found = _one(packet, resource_id, column)
-    if kind not in {r.resource_id for r in packet.resources()}:
+    if kind not in held(packet):
         raise NotDeclared(f"the packet does not hold {kind}, which {found.resource}.{found.column} names")
     named = packet.table(kind)
 

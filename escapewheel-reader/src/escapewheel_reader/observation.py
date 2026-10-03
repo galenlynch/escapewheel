@@ -17,6 +17,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from .errors import NotDeclared, StaleSupport
+from .optional import held
 from .protocols import PacketLike
 from .resource_ids import (
     CORE_CLOCK_OBSERVATION_INTERVALS,
@@ -35,11 +36,6 @@ INHERITED = "inherited"
 #: What identifies a unit in a result. `unit_id` is the whole key (Part 02 §12.1); `session_id`
 #: stays because every unit table carries it and a caller filters on it.
 _UNIT_KEY = ("session_id", "unit_id")
-
-
-def _has(packet: PacketLike, resource_id: str) -> bool:
-    """Whether the packet declares a resource. Every observation table is optional."""
-    return resource_id in {r.resource_id for r in packet.resources()}
 
 
 def _empty(names: tuple[str, ...]) -> pa.Table:
@@ -75,7 +71,7 @@ def clock_windows(packet: PacketLike, *, session_id: int | None = None, clock_id
         Columns ``session_id``, ``clock_id``, ``start_tick`` and ``stop_tick``. Empty when the
         packet declares none, which Part 02 §12.5 forbids; no extent is invented for it.
     """
-    if not _has(packet, CORE_CLOCK_OBSERVATION_INTERVALS):
+    if CORE_CLOCK_OBSERVATION_INTERVALS not in held(packet):
         return pa.table(
             {
                 n: pa.array([], type=pa.int32() if n.endswith("id") else pa.int64())
@@ -150,14 +146,14 @@ def unit_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.Tab
         (:data:`DECLARED` or :data:`INHERITED`). One row per window, so a unit observed across
         a recording gap appears more than once.
     """
-    if not _has(packet, CORE_UNITS):
+    if CORE_UNITS not in held(packet):
         return _empty(_UNIT_KEY)
     units = packet.table(CORE_UNITS, columns=[*_UNIT_KEY, "clock_id"], session_id=session_id)
     clocks = clock_windows(packet, session_id=session_id)
     inherited = _windows(_join(units, clocks, ["session_id", "clock_id"]), INHERITED, _UNIT_KEY)
 
     own = _empty(_UNIT_KEY)
-    if _has(packet, CORE_UNIT_OBSERVATION_INTERVALS):
+    if CORE_UNIT_OBSERVATION_INTERVALS in held(packet):
         # The interval row names only the unit, and its clock is the unit's.
         declared = _decoded(
             packet.table(
@@ -186,7 +182,7 @@ def stream_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.T
         ``source``.
     """
     key = ("event_stream_id",)
-    if not _has(packet, CORE_EVENT_STREAMS):
+    if CORE_EVENT_STREAMS not in held(packet):
         return _empty(key)
     streams = _decoded(
         packet.table(CORE_EVENT_STREAMS, columns=["event_stream_id", "session_id", "clock_id"], session_id=session_id)
@@ -195,7 +191,7 @@ def stream_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.T
     inherited = _windows(_join(streams, clocks, ["session_id", "clock_id"]), INHERITED, key)
 
     own = _empty(key)
-    if _has(packet, CORE_EVENT_STREAM_OBSERVATION_INTERVALS):
+    if CORE_EVENT_STREAM_OBSERVATION_INTERVALS in held(packet):
         # Inner, so a window of a stream outside the selected session is left out.
         declared = _decoded(
             packet.table(

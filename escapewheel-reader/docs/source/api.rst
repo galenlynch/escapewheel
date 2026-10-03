@@ -189,6 +189,8 @@ the module that defines it.
    clocks.declared_bound
    clocks.extrapolation_error
    clocks.mapped
+   optional.held
+   optional.read_optional
    ordering.stored_order
    profile.PROFILE_ID
    profile.physical_profile
@@ -244,6 +246,7 @@ A module's page carries its docstring; its public names are documented above.
    sql
    protocols
    profile
+   optional
    ordering
    registries
    uri
