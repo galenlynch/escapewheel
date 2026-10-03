@@ -20,7 +20,7 @@ from numpy.typing import NDArray
 
 def constant(value: Any, rows: int, type_: pa.DataType | None = None) -> pa.DictionaryArray[Any, Any]:
     """Return one repeated value as codes into a one-entry dictionary."""
-    return pa.DictionaryArray.from_arrays(pa.array([0] * rows, type=pa.int32()), pa.array([value], type=type_))
+    return pa.DictionaryArray.from_arrays(pa.array(np.zeros(rows, dtype=np.int32)), pa.array([value], type=type_))
 
 
 def values(column: Any) -> list[Any]:

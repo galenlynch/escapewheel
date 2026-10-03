@@ -23,7 +23,9 @@ The writer maps with these functions too, so ticks mapped at write time and at r
 
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, cast
 
 import numpy as np
@@ -31,7 +33,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 from numpy.typing import NDArray
 
-from .dictionaries import values, where
+from .dictionaries import values
 from .errors import NotAligned, NotDeclared, NoTimeOrigin, Refused, ResourceNotFoundError, Unanchored
 from .protocols import Memo, PacketLike
 from .resource_ids import CORE_CLOCK_ANCHORS, CORE_CLOCKS, CORE_SESSIONS
@@ -91,41 +93,58 @@ def align(
         If either sequence does not strictly increase, since interpolation between them
         would then be undefined (Part 01 §3.9).
     """
-    anchor_t = np.asarray(anchor_t, dtype=np.int64)
-    anchor_p = np.asarray(anchor_p, dtype=np.int64)
-    if anchor_t.size < 3:
-        raise Unanchored(f"{anchor_t.size} anchors define no median interval to bound by")
-    if not ((np.diff(anchor_t) > 0).all() and (np.diff(anchor_p) > 0).all()):
-        raise ValueError("anchors do not increase together, so interpolation between them is undefined")
+    return _Map(anchor_t, anchor_p, bound)(np.asarray(ticks, dtype=np.int64))
 
-    ticks = np.asarray(ticks, dtype=np.int64)
-    span = float(np.median(np.diff(anchor_t))) * bound
 
-    # Interior: np.interp is a single C pass doing the search and the lerp together, and is an
-    # order of magnitude faster than gathering the bracketing pairs and computing them here.
-    parent = np.rint(np.interp(ticks, anchor_t, anchor_p)).astype(np.int64)
+class _Map:
+    """One clock's mapping onto its parent, prepared once and applied to any number of ticks."""
 
-    # Outside the anchor span np.interp clamps to the terminal value, which is a wrong answer
-    # rather than a missing one, so both ends are recomputed with the globally fitted rate,
-    # applied from the terminal anchor's own parent tick. The fit's intercept is not
-    # used -- it is the one place a line has to represent the whole session's wander at once,
-    # and it misses local truth by an amount that does not shrink with distance.
-    slope, _ = rate(anchor_t, anchor_p)
-    for end, tick, parent_tick in (
-        (ticks < anchor_t[0], anchor_t[0], anchor_p[0]),
-        (ticks > anchor_t[-1], anchor_t[-1], anchor_p[-1]),
-    ):
-        if end.any():
-            offsets = (ticks[end] - tick).astype(np.float64)
-            parent[end] = parent_tick + np.rint(slope * offsets).astype(np.int64)
+    def __init__(self, anchor_t: Any, anchor_p: Any, bound: float) -> None:
+        anchor_t = np.asarray(anchor_t, dtype=np.int64)
+        anchor_p = np.asarray(anchor_p, dtype=np.int64)
+        if anchor_t.size < 3:
+            raise Unanchored(f"{anchor_t.size} anchors define no median interval to bound by")
+        if not ((np.diff(anchor_t) > 0).all() and (np.diff(anchor_p) > 0).all()):
+            raise ValueError("anchors do not increase together, so interpolation between them is undefined")
+        self.anchor_t, self.anchor_p = anchor_t, anchor_p
+        self.span = float(np.median(np.diff(anchor_t))) * bound
+        self.slope, _ = rate(anchor_t, anchor_p)
+        # The distance to the nearest anchor, which is what the bound is on, is piecewise linear:
+        # zero at each anchor, rising with slope one to the midpoint and falling back. Knots at
+        # the anchors and midpoints let np.interp evaluate it, and it is exact, since every slope
+        # is one and every knot an integer or a half below 2**53. Past each end it keeps rising
+        # to a far knot, beyond which nothing is within any bound.
+        far = float(2**52)
+        gap = np.diff(anchor_t).astype(np.float64)
+        knots = np.empty(2 * anchor_t.size + 1, dtype=np.float64)
+        knots[1:-1:2] = anchor_t
+        knots[2:-2:2] = anchor_t[:-1] + gap / 2
+        knots[0], knots[-1] = anchor_t[0] - far, anchor_t[-1] + far
+        distance = np.zeros_like(knots)
+        distance[2:-2:2] = gap / 2
+        distance[0] = distance[-1] = far
+        self.knots, self.distance = knots, distance
 
-    # Distance to the nearest anchor, which is what the bound is on -- the same threshold for
-    # a gap between anchors and for the unanchored ends.
-    left = np.searchsorted(anchor_t, ticks, side="right") - 1
-    np.clip(left, 0, anchor_t.size - 1, out=left)
-    right = np.minimum(left + 1, anchor_t.size - 1)
-    nearest = np.minimum(np.abs(ticks - anchor_t[left]), np.abs(anchor_t[right] - ticks))
-    return parent, nearest <= span
+    def __call__(self, ticks: NDArray[np.int64]) -> tuple[NDArray[np.int64], NDArray[np.bool_]]:
+        """Return the parent ticks and whether each is defined, as :func:`align` does."""
+        anchor_t, anchor_p = self.anchor_t, self.anchor_p
+        # Interior: np.interp is a single C pass doing the search and the lerp together, and is
+        # an order of magnitude faster than gathering the bracketing pairs and computing them
+        # here; its search starts from the last answer, so ticks in order cost least.
+        parent = np.rint(np.interp(ticks, anchor_t, anchor_p)).astype(np.int64)
+        # Outside the anchor span np.interp clamps to the terminal value, which is a wrong answer
+        # rather than a missing one, so both ends are recomputed with the globally fitted rate,
+        # applied from the terminal anchor's own parent tick. The fit's intercept is not
+        # used -- it is the one place a line has to represent the whole session's wander at
+        # once, and it misses local truth by an amount that does not shrink with distance.
+        for end, tick, parent_tick in (
+            (ticks < anchor_t[0], anchor_t[0], anchor_p[0]),
+            (ticks > anchor_t[-1], anchor_t[-1], anchor_p[-1]),
+        ):
+            if end.any():
+                offsets = (ticks[end] - tick).astype(np.float64)
+                parent[end] = parent_tick + np.rint(self.slope * offsets).astype(np.int64)
+        return parent, np.interp(ticks, self.knots, self.distance) <= self.span
 
 
 def extrapolation_error(
@@ -283,24 +302,63 @@ def reference_clock(packet: PacketLike, *, session_id: int | None = None) -> int
 def mapped(batch: pa.RecordBatch, reference: Any, anchors: Any, bound: float) -> tuple[Any, Any]:
     """Map one batch's ticks onto the reference clock, returning the ticks and what to keep."""
     ticks = np.asarray(batch.column("t_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
-    clocks = batch.column("clock_id")
+    clocks = _clock_ids(batch.column("clock_id"))
     parent = np.empty(ticks.size, dtype=np.int64)
     keep = np.zeros(ticks.size, dtype=bool)
-    # A batch ordinarily spans only a few clocks because spike rows are clustered by unit and a
-    # unit declares one clock. Its *body* must still stay in Arrow:
-    # materialising the column as Python objects to group it costs one per spike, and the
-    # comparison that follows is over a handful of distinct values either way.
-    for name in values(clocks):
-        rows = where(clocks, name)
-        if not rows.size:
-            continue
-        if name == reference:
-            parent[rows], keep[rows] = ticks[rows], True
-            continue
-        if name not in anchors:
-            raise NotAligned(f"{name} carries no anchors, so its ticks reach no reference clock")
-        parent[rows], keep[rows] = align(ticks[rows], *anchors[name], bound=bound)
+    # Every clock with anchors, prepared before the workers start: a dozen at most, each cheap.
+    maps: dict[int, _Map | None] = {int(name): _Map(*pair, bound) for name, pair in anchors.items()}
+    maps[int(reference)] = None
+
+    def run(lo: int, hi: int) -> None:
+        chunk = clocks[lo:hi]
+        # Rows cluster by unit and a unit has one clock, so a chunk is ordinarily on one clock
+        # and maps as a slice, gathering nothing.
+        first = chunk[0]
+        groups = [(int(first), slice(lo, hi))] if (chunk == first).all() else []
+        if not groups:
+            for name in np.unique(chunk).tolist():
+                groups.append((name, lo + np.flatnonzero(chunk == name)))
+        for name, rows in groups:
+            if name == _NULL_CLOCK:  # a null clock places nothing
+                continue
+            if name not in maps:
+                raise NotAligned(f"{name} carries no anchors, so its ticks reach no reference clock")
+            prepared = maps[name]
+            if prepared is None:
+                parent[rows], keep[rows] = ticks[rows], True
+            else:
+                parent[rows], keep[rows] = prepared(ticks[rows])
+
+    bounds = list(range(0, ticks.size, _CHUNK_ROWS))
+    if len(bounds) <= 1:
+        if ticks.size:
+            run(0, ticks.size)
+        return parent, keep
+    with ThreadPoolExecutor(min(len(bounds), os.cpu_count() or 1)) as pool:
+        # list() so that a worker's exception reaches the caller.
+        list(pool.map(lambda lo: run(lo, min(lo + _CHUNK_ROWS, ticks.size)), bounds))
     return parent, keep
+
+
+#: Rows a worker maps at once: large enough that a chunk's fixed cost is noise, small enough that
+#: a large batch spreads across every core.
+_CHUNK_ROWS = 1 << 20
+
+
+#: Stands in for a null clock, below any int32 identifier.
+_NULL_CLOCK = -(2**62)
+
+
+def _clock_ids(column: Any) -> NDArray[np.int64]:
+    """Return each row's clock ID as int64, a null as `_NULL_CLOCK`.
+
+    An identifier is an integer, so the ID is its own group key and nothing is hashed.
+    """
+    if pa.types.is_dictionary(column.type):
+        column = column.dictionary.take(column.indices)
+    if column.null_count:
+        column = pc.fill_null(column.cast(pa.int64()), _NULL_CLOCK)
+    return np.asarray(column.to_numpy(zero_copy_only=False), dtype=np.int64)
 
 
 def stored_span(
@@ -338,7 +396,14 @@ def stored_span(
 
 
 def _present(column: Any) -> list[int]:
-    """Distinct clock IDs in a column, read from its dictionary where it has one."""
+    """Distinct clock IDs in a column, read from its dictionary where it has one.
+
+    A min and max answer the ordinary case of one clock without hashing every row.
+    """
+    if not pa.types.is_dictionary(column.type) and len(column):
+        least, most = pc.min_max(column).values()
+        if least.as_py() == most.as_py():
+            return [] if least.as_py() is None else [int(least.as_py())]
     return sorted({int(value) for value in values(column)})
 
 
@@ -702,6 +767,8 @@ def on_clock(
         return table
     limit = declared_bound(packet) if bound is None else bound
     ticks, keep = mapped(pa.record_batch(columns), target, anchors(packet), limit)
+    if keep.all():
+        keep = None
     names = table.column_names
     out = table.set_column(names.index("t_tick"), "t_tick", pa.array(ticks))
     # The replacement keeps the column's declared type. A dictionary would change it, and buys
@@ -712,7 +779,7 @@ def on_clock(
         "clock_id",
         pa.repeat(pa.scalar(target, _plain(clock_column).type), table.num_rows).cast(clock_column.type),
     )
-    return out.filter(pa.array(keep))
+    return out if keep is None else out.filter(pa.array(keep))
 
 
 def seconds(
