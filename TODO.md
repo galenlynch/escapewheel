@@ -151,11 +151,11 @@ causes from Part 11 §8. Its ISO basis is read in the 1992 draft and the 1999 ed
 2023 edition Part 11 selects.
 
 - **An amendment drops a held column only where its recipe names it.** A draft, promoted
-  2026-10-02 and not appraised. A new subsection of Part 02 §6 makes a table holding an
+  2026-10-02, appraised and revised. A new subsection of Part 02 §6 makes a table holding an
   undeclared column non-conforming and Part 05 §5.3 reports one at `error`; an amending build
-  refuses a held column of a canonical table that the registry it binds does not declare, unless a
-  `[drop]` entry names it, and then writes the table without it. The recipe schema advances to
-  admit `[drop]`.
+  refuses, before any source, a held column of any table it does not derive again that the
+  registry it binds does not declare, unless a `[drop]` entry names it, and then writes the table
+  without it. The recipe schema advances to admit `[drop]`.
 - **A change is one document from Open to Accepted.** A process draft, opened 2026-10-02 with no
   proposal and not appraised. One change document under `revisions/changes/` replaces the proposal
   and the draft, moving in place from Open to Ready, with one appraisal of the Ready text before
@@ -344,9 +344,14 @@ Part 05 §15.6 with the draft R163 became, which wants a proposal of its own.
   over the columns the amended manifest's registry declares, and no validator check reports a file
   column the bound registry does not declare. An amendment binding a registry that stopped declaring
   a column therefore drops the column's values from a table it rewrites, and keeps them unreported
-  in one it does not. The proposal in
-  `revisions/proposals/an-amendment-drops-a-held-column-only-where-its-recipe-names-it.md` prefers
-  refusing unless the recipe names the column.
+  in one it does not. The draft in
+  `revisions/drafts/an-amendment-drops-a-held-column-only-where-its-recipe-names-it.md` refuses
+  unless the recipe names the column.
+- **An amendment re-checks only the resources it wrote.** The reference build passes the validator
+  the written resources alone as the set to re-check
+  (`escapewheel-writer/src/escapewheel_writer/publication.py`, line 233), so a rule a newer registry
+  adds to a table the amendment leaves alone does not run, against the over-inclusive test of
+  Part 05 §15.4.
 - **Part 04 §7 says the manifest records outputs at resource granularity.** The sentence before it
   says an entry names no producing run, and the manifest schema has no member recording a
   resource's outputs. Which of the provenance tables the clause meant is not stated.

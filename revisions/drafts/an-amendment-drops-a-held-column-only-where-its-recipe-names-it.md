@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `909943668adef012d7c93e9aaf265af1453bcc0a` |
+| **Based on** | `18d05c61eb7eeaea900659ffdf34f5e57d568525` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §6, by a new subsection at its end; Part 05 §§3.1, 3.5, 4.3, 5.3 and 15.2; the recipe schema |
@@ -26,10 +26,10 @@ that no registry the packet binds types, describes or checks, and no part says w
 conforms.
 
 This revision makes a table that holds an undeclared column non-conforming, and has a validator
-report each such column. It has an amending build refuse where a canonical table the packet holds
-has a column the registry the build binds does not declare, and gives a recipe a `[drop]` entry
-that releases the refusal and drops the column, even from a table the amendment would otherwise
-leave alone. It says which entries a build refuses and what it reports, settles that removing an
+report each such column. It has an amending build refuse, before it opens any source, where a
+table the packet holds has a column the registry the build binds does not declare, unless the
+recipe derives that table again. It gives a recipe a `[drop]` entry that releases the refusal and
+drops the column, even from a table the amendment would otherwise leave alone. It says which entries a build refuses and what it reports, settles that removing an
 undeclared column changes no row, and advances the recipe schema's identifier.
 
 The change is structural because it revises rules inside existing sections: the refusals and
@@ -44,17 +44,18 @@ file lacks one.
 
 ### 1.1 Structural crosswalk
 
-No anchor bootstrap is needed: at the `Based on` commit Part 05 §§3.1, 3.5, 4.3, 5.3 and 15.2
-carry `ew-recipe-purpose`, `ew-recipe-check`, `ew-import-normalization`, `ew-validation-shim` and
-`ew-amendment-scope` in that order. Part 02 §6 carries no anchor, and its text, number and heading
-are unchanged; the new subsection is created at its end with the anchor `ew-undeclared-columns`. No
-section moves, splits, merges or retires.
+Part 02 §6 had no canonical anchor, so the `Based on` commit is an anchor bootstrap that inserts
+`ew-column-presence` before its heading and changes nothing else. At that commit Part 05 §§3.1,
+3.5, 4.3, 5.3 and 15.2 carry `ew-recipe-purpose`, `ew-recipe-check`, `ew-import-normalization`,
+`ew-validation-shim` and `ew-amendment-scope` in that order. The new subsection is created at the
+end of Part 02 §6 with the anchor `ew-undeclared-columns`. No section moves, splits, merges or
+retires.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | Part 02 §6, which states which declared columns a table holds | extend by a new subsection at its end | a new subsection at the end of Part 02 §6 | a table holds no column its declaration does not declare | §3.1 |
 | Part 05 §5.3, the shim's check of resource-owned metadata | extend in place | same section | the three checks of a file's columns against its declaration are named, at `error`, with their inputs | §3.2 |
-| Part 05 §3.5, the amending build's refusals before it opens a source | extend in place | same section | a held undeclared column of a canonical table is refused unless a `[drop]` entry names it; an entry that names a declared column or no canonical table is refused | §3.3; §3.5 |
+| Part 05 §3.5, the amending build's refusals before it opens a source | extend in place | same section | a held undeclared column is refused unless the recipe derives its table again or a `[drop]` entry names it; an entry that names a declared column, a table the recipe derives again or no held table is refused | §3.3; §3.5 |
 | Part 05 §3.5, beside the amending build's admission of a column override | extend in place | same section | a `[drop]` entry is defined, releases the refusal, and draws a warning when idle and information when it drops | §3.4; §3.6 |
 | Part 05 §4.3, a table to which an amending build adds no row is not written | revise in place | same section | a table holding a column a `[drop]` entry names is written without it | §3.4 |
 | Part 05 §15.2, the change table | extend in place | same section | removing an undeclared column changes no row; the re-derivation duty holds for such a rewrite | §3.7 |
@@ -62,10 +63,12 @@ section moves, splits, merges or retires.
 
 ## 2. Background
 
-The facts below were observed in the tracked files at the `Based on` commit, where
-`verify.py --quick` passes all 37 of its stages. The probes of §§2.2 and 2.4 ran at `deb048c5`.
-Between that commit and the baseline the reader and writer sources, the validator's column checks,
-the core registry, the artifacts and Part 02 are unchanged, and Part 05 has changed only in §9.4.
+The facts below were observed in the tracked files at the `Based on` commit, which adds only the
+anchor of §1.1 to its parent. The commit holding this draft regenerates the projections that anchor
+changes, and there `verify.py --quick` passes all 38 of its stages. The probes of §§2.2 and 2.4 ran
+at `deb048c5`. Between that commit and the baseline the reader and writer sources, the validator's
+column checks, the core registry and the artifacts are unchanged, Part 02 has gained only that
+anchor, and Part 05 has changed only in §9.4.
 None of the probes changed a tracked file.
 
 ### 2.1 A rewritten table loses the values, and nothing reports it
@@ -175,7 +178,7 @@ binds.
 | population | packets | table files | with an undeclared column |
 |---|---|---|---|
 | the conformance corpus, rebuilt at the baseline | 135 | 4078 | 0 |
-| packets built from two recorded sessions, one of them at core `0.18.0`, scanned on 2026-10-02 | 26 | 1040 | 0 |
+| packets built from two recorded sessions, each with a packet at core `0.18.0`, scanned on 2026-10-02 | 27 | 1083 | 0 |
 
 No corpus fixture exercises an undeclared column. The probe packets of §2.2 and R163 §2.5 carry one
 on purpose.
@@ -193,7 +196,8 @@ carrying a `drop` entry and a recipe with neither member, and refused a non-amen
 
 An amending build reads every held row before it settles delivered rows against them (Part 05
 §4.3), and held files are part of the packet, not a source, so it can read a held table's column
-names before it opens any source.
+names before it opens any source. Each `[[materialize]]` entry names the resource it derives
+(Part 05 §3.1), so the build also knows before any source which held tables it derives again.
 
 ### 2.9 Alternatives
 
@@ -205,13 +209,14 @@ names before it opens any source.
 | report the loss and refuse nothing | the report follows the loss and leaves the packet conforming with the column; Part 05 §3.4 refuses a smaller discard unless the recipe names the column |
 | release by a column override | Part 05 §3.5 refuses a column override for an undeclared column, and an override's meaning, giving up a passed-over source's value, is another |
 | a registry records the columns it removed | needs a meta-schema change, and gives consent to the registry's author, who cannot judge one packet's values, where a per-packet remedy exists (§2.4) |
-| the build's refusal and release reach every table | Part 05 §15.2 already lets an amendment remove or replace an analysis, compatibility-projection or documentation resource, and a build deriving one again would need an entry for nothing |
+| the build refuses only over a canonical table | a non-canonical table left holding the column then fails only at validation, after every source has run; the reviewer chose an early refusal over every held table, since failing after the build has written is expensive |
+| the build refuses over a table it derives again | a `[[materialize]]` entry replaces the held file whole, so no column is carried and the recipe would need an entry for nothing |
 | the validator reports an undeclared column at `warning` | the file stays conforming, so a build that writes undeclared columns, which nothing else forbids, also conforms; the column has no type or description in the packet and no rule can read it (Part 11 §3); no measured packet holds one (§2.7) |
 | the rule lives in Part 03 §5.1 | a fact about a table's logical columns becomes a property of one physical profile |
 
 ### 2.10 Other open work
 
-No other draft is open. R165, accepted and incorporated at the baseline, amended Part 11 §§1, 4
+One other draft is open; it changes the revision process and amends no part. R165, accepted and incorporated at the baseline, amended Part 11 §§1, 4
 and 8 and Part 05 §9.4, none of which is amended here. Two proposals are open. One,
 on what a null identifier says, also adds a subsection to Part 02 §6; this revision is ordered first,
 so that subsection follows this one's. The other, on a frame's `pts` and `dropped` flag, touches Part 01
@@ -256,6 +261,9 @@ report at `error`, naming the resource and the column:
 - under the check ID `schema.column_undeclared`, a column the file holds that the resource's
   declaration does not declare (§3.1).
 
+This revision does not fix which Parquet type represents each declared type (§2.10); the reference
+validator compares a column with the Arrow type it maps the declared type to.
+
 Each finding concerns one resource, so Part 05 §9.5 attributes it to the registry whose declaration
 the resource's entry names. The shim declares as the inputs of each check the packet manifest,
 which binds the registry holding the declaration, and the table resource, so Part 05 §15.4 re-runs
@@ -264,16 +272,17 @@ each check on every amendment. A file that only a superseded manifest names is n
 ### 3.3 An amending build refuses a held column no bound registry declares
 
 An amending build (Part 05 §15.1) MUST refuse, before it opens any source and naming the table and
-the column, a canonical table the packet's current manifest names whose file holds a column that the
-table's declaration, in the registry the build binds for it, does not declare, unless a `[drop]`
-entry names that column (§3.4).
+the column, a table resource the packet's current manifest names whose file holds a column that the
+table's declaration, in the registry the build binds for it, does not declare, unless:
 
-A recipe resolves the refusal by a `[drop]` entry, or by naming no registry under the registry ID
-of the table's declaration, so that the build binds the registry the packet's current manifest binds
-under that ID (Part 05 §15.1).
+- a `[drop]` entry names that column (§3.4); or
+- a `[[materialize]]` entry of the recipe names that resource, so that the build derives the table
+  again rather than carrying its held rows.
 
-A build does not refuse over a table that is not canonical. Part 05 §15.2 lets an amendment remove
-or replace such a resource, and §3.2 reports a column one keeps.
+A `[drop]` entry resolves the refusal in every case. Where the registry the packet's current
+manifest binds under the registry ID of the table's declaration declares the column, a recipe also
+resolves it by naming no registry under that ID, so that the build binds that registry
+(Part 05 §15.1).
 
 ### 3.4 A `[drop]` entry releases the refusal and drops the column
 
@@ -290,12 +299,13 @@ with its other columns' values unchanged, and the rows the build adds.
 A table to which an amending build adds no row and from which it drops no column keeps its resource
 entry, so the amendment does not write it.
 
-### 3.5 A build refuses a `[drop]` entry that names a declared column or no canonical table
+### 3.5 A build refuses a `[drop]` entry that names a declared column or no held table
 
 An amending build MUST refuse, before it opens any source and naming the entry's key, a `[drop]`
 entry:
 
-- whose resource no registry the build binds declares as a canonical table; or
+- whose resource the packet's current manifest does not name;
+- whose resource a `[[materialize]]` entry of the recipe also names; or
 - whose column the resource's declaration, in the registry the build binds, declares.
 
 ### 3.6 A build reports each dropped column and each idle entry
@@ -306,7 +316,10 @@ holds its column. An amending build MUST report an idle entry as a warning and M
 An amending build MUST report as information each column it drops, naming the table, the column and
 the entry's reason.
 
-No checker verifies either report.
+A refusal under §3.3 MUST name a `[drop]` entry as a remedy, and MUST name binding the registry the
+packet's current manifest binds only where that registry declares the column.
+
+No checker verifies these reports.
 
 ### 3.7 Removing an undeclared column changes no row
 
@@ -358,11 +371,16 @@ since R163, from a version holding `core.clocks.transform_to_parent`, without wr
 holds that column; no measured packet does. A writer that stores a data frame's index as a Parquet
 column writes a column no declaration declares; the reference writer does not.
 
-An amending build that binds a registry which removed a column from a canonical table the packet
-holds now refuses until its recipe drops the column or binds the packet's own registry. A
-non-canonical table the amendment leaves holding such a column fails §3.2, so Part 05 §2 forbids the
-build to promote the amendment; the recipe resolves it by binding the packet's own registry or by
-replacing the resource as Part 05 §15.2 permits.
+An amending build that binds a registry which removed a column from a table the packet holds now
+refuses before any source, unless its recipe derives that table again. The recipe proceeds by
+dropping the column or, where the packet's own registry still declares it, by binding that
+registry. A packet amended since R163 from a version holding `core.clocks.transform_to_parent`
+binds core `0.18.0`, which does not declare that column, so only a `[drop]` entry lets it be amended.
+
+A drop rewrites its table as a new file, so Part 05 §15.2 requires every analysis or
+compatibility-projection resource whose `derived_from` chain reaches that table to be derived again
+or removed (§3.7). Dropping `core.clocks.transform_to_parent` rewrites `core.clocks`, so the
+amendment carries the cost of re-deriving every held resource that reaches it.
 
 The refusal of §3.3 and those of §3.5 are decided from the recipe, the registries the build binds
 and the held files' column names, which the build reads before it opens any source (§2.8).
@@ -380,7 +398,7 @@ only in part and keep `applied` at their anchors.
 | packet manifest and JSON Schemas | The recipe schema gains `drop`, requires `packet.amends` beside it, and advances its `$id` (§3.8). The manifest schema is unchanged. | The schema artifact; schema tests admitting an amending recipe with `drop` and refusing a non-amending one, a two-segment key and a blank reason. |
 | validation and import | Part 05 §3.1 takes §3.8; Part 05 §3.5 takes §§3.3, 3.4, 3.5 and 3.6; Part 05 §4.3 takes §3.4; Part 05 §5.3 takes §3.2; Part 05 §15.2 takes §3.7. | `evidence/R<N>.json` names the five anchors. |
 | extensions | Unchanged. §§3.1 to 3.6 reach an extension table as a core one, and no extension declaration changes. | None required. |
-| reader, writer, validator, adapters | The reference build refuses a held undeclared column of a canonical table naming both remedies, honours `[drop]`, writes a table it adds no row to where it drops a column, refuses the two entries of §3.5, and reports a drop and an idle entry; its packaged recipe schema regenerates. The reference validator adds `schema.column_undeclared` and declares the manifest an input of the three column checks. Readers and adapters are unchanged. | The writer and validator suites' cases of §6; the copies check of `verify.py`. |
+| reader, writer, validator, adapters | The reference build refuses a held undeclared column of a table it does not derive again, naming the remedies that apply, honours `[drop]`, writes a table it adds no row to where it drops a column, refuses the three entries of §3.5, and reports a drop and an idle entry; its packaged recipe schema regenerates. The reference validator adds `schema.column_undeclared` and declares the manifest an input of the three column checks. Readers and adapters are unchanged. | The writer and validator suites' cases of §6; the copies check of `verify.py`. |
 | conformance fixtures and tests | A corpus fixture whose table holds an undeclared column, expected at `error` under `schema.column_undeclared`. The writer test of §2.1 asserts the refusal instead of the loss. | The corpus test; the writer suite. |
 | revision process and tooling | A ledger entry for each Decision clause and the ordinary evidence record; no existing entry changes. No tool changes. | `ledger.py`, `evidence.py` and `verify.py`. |
 | generated publications and developer documentation | The combined specification regenerates. The writer's guide documents `[drop]` in its account of an amending recipe. | `verify.py`. |
@@ -409,12 +427,15 @@ These build cases distinguish §§3.3 to 3.7:
 - the amendment of §2.2 with that entry writes `core.source_files` as a new file without the column,
   though it adds no row to it;
 - the same amendment naming no core registry binds the packet's own and builds without an entry;
+- an amendment of a packet whose own registry also lacks the column is refused naming only the
+  `[drop]` remedy;
 - an entry for a column the held file does not hold is reported as a warning and the build
   proceeds;
-- an entry naming an analysis table, a resource no bound registry declares, or a declared column is
-  refused before any source opens, naming the key;
-- an amendment that leaves an analysis table holding an undeclared column is not refused by the
-  build, and its validation fails under `schema.column_undeclared`; and
+- an entry naming a resource the packet does not hold, a resource a `[[materialize]]` entry names,
+  or a declared column is refused before any source opens, naming the key;
+- an amendment that leaves a held analysis table holding an undeclared column is refused before any
+  source opens; with a `[drop]` entry it writes that table without the column, and with a
+  `[[materialize]]` entry deriving the table again it builds without one; and
 - an amendment that only drops a column of a canonical table that a held analysis resource derives
   from draws `amendment.derived_resource_stale` unless it derives that resource again or removes it.
 

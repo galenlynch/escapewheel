@@ -566,6 +566,12 @@ section = "3"
 title = "Column declaration"
 aliases = []
 
+[anchor.ew-column-presence]
+part = "02"
+section = "6"
+title = "Presence"
+aliases = []
+
 [anchor.ew-conformance-classes]
 part = "05"
 section = "10"
