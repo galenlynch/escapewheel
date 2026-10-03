@@ -186,6 +186,7 @@ the module that defines it.
 
    protocols.PacketLike
    protocols.Memo
+   protocols.PacketSetLike
    clocks.ClockGraph
    clocks.anchors
    clocks.clock_columns

@@ -108,7 +108,8 @@ with no rounding margin. `tick_range` turns them into an expression on `clock_id
 tick, or on the referencing keys where the clock comes through a reference, as spikes reach theirs
 through `core.units`. The reader checks a clock's anchors increase as it builds the inverse.
 Rows on a clock whose anchors do not, or that cannot reach the target, are matched whatever their
-tick, so that mapping them refuses as it would with no range. Without `on_clock`, a constraint on
+tick, so that mapping them refuses as it would with no range. `tick_bounds`, written for a filter
+in SQL or Polars with no mapping after it, refuses such a clock instead. Without `on_clock`, a constraint on
 a coordinate in `Packet.table` tests the stored value.
 
 `spike_times` on the reference clock reads `analysis.spike_events`, which the writer mapped with
@@ -237,7 +238,8 @@ packets' files without opening them. A packet holding several sessions cannot la
 one key, so `scan` refuses a session-scoped resource there, and `scanner` and `table` project the
 key from `session_id` instead. A clock ID is unique only within its packet, so `tick_range` over a
 packet set tests each packet's terms under its `session_key` values, and the transforms resolve
-each row's clocks in the packet its `session_key` names.
+each row's clocks in the packet its `session_key` names. For the same reason a clock named over a
+packet set must be every packet's reference clock.
 
 ## Locations and URIs
 

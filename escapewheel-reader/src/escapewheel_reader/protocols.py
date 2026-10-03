@@ -2,6 +2,7 @@
 
 - :class:`PacketLike` -- the members of :class:`~escapewheel_reader.Packet` the free functions use.
 - :class:`Memo` -- what those functions have read from one packet and keep for its lifetime.
+- :class:`PacketSetLike` -- what a transform or predicate asks of several packets.
 
 A function typed against it accepts a :class:`~escapewheel_reader.Packet` or anything else that
 resolves and reads resources the same way, such as a stand-in over in-memory tables.
@@ -10,7 +11,7 @@ resolves and reads resources the same way, such as a stand-in over in-memory tab
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Collection
@@ -25,6 +26,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from .clocks import ClockGraph
     from .manifest import Resource
+    from .packet_set import Session
     from .predicates import Predicate
     from .resources import ArrayResource, TableResource
     from .runs import Ambiguity
@@ -133,4 +135,23 @@ class PacketLike(Protocol):
         """Register table resources as views and return the connection."""
 
 
-__all__ = ["Memo", "PacketLike"]
+@runtime_checkable
+class PacketSetLike(Protocol):
+    """What a transform or predicate asks of several packets: the packet and session each `session_key` names.
+
+    A clock ID means something only within its packet, so each row is resolved in the packet its
+    `session_key` names. The two methods are the reader's own, so only
+    :class:`~escapewheel_reader.PacketSet` implements this.
+    """
+
+    @property
+    def sessions(self) -> tuple[Session, ...]:
+        """Every packet's sessions, each with its `session_key`."""
+        ...
+
+    def _located(self, session_key: int) -> tuple[PacketLike, Session]: ...
+
+    def _keyed(self, resource_id: str) -> list[tuple[PacketLike, list[int]]]: ...
+
+
+__all__ = ["Memo", "PacketLike", "PacketSetLike"]

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any
 
 import numpy as np
 import pyarrow as pa
@@ -21,10 +21,7 @@ from numpy.typing import NDArray
 from . import clocks
 from .dictionaries import decoded
 from .errors import NotAligned, NotDeclared
-from .protocols import PacketLike
-
-if TYPE_CHECKING:
-    from .packet_set import PacketSet
+from .protocols import PacketLike, PacketSetLike
 
 #: One column's constraint: a scalar is equality, a two-item tuple a closed range, a list or set
 #: membership, and None no constraint.
@@ -69,7 +66,7 @@ def where(**constraints: Predicate) -> pads.Expression:
 
 
 def tick_range(
-    packet: PacketLike | PacketSet,
+    source: PacketLike | PacketSetLike,
     resource_id: str,
     span: tuple[int, int],
     *,
@@ -88,10 +85,10 @@ def tick_range(
 
     Parameters
     ----------
-    packet : PacketLike or PacketSet
+    source : PacketLike or PacketSet
         The packet whose clocks and declarations the expression is built from. Over a packet set,
         each packet's expression is tested under its `session_key` values, since a clock ID is
-        unique only within its packet, and `clock` is an identifier within each packet.
+        unique only within its packet, and `clock` must be unset or every packet's reference clock.
     resource_id : str
         The table the expression filters, whose declaration says where each coordinate's clock is.
     span : tuple of int
@@ -112,14 +109,15 @@ def tick_range(
     --------
     >>> packet.scanner("core.events", filter=tick_range(packet, "core.events", (lo, hi)))  # doctest: +SKIP
     """
-    if (members := clocks._members(packet)) is not None:
+    if isinstance(source, PacketSetLike):
         return _any(
             [
-                pads.field("session_key").isin(keys) & tick_range(member, resource_id, span, clock=clock, column=column)
-                for member, keys in members._keyed(resource_id)
+                pads.field("session_key").isin(keys)
+                & tick_range(member, resource_id, span, clock=clocks.shared_clock(member, clock), column=column)
+                for member, keys in source._keyed(resource_id)
             ]
         )
-    reach = _reach(cast("PacketLike", packet), resource_id, span, clock, column)
+    reach = _reach(source, resource_id, span, clock, column)
     ticks = pads.field(reach.coordinate)
     terms: list[pads.Expression] = []
     if reach.parent is None:
@@ -141,7 +139,7 @@ def tick_range(
 
 
 def tick_bounds(
-    packet: PacketLike | PacketSet,
+    source: PacketLike | PacketSetLike,
     resource_id: str,
     span: tuple[int, int],
     *,
@@ -150,8 +148,7 @@ def tick_bounds(
 ) -> pa.Table:
     """Return the stored-tick intervals :func:`tick_range` tests, for a filter written in SQL or Polars.
 
-    Takes :func:`tick_range`'s arguments. A clock with no interval landing in `span` has no row; one
-    whose rows :func:`tick_range` matches whatever their tick has `lo` and `hi` at int64's limits.
+    Takes :func:`tick_range`'s arguments. A clock with no interval landing in `span` has no row.
 
     Returns
     -------
@@ -159,21 +156,34 @@ def tick_bounds(
         `clock_id`, `lo` and `hi`, int64, one row per closed interval: a stored tick on `clock_id`
         lands in `span` if and only if it lies in one of its clock's intervals. Over a packet set,
         `session_key` first, since a clock ID is unique only within its packet.
+
+    Raises
+    ------
+    NotAligned
+        If the rows are on a clock that cannot reach `clock`, or whose anchors do not increase.
+        :func:`tick_range` lets such rows through for mapping to refuse; a filter written from
+        bounds has no mapping after it, so it would keep them as if they were in range.
     """
-    if (members := clocks._members(packet)) is not None:
+    if isinstance(source, PacketSetLike):
         parts = []
-        for member, keys in members._keyed(resource_id):
-            bounds = tick_bounds(member, resource_id, span, clock=clock, column=column)
+        for member, keys in source._keyed(resource_id):
+            bounds = tick_bounds(member, resource_id, span, clock=clocks.shared_clock(member, clock), column=column)
             for key in keys:
                 parts.append(bounds.add_column(0, "session_key", pa.array([key] * bounds.num_rows, pa.int32())))
         return pa.concat_tables(parts)
-    reach = _reach(cast("PacketLike", packet), resource_id, span, clock, column)
-    every = np.iinfo(np.int64)
+    reach = _reach(source, resource_id, span, clock, column)
+    unplaced = [name for name in reach.present if name not in reach.intervals]
+    if unplaced:
+        raise NotAligned(
+            f"rows of {resource_id} on clock(s) {unplaced} cannot be placed on the target clock, so no "
+            "stored range selects them; exclude those clocks, or filter with tick_range and map with "
+            "on_clock, which refuses them"
+        )
     names: list[int] = []
     lows: list[int] = []
     highs: list[int] = []
     for name in reach.present:
-        starts, stops = reach.intervals.get(name, (np.array([every.min]), np.array([every.max])))
+        starts, stops = reach.intervals[name]
         names += [name] * starts.size
         lows += starts.tolist()
         highs += stops.tolist()

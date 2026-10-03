@@ -107,8 +107,12 @@ Each returns a `pyarrow.compute.Expression`, usable on any Dataset or Scanner.
 
 The reader checks a clock's anchors increase as it builds the clock's map. A clock whose anchors do
 not, or that cannot reach `clock`, gets no interval: `tick_range` matches its rows whatever their
-tick and `tick_bounds` gives it int64's limits, so mapping them refuses as it would without the
-range.
+tick, so mapping them refuses as it would without the range. `tick_bounds` refuses such a clock,
+since a filter written from bounds has no mapping after it and would keep those rows as if in range.
+
+Over a packet set, a named `clock` must be every packet's reference clock, since any other ID names
+a different clock in each packet; `seconds` refuses `session_id` there, since each row's
+`session_key` names its session.
 
 ### 3.3 Transforms
 

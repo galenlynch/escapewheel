@@ -7,10 +7,11 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import pytest
-from packet_fixture import SESSION, SESSION_NAME, UNITS
+from packet_fixture import CLOCK_BEHAVIOUR, CLOCK_PROBE, SESSION, SESSION_NAME, UNITS
 
 from escapewheel_reader import (
     MultiSessionUnresolved,
+    Refused,
     attach_clocks,
     on_clock,
     open_packets,
@@ -150,3 +151,26 @@ def test_a_packet_of_several_sessions_is_scanned_through_its_session_ids(two_ses
     assert two_sessions.scanner("core.units", session_key=0).to_table().num_rows == 2
     assert two_sessions.scanner("core.units", session_name=SECOND_NAME).to_table().num_rows == 0
     assert two_sessions.table("core.units", session_key=1).num_rows == 0
+
+
+def test_a_clock_named_across_packets_must_be_the_reference(pair):
+    """A clock ID is assigned within its packet, so only the reference names one clock in all of them."""
+    stored = pair.table(SPIKES)
+    assert on_clock(pair, stored, CLOCK_BEHAVIOUR, resource_id=SPIKES).equals(
+        on_clock(pair, stored, resource_id=SPIKES)
+    )
+    with pytest.raises(Refused, match="different clock in each packet"):
+        on_clock(pair, stored, CLOCK_PROBE, resource_id=SPIKES)
+    with pytest.raises(Refused, match="different clock in each packet"):
+        tick_range(pair, SPIKES, SPAN, clock=CLOCK_PROBE)
+    with pytest.raises(Refused, match="different clock in each packet"):
+        tick_bounds(pair, SPIKES, SPAN, clock=CLOCK_PROBE)
+    with pytest.raises(Refused, match="different clock in each packet"):
+        pair.table(SPIKES, on_clock=CLOCK_PROBE)
+    assert pair.table(SPIKES, on_clock=CLOCK_BEHAVIOUR).equals(pair.table(SPIKES, on_clock=True))
+
+
+def test_seconds_over_a_packet_set_takes_the_session_from_each_row(pair):
+    mapped = on_clock(pair, pair.table(SPIKES), resource_id=SPIKES)
+    with pytest.raises(ValueError, match="session_key says"):
+        seconds(pair, mapped, resource_id=SPIKES, session_id=SESSION)

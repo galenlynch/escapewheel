@@ -5,7 +5,7 @@ import pyarrow as pa
 import pytest
 from packet_fixture import CLOCK_BEHAVIOUR, CLOCK_PROBE
 
-from escapewheel_reader import open_packet, tick_bounds, tick_range
+from escapewheel_reader import NotAligned, open_packet, tick_bounds, tick_range, where
 from escapewheel_reader.clocks import ClockGraph, attach_clocks, clock_graph, declared_bound, mapped, stored_intervals
 
 #: Stored ticks every random graph is checked over: past both ends of every anchor sequence drawn.
@@ -116,3 +116,15 @@ def test_the_bounds_are_the_intervals_the_expression_tests(dense_packet):
 def test_an_empty_range_matches_nothing(dense_packet):
     expression = tick_range(dense_packet, "core.spike_events", (5, 4))
     assert dense_packet.scan("core.spike_events").count_rows(filter=expression) == 0
+
+
+def test_bounds_refuse_a_clock_that_cannot_reach_the_target(dense_packet):
+    """Events on the behaviour clock cannot reach the probe below it: the expression passes them for
+    mapping to refuse, where bounds would have a filter keep them as if in range."""
+    expression = tick_range(dense_packet, "core.events", (0, 10), clock=CLOCK_PROBE)
+    matched = attach_clocks(dense_packet, dense_packet.scan("core.events").to_table(filter=expression), "core.events")
+    stored = attach_clocks(dense_packet, dense_packet.table("core.events"), "core.events")
+    on_behaviour = where(clock_id=CLOCK_BEHAVIOUR)
+    assert matched.filter(on_behaviour).num_rows == stored.filter(on_behaviour).num_rows > 0
+    with pytest.raises(NotAligned, match="cannot be placed"):
+        tick_bounds(dense_packet, "core.events", (0, 10), clock=CLOCK_PROBE)

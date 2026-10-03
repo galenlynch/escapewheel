@@ -23,6 +23,7 @@ import pyarrow.compute as pc
 import pyarrow.dataset as pads
 
 from . import duck
+from .clocks import shared_clock
 from .errors import MultiSessionUnresolved, ResourceNotFoundError
 from .location import Location
 from .optional import held
@@ -402,7 +403,7 @@ class PacketSet:
 
         Takes :meth:`Packet.table`'s arguments, applied in each packet, with `session_key` and
         `session_name` as constraints like any column; `on_clock` maps onto each packet's
-        reference clock or the clock given, which is an identifier within each packet. The
+        reference clock. The
         identity is appended the same way the SQL view projects it, so the two agree. Goes
         through PyArrow, so a packet set stays readable with the ``sql`` extra absent.
 
@@ -414,7 +415,8 @@ class PacketSet:
             Read only these columns. `session_key` and `session_name` are always added to a
             session-scoped resource, and asking for them alone still reads `session_id`.
         on_clock, seconds, **where
-            As :meth:`Packet.table` takes them.
+            As :meth:`Packet.table` takes them, except that a clock ID must be every packet's
+            reference clock, since it names a different clock in each.
 
         Returns
         -------
@@ -435,6 +437,8 @@ class PacketSet:
                 wanted = [c for c in columns if c not in PROJECTED]
                 if "session_id" not in wanted and "session_id" in _column_names(packet, resource_id):
                     wanted = [*wanted, "session_id"]
+            if not isinstance(on_clock, bool):
+                shared_clock(packet, on_clock)
             part = packet.table(resource_id, columns=wanted, on_clock=on_clock, seconds=seconds, **constraints)
             if resource_id in self._scoped:
                 part = self._stamp(packet, resource_id, part)
