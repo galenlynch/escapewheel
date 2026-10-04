@@ -182,6 +182,19 @@ def test_events_on_another_clock_are_refused(aligned_packet):
         aligned_spikes(open_packet(root), "cue", 30)
 
 
+@pytest.mark.parametrize("statistics", [True, False])
+def test_spikes_on_another_clock_are_refused(aligned_packet, statistics):
+    """The spikes' clock comes from row-group statistics, or from the column where none are written."""
+    path = aligned_packet.root / "tables" / "analysis" / "spike_events.parquet"
+    spikes = pq.read_table(path)
+    moved = spikes.set_column(
+        spikes.schema.get_field_index("clock_id"), "clock_id", pa.array([CLOCK_PROBE] * spikes.num_rows)
+    )
+    pq.write_table(moved, path, compression="zstd", write_statistics=statistics)
+    with pytest.raises(ClockMismatch, match="map one onto the other"):
+        aligned_spikes(open_packet(aligned_packet.root), "cue", 30)
+
+
 def test_alignment_never_correlates_different_sessions(aligned_packet):
     """Equal ticks in two sessions yield two same-session pairs, never their cross product."""
     root = aligned_packet.root
@@ -223,6 +236,10 @@ def test_alignment_never_correlates_different_sessions(aligned_packet):
         root / "tables" / "core" / "event_streams.parquet",
         compression="zstd",
     )
+    # A packet listing one session is joined without the session key, so this one lists both.
+    manifest = json.loads((root / "packet.json").read_text())
+    manifest["sessions"].append("other")
+    (root / "packet.json").write_text(json.dumps(manifest, indent=2))
     packet = open_packet(root)
     assert windows_disjoint(packet, "cue", 1)
     assert {(row[0], row[3], row[2]) for row in aligned_spikes(packet, "cue", 0).fetchall()} == {

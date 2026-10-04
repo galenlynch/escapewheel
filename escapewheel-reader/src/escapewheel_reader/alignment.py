@@ -18,7 +18,10 @@ from .resource_ids import ANALYSIS_SPIKE_EVENTS, CORE_EVENT_STREAMS, CORE_EVENTS
 from .sql import sql_name
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterator
+
     import duckdb
+    import pyarrow.dataset as pads
 
 #: How a spike is matched to the one event it is assigned to.
 ASSIGNMENTS = ("preceding", "nearest")
@@ -52,15 +55,54 @@ def _clock(packet: PacketLike, con: duckdb.DuckDBPyConnection, event_type: str, 
     if not streams.num_rows:
         raise NotDeclared(f"no {event_type!r} stream in {CORE_EVENT_STREAMS}")
     on = sorted({v for v in streams.column("clock_id").unique().to_pylist() if v is not None})
-    # Asked of DuckDB, which streams the column, where reading it whole holds every spike's clock.
-    spikes = con.sql(f"SELECT DISTINCT clock_id FROM {_spikes(session_id)} WHERE clock_id IS NOT NULL").fetchall()
-    reference = sorted(row[0] for row in spikes)
+    reference = _spike_clocks(packet, con, session_id)
     if len(on) > 1 or on != reference:
         raise ClockMismatch(
             f"{event_type!r} events are on {on} and {ANALYSIS_SPIKE_EVENTS} is on {reference}; "
             "map one onto the other before comparing ticks"
         )
     return int(on[0])
+
+
+def _spike_clocks(packet: PacketLike, con: duckdb.DuckDBPyConnection, session_id: int | None) -> list[int]:
+    """Return the distinct clocks of the spikes, from row-group statistics where they settle it.
+
+    The footer holds each group's least and greatest `clock_id`, so where every group in scope
+    has one clock that is the answer and no page is read; over a store, a query instead costs a
+    request per row group and fetches neighbouring `t_tick` pages with it. Statistics that are
+    missing or span several clocks fall back to the query.
+    """
+    found: set[int] = set()
+    for group in _row_groups(packet.scan(ANALYSIS_SPIKE_EVENTS)):
+        session = group.statistics.get("session_id")
+        if session_id is not None and session and not session["min"] <= session_id <= session["max"]:
+            continue
+        clock = group.statistics.get("clock_id")
+        if not clock or clock.get("min") is None:
+            found.clear()
+            break
+        found |= {clock["min"], clock["max"]}
+    if len(found) == 1:
+        return sorted(found)
+    # Asked of DuckDB, which streams the column, where reading it whole holds every spike's clock.
+    spikes = con.sql(f"SELECT DISTINCT clock_id FROM {_spikes(session_id)} WHERE clock_id IS NOT NULL").fetchall()
+    return sorted(row[0] for row in spikes)
+
+
+def _row_groups(dataset: pads.Dataset) -> Iterator[pads.RowGroupInfo]:
+    """Yield every row group of a Parquet dataset, reading footers only."""
+    for fragment in dataset.get_fragments():
+        fragment.ensure_complete_metadata()
+        yield from fragment.row_groups
+
+
+def _same_session(packet: PacketLike, session_id: int | None) -> str:
+    """Return the join condition keeping a spike to its own session's events, where one is needed.
+
+    Where the packet holds one session, or both sides are already restricted to one, every pair
+    is in the same session and the condition only makes DuckDB partition the join by it.
+    """
+    return "" if session_id is not None or len(packet.sessions) == 1 else "s.session_id = e.session_id AND "
 
 
 def _literal(value: str) -> str:
@@ -199,14 +241,12 @@ def aligned_spikes(
     con = _connect(packet, connection)
     _clock(packet, con, event_type, session_id)
     spikes, events = _spikes(session_id, t_tick), _events(event_type, session_id)
+    same = _same_session(packet, session_id)
     if windows_disjoint(packet, event_type, half_window, session_id=session_id):
-        join = f"ASOF JOIN {events} e ON s.session_id = e.session_id AND s.t_tick >= e.t_tick - {half_window}"
+        join = f"ASOF JOIN {events} e ON {same}s.t_tick >= e.t_tick - {half_window}"
         where = f"WHERE s.t_tick <= e.t_tick + {half_window}"
     else:
-        join = (
-            f"JOIN {events} e ON s.session_id = e.session_id "
-            f"AND s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window}"
-        )
+        join = f"JOIN {events} e ON {same}s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window}"
         where = ""
     return con.sql(
         f"SELECT s.session_id, s.unit_id, e.t_tick AS event_tick, "
@@ -271,6 +311,7 @@ def assigned_spikes(
     con = _connect(packet, connection)
     _clock(packet, con, event_type, session_id)
     spikes, events = _spikes(session_id, t_tick), _events(event_type, session_id)
+    same = _same_session(packet, session_id)
     keys = "s.session_id, s.unit_id, s.t_tick"
 
     if to == "preceding":
@@ -278,7 +319,7 @@ def assigned_spikes(
         return con.sql(
             f"SELECT {keys}, e.t_tick AS event_tick, s.t_tick - e.t_tick AS t_rel_tick "
             f"FROM {spikes} s ASOF JOIN {events} e "
-            f"ON s.session_id = e.session_id AND s.t_tick >= e.t_tick {bound}"
+            f"ON {same}s.t_tick >= e.t_tick {bound}"
         )
     # `nearest` cannot be an ASOF join in either direction: the closest event may be the one
     # after the spike. Grouping over a bounded range join is what makes the comparison possible,
@@ -289,8 +330,8 @@ def assigned_spikes(
         f"SELECT {keys}, argmin(e.t_tick, abs(s.t_tick - e.t_tick)) AS event_tick, "
         f"argmin(s.t_tick - e.t_tick, abs(s.t_tick - e.t_tick)) AS t_rel_tick "
         f"FROM {spikes} s JOIN {events} e "
-        f"ON s.session_id = e.session_id "
-        f"AND s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window} "
+        f"ON {same}"
+        f"s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window} "
         f"GROUP BY {keys}"
     )
 

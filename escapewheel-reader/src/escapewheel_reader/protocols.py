@@ -89,6 +89,10 @@ class PacketLike(Protocol):
     def registry(self) -> dict[str, Any]:
         """The core registry the packet binds."""
 
+    @property
+    def sessions(self) -> tuple[str, ...]:
+        """Every session the packet contains, as its manifest lists them."""
+
     def extensions(self) -> dict[str, dict[str, Any]]:
         """Every extension registry the packet binds, by registry ID."""
 
