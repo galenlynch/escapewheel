@@ -26,11 +26,13 @@ The arms:
   `analysis.spike_events`, already on the reference clock, where each unit is an ascending run per
   time bucket: every run is searched for the cues near it at once, and the slices found, not the
   spikes, are ordered into the raster.
-- Polars: the packet through `TableResource.scan_polars` and the NWB through lazynwb's `scan_nwb`,
-  each spike's cues found by `search_sorted` in a streaming plan and the result sorted.
+- Polars: the packet through `TableResource.scan_polars` and the NWB through lazynwb's `scan_nwb`.
 - SQL: the packet through DuckDB, the NWB through lazynwb's Polars `SQLContext`, and pynwb's frames
-  through DuckDB, each ordered by unit and trial. The DuckDB arms state an ASOF join, and
-  lazynwb's SQL the range join.
+  through DuckDB.
+
+The Polars and SQL arms join spikes to cues on bins twice the window's width, each cue entered
+under the bin its window opens in and the next, and keep the exact window after: a hash join, where
+an ASOF join sorts every spike and a range join tests every pair. Each orders by unit and trial.
 - Helpers, for rasters only: the reader's `aligned_spikes`, whose window is symmetric, so it is
   asked for +-2 s and narrowed to -1 s, and which names a trial by its cue's tick; and lazynwb's
   `get_spike_times_in_intervals`, which returns a list per (unit, trial) and whose window excludes
@@ -250,20 +252,19 @@ def run_packet_polars(plan: dict, analysis: str) -> object:
 
 
 def polars_raster(spikes, trials, before, after, per_second: float = 1.0):
-    """The raster as a Polars plan over (unit, t): each spike's cues found in the sorted cues, then expanded.
-
-    `join_where`, the range join Polars SQL plans for the same question, tests every pair.
-    """
+    """The raster as a Polars plan over (unit, t), joined to the (trial, g) cues on bins."""
     import polars as pl
 
-    go, trial = pl.lit(trials["g"]), pl.lit(trials["trial"])
-    t, lo, hi = pl.col("t"), pl.col("lo"), pl.col("hi")
+    disjoint(trials["g"], before, after)
+    # Twice the window, so a float rounding at a bin's edge cannot carry a window into a third bin.
+    width = 2 * (before + after)
+    t, g = pl.col("t"), pl.col("g")
+    cues = pl.concat([trials.lazy().with_columns(bin=((g - before) // width).cast(pl.Int64) + k) for k in (0, 1)])
     return (
-        spikes.with_columns(lo=go.search_sorted(t - after, side="left"), hi=go.search_sorted(t + before, side="right"))
-        .filter(hi > lo)
-        .with_columns(cue=pl.int_ranges(lo, hi))
-        .explode("cue")
-        .select("unit", trial=trial.gather("cue"), t=(t - go.gather("cue")) / per_second)
+        spikes.with_columns(bin=(t // width).cast(pl.Int64))
+        .join(cues, on="bin")
+        .filter(t.is_between(g - before, g + after))
+        .select("unit", "trial", t=(t - g) / per_second)
         .sort("unit", "trial")
         .collect(engine="streaming")
     )
@@ -360,20 +361,11 @@ SELECT min(t) - g AS latency FROM go JOIN licks ON t > g AND (following IS NULL 
 """
 
 SPIKE_SQL = """
-SELECT s.unit_id AS unit, t.trial_id AS trial, (s.t_tick - t.go_cue_start_tick) / {rate} AS t
-FROM analysis_spike_events s JOIN {trials} t
-  ON s.t_tick BETWEEN t.go_cue_start_tick - {before} AND t.go_cue_start_tick + {after}
-ORDER BY unit, trial
-"""
-
-# The same pairs while no spike lies in two windows: each spike meets the latest cue whose window
-# has opened, and is dropped if that window has closed.
-SPIKE_ASOF_SQL = """
-SELECT s.unit_id AS unit, t.trial_id AS trial, (s.t_tick - t.go_cue_start_tick) / {rate} AS t
+SELECT s.unit_id AS unit, c.trial_id AS trial, (s.t_tick - c.g) / {rate} AS t
 FROM analysis_spike_events s
-ASOF JOIN (SELECT trial_id, go_cue_start_tick FROM {trials} WHERE go_cue_start_tick IS NOT NULL) t
-  ON s.t_tick + {before} >= t.go_cue_start_tick
-WHERE s.t_tick <= t.go_cue_start_tick + {after}
+JOIN (SELECT trial_id, go_cue_start_tick AS g, (go_cue_start_tick - {before}) // {width} + k AS bin
+      FROM {trials}, (VALUES (0), (1)) AS shift(k)) c
+  ON s.t_tick // {width} = c.bin AND s.t_tick BETWEEN c.g - {before} AND c.g + {after}
 ORDER BY unit, trial
 """
 
@@ -406,23 +398,21 @@ def run_packet_duckdb(plan: dict, analysis: str) -> object:
     before, after = BEFORE * rate, AFTER * rate
     packet.duckdb(connection=con, tables=("analysis.spike_events", plan["trials"]))
     gap = con.sql(CUE_GAP_SQL.format(trials=trials)).fetchone()[0]
-    # Two cues closer than the window's width put a spike in both windows, which ASOF cannot pair.
-    join = "asof" if gap is None or gap > before + after else "range"
-    query = (SPIKE_ASOF_SQL if join == "asof" else SPIKE_SQL).format(
-        trials=trials, before=before, after=after, rate=rate
-    )
-    return con.sql(query).to_arrow_table(), join
+    if gap is not None and gap <= before + after:
+        raise ValueError(f"two go cues lie {gap} ticks apart, inside one window's width")
+    width = 2 * (before + after)
+    query = SPIKE_SQL.format(trials=trials, before=before, after=after, width=width, rate=rate)
+    return con.sql(query).to_arrow_table()
 
 
 def run_packet_aligned(plan: dict, analysis: str) -> object:
     """The reader's `aligned_spikes`, asked for the symmetric window that covers ours."""
-    from escapewheel_reader import aligned_spikes, windows_disjoint
+    from escapewheel_reader import aligned_spikes
 
     packet = open_packet(plan)
     rate = plan["rate"]
     half = max(BEFORE, AFTER) * rate
     con = connection(plan)
-    join = "asof" if windows_disjoint(packet, "go_cue", half) else "range"
     # An event has no identifier of its own, so its tick names the trial.
     found = (
         aligned_spikes(packet, "go_cue", half, connection=con)
@@ -431,7 +421,7 @@ def run_packet_aligned(plan: dict, analysis: str) -> object:
         .order("unit, trial")
         .to_arrow_table()
     )
-    return found, join
+    return found
 
 
 # The NWB.
@@ -481,23 +471,17 @@ GROUP BY g
 """
 
 NWB_SPIKE_SQL = """
-SELECT s.unit, trials.trial, s.t - trials.goCue_start_time AS t
-FROM spikes s JOIN trials ON s.t BETWEEN trials.goCue_start_time - {before} AND trials.goCue_start_time + {after}
-ORDER BY s.unit, trials.trial
-"""
-
-NWB_SPIKE_ASOF_SQL = """
-SELECT s.unit, c.trial, s.t - c.goCue_start_time AS t
+SELECT s.unit, c.trial, s.t - c.g AS t
 FROM spikes s
-ASOF JOIN (SELECT trial, goCue_start_time FROM trials WHERE goCue_start_time IS NOT NULL) c
-  ON s.t + {before} >= c.goCue_start_time
-WHERE s.t <= c.goCue_start_time + {after}
+JOIN (SELECT trial, goCue_start_time AS g, floor((goCue_start_time - {before}) / {width})::BIGINT + k AS bin
+      FROM trials, (VALUES (0), (1)) AS shift(k)) c
+  ON floor(s.t / {width})::BIGINT = c.bin AND s.t BETWEEN c.g - {before} AND c.g + {after}
 ORDER BY s.unit, c.trial
 """
 
 
 def run_pynwb_duckdb(plan: dict, analysis: str) -> object:
-    """DuckDB over pynwb's frames, read whole, choosing the join as the packet's DuckDB arm does."""
+    """DuckDB over pynwb's frames, read whole, joined as the packet's DuckDB arm joins."""
     import duckdb
 
     trials, other = nwb_frames(plan, analysis)
@@ -508,9 +492,10 @@ def run_pynwb_duckdb(plan: dict, analysis: str) -> object:
         return lick_summary(con.sql(NWB_LICK_SQL).fetchnumpy()["latency"])
     con.register("spikes", other)
     gap = con.sql(CUE_GAP_SQL.format(trials="trials").replace("go_cue_start_tick", "goCue_start_time")).fetchone()[0]
-    join = "asof" if gap is None or gap > BEFORE + AFTER else "range"
-    query = NWB_SPIKE_ASOF_SQL if join == "asof" else NWB_SPIKE_SQL
-    return con.sql(query.format(before=BEFORE, after=AFTER)).to_arrow_table(), join
+    if gap is not None and gap <= BEFORE + AFTER:
+        raise ValueError(f"two go cues lie {gap} s apart, inside one window's width")
+    width = 2 * (BEFORE + AFTER)
+    return con.sql(NWB_SPIKE_SQL.format(before=BEFORE, after=AFTER, width=width)).to_arrow_table()
 
 
 def quiet_lazynwb():
@@ -587,11 +572,21 @@ SELECT min(licks.t - go.g) AS latency FROM go JOIN licks ON licks.t > go.g
 WHERE go.following IS NULL OR licks.t < go.following GROUP BY go.g
 """
 
+# Polars SQL has no VALUES list to cross with, so each cue's two bins are a UNION.
 POLARS_SPIKE_SQL = """
-SELECT s.unit, trials._table_index AS trial, s.t - trials.goCue_start_time AS t
-FROM (SELECT _table_index AS unit, UNNEST(spike_times) AS t FROM units) s
-JOIN trials ON s.t >= trials.goCue_start_time - {before} AND s.t <= trials.goCue_start_time + {after}
-ORDER BY s.unit, trial
+SELECT s.unit, c.trial, s.t - c.g AS t
+FROM (SELECT unit, t, CAST(FLOOR(t / {width}) AS BIGINT) AS bin
+      FROM (SELECT _table_index AS unit, UNNEST(spike_times) AS t FROM units)) s
+JOIN (SELECT _table_index AS trial, goCue_start_time AS g,
+             CAST(FLOOR((goCue_start_time - {before}) / {width}) AS BIGINT) AS bin
+      FROM trials
+      UNION ALL
+      SELECT _table_index AS trial, goCue_start_time AS g,
+             CAST(FLOOR((goCue_start_time - {before}) / {width}) AS BIGINT) + 1 AS bin
+      FROM trials) c
+  ON s.bin = c.bin
+WHERE s.t >= c.g - {before} AND s.t <= c.g + {after}
+ORDER BY s.unit, c.trial
 """
 
 
@@ -604,7 +599,7 @@ def run_lazynwb_sql(plan: dict, analysis: str) -> object:
     )
     if analysis == "lick latency":
         return lick_summary(context.execute(POLARS_LICK_SQL).collect()["latency"].to_numpy())
-    return context.execute(POLARS_SPIKE_SQL.format(before=BEFORE, after=AFTER)).collect()
+    return context.execute(POLARS_SPIKE_SQL.format(before=BEFORE, after=AFTER, width=2 * (BEFORE + AFTER))).collect()
 
 
 def run_lazynwb_intervals(plan: dict, analysis: str) -> object:
@@ -674,16 +669,8 @@ def child(arm: str, analysis: str, plan: dict) -> None:
     for module in modules:
         importlib.import_module(module)
     benchkit.cold_child(
-        [plan["packet"], plan["nwb"]], lambda: runner(plan, analysis), summarise if analysis == RASTERS else None
+        [plan["packet"], plan["nwb"]], lambda: runner(plan, analysis), raster_summary if analysis == RASTERS else None
     )
-
-
-def summarise(found) -> dict:
-    """A raster's summary, with the join a SQL arm chose where it returned one."""
-    if isinstance(found, tuple):
-        found, join = found
-        return {**raster_summary(found), "join": join}
-    return raster_summary(found)
 
 
 def agreement(cells: list[dict], analysis: str) -> list[str]:
