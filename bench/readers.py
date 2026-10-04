@@ -22,7 +22,8 @@ The packet's spikes are read from whichever table answers faster: `analysis.spik
 by time, for the window, and `core.spike_events`, sorted by unit, for every spike and for units,
 where over a store a time-sorted table costs a request per row group. `one train` is
 `spike_times` on the reference clock, which reads `analysis.spike_events`, and `one train stored`
-the same unit's ticks as recorded; DuckDB and the NWB answer both from one table.
+the same unit's ticks as recorded; `10 s spike_times` asks `spike_times` for the window. DuckDB
+and the NWB answer each pair from one table.
 
 Either store may be an `s3://` URI. A remote cell is cold because its process is fresh, and it
 records the bytes the host received. Credentials come from the environment: run
@@ -54,6 +55,7 @@ OPERATIONS = (
     "trials",
     "every spike",
     "10 s window",
+    "10 s spike_times",
     "one train",
     "one train stored",
     "region units",
@@ -85,6 +87,9 @@ def run_packet(plan: dict, operation: str) -> object:
     if operation == "10 s window":
         lo, hi = plan["window_tick"]
         return packet.table("analysis.spike_events", columns=["t_tick"], t_tick=(lo, hi - 1)).num_rows
+    if operation == "10 s spike_times":
+        lo, hi = plan["window_tick"]
+        return spike_times(packet, t_tick=(lo, hi - 1)).num_rows
     if operation == "one train":
         return spike_times(packet, plan["unit_id"]).num_rows
     if operation == "one train stored":
@@ -136,7 +141,7 @@ def run_packet_sql(plan: dict, operation: str) -> object:
         return [sql(f"SELECT * FROM {name.replace('.', '_')}").num_rows for name in plan["trial_tables"]]
     if operation == "every spike":
         return sql("SELECT sum(t_tick) AS s FROM core_spike_events")["s"][0].as_py()
-    if operation == "10 s window":
+    if operation in ("10 s window", "10 s spike_times"):
         lo, hi = plan["window_tick"]
         query = f"SELECT count(*) AS n FROM analysis_spike_events WHERE t_tick >= {lo} AND t_tick < {hi}"
         return sql(query)["n"][0].as_py()
@@ -181,7 +186,7 @@ def run_pynwb(plan: dict, operation: str) -> object:
         return len(nwb.intervals["trials"].to_dataframe())
     if operation == "every spike":
         return float(np.asarray(units.spike_times.data[:]).sum())
-    if operation == "10 s window":
+    if operation in ("10 s window", "10 s spike_times"):
         times = np.asarray(units.spike_times.data[:])
         return int(np.count_nonzero((times >= lo) & (times < hi)))
     if operation in ("one train", "one train stored"):
@@ -237,7 +242,7 @@ def run_lazynwb(plan: dict, operation: str) -> object:
         return lazynwb.scan_nwb(plan["nwb"], "/intervals/trials").collect().height
     if operation == "every spike":
         return float(frame.select(pl.col("spike_times").list.sum().sum()).collect().item())
-    if operation == "10 s window":
+    if operation in ("10 s window", "10 s spike_times"):
         inside = pl.element().filter((pl.element() >= lo) & (pl.element() < hi))
         return int(frame.select(pl.col("spike_times").list.eval(inside).list.len().sum()).collect().item())
     if operation in ("one train", "one train stored"):
