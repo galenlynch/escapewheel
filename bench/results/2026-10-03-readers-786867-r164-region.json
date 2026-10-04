@@ -1,15 +1,15 @@
 {
   "environment": {
     "date": "2026-10-04",
-    "commit": "3bcc0c7f+dirty",
+    "commit": "12faaddb+dirty",
     "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
     "cores": 24,
     "memory_gib": 126,
     "kernel": "7.2.7-200.fc44.x86_64",
     "load_average": [
-      1.63,
-      2.4,
-      3.18
+      3.0,
+      2.27,
+      1.4
     ],
     "python": "3.14.7",
     "disks": [
@@ -72,11 +72,20 @@
   "cells": [
     {
       "reader": "packet",
+      "operation": "10 s spike_times",
+      "runs": 3,
+      "seconds": 0.07462479802779853,
+      "peak_mib": 322.02734375,
+      "received_bytes": 231,
+      "value": "294526"
+    },
+    {
+      "reader": "packet",
       "operation": "region units",
       "runs": 3,
-      "seconds": 0.15686334599740803,
-      "peak_mib": 326.890625,
-      "received_bytes": 66,
+      "seconds": 0.1785152280353941,
+      "peak_mib": 341.515625,
+      "received_bytes": 0,
       "value": "(164, 5887635)"
     }
   ]

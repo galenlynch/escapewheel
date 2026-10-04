@@ -14,7 +14,7 @@ import numpy as np
 from matplotlib.ticker import NullFormatter
 
 RESULTS = Path(__file__).parent / "results"
-COLOURS = {"packet": "#1b7837", "pynwb": "#762a83", "lazynwb": "#e08214", "eager": "#8c8c8c", "lazy": "#1b7837"}
+COLOURS = {"Escapewheel": "#1b7837", "pynwb": "#762a83", "lazynwb": "#e08214", "eager": "#8c8c8c", "lazy": "#1b7837"}
 
 
 def cells(*names: str) -> dict[tuple[str, str], dict]:
@@ -100,7 +100,7 @@ def readers(session: str, out: Path) -> None:
     )
 
     def packet(found, op):
-        """The faster of the packet's PyArrow and DuckDB paths."""
+        """The faster of the Escapewheel PyArrow and DuckDB paths."""
         options = [c for c in (found.get(("packet", op)), found.get(("packet-sql", op))) if c]
         return min(options, key=lambda c: c["seconds"]) if options else None
 
@@ -113,24 +113,24 @@ def readers(session: str, out: Path) -> None:
     ]
     for ax, found, field, scale, unit in panels:
         series = {
-            "packet": [value(packet(found, op), field, scale) for op, _ in READER_QUESTIONS],
+            "Escapewheel": [value(packet(found, op), field, scale) for op, _ in READER_QUESTIONS],
             "pynwb": [value(found.get(("pynwb", op)), field, scale) for op, _ in READER_QUESTIONS],
             "lazynwb": [value(found.get(("lazynwb", op)), field, scale) for op, _ in READER_QUESTIONS],
         }
         bars(ax, labels, series, unit)
     axes[0].invert_yaxis()
     fig.legend(*axes[0].get_legend_handles_labels(), loc="upper right", ncols=3, fontsize=8)
-    fig.suptitle(f"{session}: one question at a time, cold (packet: faster of PyArrow and DuckDB)")
+    fig.suptitle(f"{session}: one question at a time, cold (Escapewheel: faster of PyArrow and DuckDB)")
     fig.tight_layout(rect=(0, 0, 1, 0.94))
     fig.savefig(out / f"readers-{session}.png", dpi=150)
 
 
 GO_CUE_ARMS = [
-    ("packet aligned_spikes", "packet", "packet: aligned_spikes"),
-    ("packet duckdb", "packet", "packet: DuckDB"),
-    ("packet dataset", "packet", "packet: PyArrow dataset"),
-    ("packet polars", "packet", "packet: Polars"),
-    ("packet pandas", "packet", "packet: pandas"),
+    ("packet aligned_spikes", "Escapewheel", "Escapewheel: aligned_spikes"),
+    ("packet duckdb", "Escapewheel", "Escapewheel: DuckDB"),
+    ("packet dataset", "Escapewheel", "Escapewheel: PyArrow dataset"),
+    ("packet polars", "Escapewheel", "Escapewheel: Polars"),
+    ("packet pandas", "Escapewheel", "Escapewheel: pandas"),
     ("lazynwb intervals", "lazynwb", "lazynwb: intervals"),
     ("lazynwb polars", "lazynwb", "lazynwb: Polars"),
     ("lazynwb pandas", "lazynwb", "lazynwb: pandas"),

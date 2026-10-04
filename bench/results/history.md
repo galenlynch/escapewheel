@@ -21,8 +21,12 @@ are in [`../SUMMARY.md`](../SUMMARY.md), built from these files:
 - `*-readers-<session>-r164[-s3]-final.json` and `*-trials-<session>-r164[-s3]-final.json`: the
   packet arms, at commits from `c69f7e68` to `c87fe92d`, all with the reader's read path of
   `c69f7e68`. The pynwb and lazynwb cells are the 2026-10-02 and earlier 2026-10-03 runs above.
-- `*-readers-<session>-r164[-s3]-region.json` and `*-lazy-<session>-r164[-s3]-good.json`: the units in
-  MD and `good region window`, rerun at `3bcc0c7f`, after `where` split long membership tests.
+- `*-readers-<session>-r164[-s3]-region.json` and `*-lazy-<session>-r164[-s3]-good.json`: the
+  ten-second window through `spike_times`, the units in MD and `good region window`, rerun at
+  `b3843f9d`, after `where` guarded a long membership test with value ranges. At `3bcc0c7f`, which
+  split the test into `is_in` tests of 50 values instead, the window through `spike_times` took
+  2.18 s locally and 3.18 s from S3 on 776259, against 0.089 s and 1.15 s before it; those runs
+  were not kept.
 - `*-lazy-<session>-r164[-s3].json`: the other lazy operations, at `42ae6f0a` locally and `c87fe92d`
   from S3. The local file also holds an earlier `region window` operation, superseded by
   `good region window`.
