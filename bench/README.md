@@ -41,6 +41,7 @@ long; each cell records how many runs its median is of.
 |---|---|---|
 | `readers.py` | One session read cold four ways: the packet through PyArrow and through DuckDB, and the NWB through pynwb and through lazynwb. The operations are opening the store, unit metadata, trials, every spike, a ten-second window, one unit's train, and the units in one region with their trains. | `--packet`, `--nwb`, either a path or an `s3://` URI |
 | `trials.py` | Two trial analyses read cold every way each store's readers offer: per trial, the first lick after the go cue; and for every unit, the spikes within [-1, +2] s of each go cue. The arms load each needed table whole into pandas, work out of core through Polars or a PyArrow dataset, state it in SQL, or call a reader's own alignment helper. Each prints the counts it found, and the run groups the arms that disagree. | `--packet`, `--nwb`, either a path or an `s3://` URI; `--memory-max` |
+| `lazy.py` | What lazy reading saves. Seven questions each answered by reading the table whole and by narrowing first: the first rows, spikes per unit, every spike mapped onto the reference clock, one region's units in a window, one packet of a `PacketSet`, and a window handed to DuckDB and to Polars. Both arms must return the same value. | `--packet`, either a path or an `s3://` URI; `--other`, a second packet; `--memory-max` |
 | `lazy_spike.py` | What a reader function should return. The clock mapping stated as an ASOF join in DuckDB, Polars and Narwhals and compared with the reader's kernel row by row; the go-cue analysis from an eager table, a lazy relation and a `RecordBatchReader`; and a reference-clock range applied after a lazy mapping. Writes a dump per mapping arm to `--scratch`. | `--packet`, either a path or an `s3://` URI; `--scratch`; `--bound` |
 | `row_groups.py` | Cold reads of `analysis.spike_events` at several row-group sizes, for a one-second window and for one unit over the whole session, from local disk or from a store. | `--packet`, `--scratch`; for a store, `--store-packet`, `--store-scratch` |
 | `stores.py` | Listing a stored packet or NWB, and downloading it to local disk, in seconds and objects. | `--root NAME=URI`, `--stage-dir` |
@@ -57,6 +58,8 @@ uv run python readers.py --packet /nvme/bench/packet --nwb /nvme/bench/session.n
     --repeat 3 --json-out results/$(date +%F)-readers-<session>.json
 uv run python trials.py --packet /nvme/bench/packet --nwb /nvme/bench/session.nwb \
     --repeat 3 --memory-max 80G --json-out results/$(date +%F)-trials-<session>.json
+uv run python lazy.py --packet /nvme/bench/packet --other /nvme/bench/other-packet \
+    --repeat 3 --memory-max 80G --json-out results/$(date +%F)-lazy-<session>.json
 uv run python row_groups.py --packet /nvme/bench/packet --scratch /nvme/bench/rowgroups \
     --json-out results/$(date +%F)-row-groups-<session>.json
 uv run python containment.py --json-out results/$(date +%F)-containment.json
