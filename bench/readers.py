@@ -20,9 +20,9 @@ reads their trains; the NWB has no electrode coordinates of its own, so pynwb an
 unit's region through `location` where the units table has it and through its electrodes where not.
 `list tables` names each table and array without opening one: the packet's resources and kinds,
 pynwb's `DynamicTable` objects, which it reaches only by building the whole tree, or lazynwb's
-default internal paths. `list` walks the store's full tree: every packet resource with a table's columns and types or an
-array's shape and dtype, every object pynwb builds, or every lazynwb internal path down to datasets
-and table columns. Its value counts the leaves, which differ by format.
+default internal paths. `list` walks the store's full tree: every packet resource with a table's stored columns and
+types, every object pynwb builds, or every lazynwb internal path down to datasets and table
+columns. Its value counts the leaves, which differ by format.
 The packet's spikes are read from whichever table answers faster: `analysis.spike_events`, sorted
 by time, for the window, and `core.spike_events`, sorted by unit, for every spike and for units,
 where over a store a time-sorted table costs a request per row group. `one train` is
@@ -76,18 +76,8 @@ NWB_ARRAYS = ("spike_times", "electrodes", "extremum_channel", "waveform_mean", 
 
 
 def packet_tree(packet) -> list[tuple]:
-    """Every resource with what it holds: a table's columns and types, an array's shape and dtype."""
-    tree: list[tuple] = []
-    for resource in packet.resources():
-        if resource.kind == "table":
-            schema = packet.table_resource(resource.resource_id).schema()
-            tree += [(resource.resource_id, field.name, str(field.type)) for field in schema]
-        elif resource.kind == "dense_array":
-            array = packet.array_resource(resource.resource_id)
-            tree.append((resource.resource_id, array.shape, array.dtype))
-        else:
-            tree.append((resource.resource_id, resource.kind))
-    return tree
+    """Every resource, with each table's stored columns and types."""
+    return list(zip(*packet.contents().to_pydict().values(), strict=True))
 
 
 def run_packet(plan: dict, operation: str) -> object:

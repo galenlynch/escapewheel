@@ -185,8 +185,13 @@ def filesystem(path: Path) -> str:
     return found.stdout.strip() or "?"
 
 
-def cold_child(stores: Iterable[str | Path], operation: Callable[[], object]) -> None:
-    """Evict the local stores, confirm it, time one operation, and print the result as JSON."""
+def cold_child(
+    stores: Iterable[str | Path], operation: Callable[[], object], summarise: Callable[[object], object] | None = None
+) -> None:
+    """Evict the local stores, confirm it, time one operation, and print the result as JSON.
+
+    `summarise` reduces the operation's result to the value printed, after the clock stops.
+    """
     stores = [Path(store) for store in stores if not is_remote(store)]
     for store in stores:
         if filesystem(store).startswith("fuse"):
@@ -202,6 +207,7 @@ def cold_child(stores: Iterable[str | Path], operation: Callable[[], object]) ->
     elapsed = time.perf_counter() - clock
     after = received_bytes()
     received = after - before if before is not None and after is not None else None
+    value = summarise(value) if summarise is not None else value
     print(json.dumps({"seconds": elapsed, "peak_mib": peak_mib(), "received_bytes": received, "value": str(value)}))
 
 
