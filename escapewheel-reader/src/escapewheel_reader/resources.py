@@ -29,6 +29,19 @@ if TYPE_CHECKING:  # pragma: no cover
     import polars as pl
 
 
+@functools.cache
+def parquet_format() -> pads.ParquetFileFormat:
+    """Return the Parquet format every scan uses, fetching a row group's byte ranges together.
+
+    PyArrow's default cache requests a pre-buffered row group's ranges as the decoder reaches
+    them, so over an object store each waits its own round trip; requested at once, the round
+    trips overlap and no more bytes are read. The cache holds the row groups being read ahead,
+    not the file.
+    """
+    options = pads.ParquetFragmentScanOptions(pre_buffer=True, cache_options=pa.CacheOptions(lazy=False))
+    return pads.ParquetFileFormat(default_fragment_scan_options=options)
+
+
 #: Where a Zarr array keeps its metadata, by format version. v3 names it `zarr.json`; v2, which
 #: Part 03 §6.1 permits an external array to use, names it `.zarray`. Both are JSON.
 ZARR_METADATA_FILENAMES: dict[Literal[2, 3], str] = {3: "zarr.json", 2: ".zarray"}
@@ -235,9 +248,7 @@ class TableResource:
             A lazy dataset, suitable for predicate pushdown over large resources.
         """
         path, filesystem = self._store()
-        opened: pads.Dataset = pads.dataset(
-            path, format=pads.ParquetFileFormat(), partitioning="hive", filesystem=filesystem
-        )
+        opened: pads.Dataset = pads.dataset(path, format=parquet_format(), partitioning="hive", filesystem=filesystem)
         return opened
 
     def schema(self) -> pa.Schema:
