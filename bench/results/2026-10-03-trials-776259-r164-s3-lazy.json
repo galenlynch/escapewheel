@@ -1,0 +1,166 @@
+{
+  "environment": {
+    "date": "2026-10-04",
+    "commit": "bf35b60b+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      1.94,
+      2.64,
+      2.23
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb.zarr",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+    "nwb": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb.zarr",
+    "region_aws": "us-west-2",
+    "trials": "dynamic_foraging.trials",
+    "clock": 12,
+    "rate": 31250
+  },
+  "core_version": "0.18.0",
+  "memory_max": "80G",
+  "once_above": 300.0,
+  "cells": [
+    {
+      "arm": "packet pandas",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 1.3764638979919255,
+      "peak_mib": 202.87109375,
+      "received_bytes": 259420,
+      "value": "{'trials': 496, 'median_ms': 243.024, 'mean_ms': 1934.703}"
+    },
+    {
+      "arm": "packet pandas",
+      "analysis": "go-cue spikes",
+      "runs": 3,
+      "seconds": 24.24772474600468,
+      "peak_mib": 25417.67578125,
+      "received_bytes": 519606386,
+      "value": "{'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'offset_s': 48471239.7}"
+    },
+    {
+      "arm": "packet pandas, needed columns",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 1.375135954003781,
+      "peak_mib": 202.87109375,
+      "received_bytes": 242699,
+      "value": "{'trials': 496, 'median_ms': 243.024, 'mean_ms': 1934.703}"
+    },
+    {
+      "arm": "packet pandas, needed columns",
+      "analysis": "go-cue spikes",
+      "runs": 3,
+      "seconds": 23.449694795010146,
+      "peak_mib": 18835.74609375,
+      "received_bytes": 519697361,
+      "value": "{'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'offset_s': 48471239.7}"
+    },
+    {
+      "arm": "packet polars",
+      "analysis": "lick latency",
+      "runs": 0,
+      "error": "OSError: object-store error: Generic S3 error: Error performing PUT http://169.254.169.254/latest/api/token in 13.053968273s, after 8 retries, max_retries: 8, retry_timeout: 30s  - HTTP error: error s"
+    },
+    {
+      "arm": "packet polars",
+      "analysis": "go-cue spikes",
+      "runs": 0,
+      "error": "OSError: object-store error: Generic S3 error: Error performing PUT http://169.254.169.254/latest/api/token in 16.63011463s, after 8 retries, max_retries: 8, retry_timeout: 30s  - HTTP error: error se"
+    },
+    {
+      "arm": "packet dataset",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 0.6015366569627076,
+      "peak_mib": 203.05859375,
+      "received_bytes": 172160,
+      "value": "{'trials': 496, 'median_ms': 243.024, 'mean_ms': 1934.703}"
+    },
+    {
+      "arm": "packet dataset",
+      "analysis": "go-cue spikes",
+      "runs": 3,
+      "seconds": 13.588758689991664,
+      "peak_mib": 6475.78125,
+      "received_bytes": 515228240,
+      "value": "{'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'offset_s': 48471239.7}"
+    },
+    {
+      "arm": "packet dataset, read_pool",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 0.6324381239828654,
+      "peak_mib": 203.05859375,
+      "received_bytes": 170635,
+      "value": "{'trials': 496, 'median_ms': 243.024, 'mean_ms': 1934.703}"
+    },
+    {
+      "arm": "packet dataset, read_pool",
+      "analysis": "go-cue spikes",
+      "runs": 3,
+      "seconds": 14.420493646000978,
+      "peak_mib": 6062.01953125,
+      "received_bytes": 515251557,
+      "value": "{'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'offset_s': 48471239.7}"
+    },
+    {
+      "arm": "packet duckdb",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 0.8847575900144875,
+      "peak_mib": 203.05859375,
+      "received_bytes": 159037,
+      "value": "{'trials': 496, 'median_ms': 243.024, 'mean_ms': 1934.703}"
+    },
+    {
+      "arm": "packet duckdb",
+      "analysis": "go-cue spikes",
+      "runs": 3,
+      "seconds": 11.54535113502061,
+      "peak_mib": 21758.26953125,
+      "received_bytes": 519434460,
+      "value": "{'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'offset_s': 48471239.7, 'join': 'asof'}"
+    },
+    {
+      "arm": "packet aligned_spikes",
+      "analysis": "go-cue spikes",
+      "runs": 3,
+      "seconds": 19.181057301000692,
+      "peak_mib": 17996.65625,
+      "received_bytes": 800605476,
+      "value": "{'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'offset_s': 48471239.7, 'join': 'asof'}"
+    }
+  ],
+  "disagreements": []
+}

@@ -12,6 +12,31 @@ region operation were committed after they ran.
 does not reach the block device's buffer cache. "NVMe" is a WD SN850X under btrfs, where a cold
 read is checked by `mincore`.
 
+## The lazy reader's final configuration, against the NWB readers
+
+`readers.py`, `trials.py` and `lazy.py` on 2026-10-03, against the `packet-r164` packets of the
+section on core 0.18.0, from the NVMe and from S3 read unsigned. Cold medians of three. The tables
+are in [`../SUMMARY.md`](../SUMMARY.md), built from these files:
+
+- `*-readers-<session>-r164[-s3]-final.json` and `*-trials-<session>-r164[-s3]-final.json`: the
+  packet arms, at commits from `c69f7e68` to `c87fe92d`, all with the reader's read path of
+  `c69f7e68`. The pynwb and lazynwb cells are the 2026-10-02 and earlier 2026-10-03 runs above.
+- `*-readers-<session>-r164[-s3]-region.json` and `*-lazy-<session>-r164[-s3]-good.json`: the units in
+  MD and `good region window`, rerun at `3bcc0c7f`, after `where` split long membership tests.
+- `*-lazy-<session>-r164[-s3].json`: the other lazy operations, at `42ae6f0a` locally and `c87fe92d`
+  from S3. The local file also holds an earlier `region window` operation, superseded by
+  `good region window`.
+- `*-readers-<session>-r164[-s3]-list*.json`: listing, at `84915050` to `357151f7`; the 776259 local
+  packet cells are from `-list-packet.json`, after the first run's eviction check failed.
+- `*-before-lazy.json`: `spike_times` through the reader at `fa060640`, for the "before" column.
+- `*-readers-*-lazy.json`, `*-trials-*-lazy.json` and `*-s3-polars-lazy.json`: the same packet arms
+  at `38097644` to `84915050`, after the lazy reader and before the eager cache and the alignment
+  changes; superseded by `-final.json`.
+
+The load average was between 1 and 10 on 24 threads; each file records it. An `aligned_spikes` S3
+cell of 801 MB taken earlier the same day overlapped other S3 traffic from the host and is not
+used: alone, the cell received 522 MB against DuckDB's 520.
+
 ## What a reader function returns: the clock mapping as a relation
 
 `lazy_spike.py` on 2026-10-03, 776259 `packet-r164` from the NVMe, at a dirty `3cd086d4` whose

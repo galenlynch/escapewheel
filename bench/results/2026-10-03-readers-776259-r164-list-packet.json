@@ -1,0 +1,92 @@
+{
+  "environment": {
+    "date": "2026-10-04",
+    "commit": "357151f7+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      0.84,
+      2.17,
+      2.19
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r164/776259/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      },
+      {
+        "path": "/home/galen.lynch/bench-cold/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "/home/galen.lynch/bench-cold/r164/776259/packet",
+    "nwb": "/home/galen.lynch/bench-cold/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+    "region": "MD",
+    "region_aws": "us-west-2",
+    "window_tick": [
+      361749256863,
+      361749569363
+    ],
+    "window_s": [
+      11575976.219616,
+      11575986.219616
+    ],
+    "unit_id": 1475,
+    "unit_label": "671",
+    "probe_name": "45883-2",
+    "unit_spikes": 1789113,
+    "unit_tables": [
+      "core.units",
+      "aind_unit_qc.metrics"
+    ],
+    "trial_tables": [
+      "core.intervals",
+      "dynamic_foraging.trials"
+    ]
+  },
+  "core_version": "0.18.0",
+  "packet_bytes": 1219662231,
+  "nwb_bytes": 8493662834,
+  "cells": [
+    {
+      "reader": "packet",
+      "operation": "list",
+      "runs": 3,
+      "seconds": 0.023935332021210343,
+      "peak_mib": 168.37890625,
+      "received_bytes": 1052,
+      "value": "406"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "list",
+      "runs": 3,
+      "seconds": 0.023220197996124625,
+      "peak_mib": 173.921875,
+      "received_bytes": 1438,
+      "value": "406"
+    }
+  ]
+}

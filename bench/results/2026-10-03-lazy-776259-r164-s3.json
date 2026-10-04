@@ -1,0 +1,189 @@
+{
+  "environment": {
+    "date": "2026-10-04",
+    "commit": "c87fe92d+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      9.29,
+      5.38,
+      4.17
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+    "other": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+    "region": "MD",
+    "quality": "sua",
+    "region_aws": "us-west-2",
+    "t_zero": 361746131863,
+    "rate": 31250,
+    "window_tick": [
+      361749256863,
+      361751131863
+    ],
+    "window_s": [
+      100.0,
+      160.0
+    ],
+    "chosen_units": 111
+  },
+  "core_version": "0.18.0",
+  "packet_bytes": 1219662231,
+  "cells": [
+    {
+      "arm": "eager",
+      "operation": "first rows",
+      "runs": 3,
+      "seconds": 6.605999426974449,
+      "peak_mib": 6544.84375,
+      "received_bytes": 704693793,
+      "value": "674146136534"
+    },
+    {
+      "arm": "lazy",
+      "operation": "first rows",
+      "runs": 3,
+      "seconds": 2.690614800027106,
+      "peak_mib": 575.796875,
+      "received_bytes": 276326604,
+      "value": "674146136534"
+    },
+    {
+      "arm": "eager",
+      "operation": "spikes per unit",
+      "runs": 3,
+      "seconds": 1.664412088051904,
+      "peak_mib": 1460.5234375,
+      "received_bytes": 1984373,
+      "value": "(6781, 1789113)"
+    },
+    {
+      "arm": "lazy",
+      "operation": "spikes per unit",
+      "runs": 3,
+      "seconds": 1.5413549289805815,
+      "peak_mib": 324.5546875,
+      "received_bytes": 1985226,
+      "value": "(6781, 1789113)"
+    },
+    {
+      "arm": "eager",
+      "operation": "rate on clock",
+      "runs": 3,
+      "seconds": 10.562927282007877,
+      "peak_mib": 13510.89453125,
+      "received_bytes": 486968965,
+      "value": "(6388, 286896563)"
+    },
+    {
+      "arm": "lazy",
+      "operation": "rate on clock",
+      "runs": 3,
+      "seconds": 10.023284876020625,
+      "peak_mib": 1696.23828125,
+      "received_bytes": 485240626,
+      "value": "(6388, 286896563)"
+    },
+    {
+      "arm": "eager",
+      "operation": "good region window",
+      "runs": 3,
+      "seconds": 11.644702774996404,
+      "peak_mib": 13030.97265625,
+      "received_bytes": 484932271,
+      "value": "(111, 59650, 7798696.682)"
+    },
+    {
+      "arm": "lazy",
+      "operation": "good region window",
+      "runs": 3,
+      "seconds": 7.0474526599864475,
+      "peak_mib": 1000.4140625,
+      "received_bytes": 474962565,
+      "value": "(111, 59650, 7798696.682)"
+    },
+    {
+      "arm": "eager",
+      "operation": "one session",
+      "runs": 3,
+      "seconds": 9.582245147961657,
+      "peak_mib": 12169.76953125,
+      "received_bytes": 725316533,
+      "value": "286896563"
+    },
+    {
+      "arm": "lazy",
+      "operation": "one session",
+      "runs": 3,
+      "seconds": 5.763034651987255,
+      "peak_mib": 4087.00390625,
+      "received_bytes": 483916387,
+      "value": "286896563"
+    },
+    {
+      "arm": "eager",
+      "operation": "duckdb window",
+      "runs": 3,
+      "seconds": 5.086612979997881,
+      "peak_mib": 4180.48046875,
+      "received_bytes": 518979586,
+      "value": "(5873, 2105849)"
+    },
+    {
+      "arm": "lazy",
+      "operation": "duckdb window",
+      "runs": 3,
+      "seconds": 0.7320402089972049,
+      "peak_mib": 502.96484375,
+      "received_bytes": 19134642,
+      "value": "(5873, 2105849)"
+    },
+    {
+      "arm": "eager",
+      "operation": "polars window",
+      "runs": 3,
+      "seconds": 5.977068851003423,
+      "peak_mib": 7471.41015625,
+      "received_bytes": 517123606,
+      "value": "(5873, 2105849)"
+    },
+    {
+      "arm": "lazy",
+      "operation": "polars window",
+      "runs": 3,
+      "seconds": 0.9300100569962524,
+      "peak_mib": 532.89453125,
+      "received_bytes": 19130993,
+      "value": "(5873, 2105849)"
+    }
+  ]
+}

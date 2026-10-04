@@ -87,6 +87,9 @@ the bucket sits relative to the machine; say so beside the numbers in `results/h
 
 ## Results
 
+[`SUMMARY.md`](SUMMARY.md) collects the current readings: the packet against pynwb and lazynwb,
+the trial analyses, listing and lazy reading, locally and from S3.
+
 `results/` holds one JSON file per run, named by date, and
 [`results/history.md`](results/history.md). The history table carries every reading quoted
 anywhere in the repository, with what it was measured on and whether its script survives.

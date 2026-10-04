@@ -1,0 +1,143 @@
+{
+  "environment": {
+    "date": "2026-10-04",
+    "commit": "84915050+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      3.23,
+      2.5,
+      2.07
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r164/776259/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      },
+      {
+        "path": "/home/galen.lynch/bench-cold/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "/home/galen.lynch/bench-cold/r164/776259/packet",
+    "nwb": "/home/galen.lynch/bench-cold/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+    "region": "MD",
+    "region_aws": "us-west-2",
+    "window_tick": [
+      361749256863,
+      361749569363
+    ],
+    "window_s": [
+      11575976.219616,
+      11575986.219616
+    ],
+    "unit_id": 1475,
+    "unit_label": "671",
+    "probe_name": "45883-2",
+    "unit_spikes": 1789113,
+    "unit_tables": [
+      "core.units",
+      "aind_unit_qc.metrics"
+    ],
+    "trial_tables": [
+      "core.intervals",
+      "dynamic_foraging.trials"
+    ]
+  },
+  "core_version": "0.18.0",
+  "packet_bytes": 1219662231,
+  "nwb_bytes": 8493662834,
+  "cells": [
+    {
+      "reader": "packet",
+      "operation": "list tables",
+      "runs": 3,
+      "seconds": 0.0028111139545217156,
+      "peak_mib": 168.84765625,
+      "received_bytes": 0,
+      "value": "57"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "list tables",
+      "runs": 3,
+      "seconds": 0.002984141989145428,
+      "peak_mib": 168.84765625,
+      "received_bytes": 0,
+      "value": "57"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "list tables",
+      "runs": 3,
+      "seconds": 0.8782138180104084,
+      "peak_mib": 195.921875,
+      "received_bytes": 2381,
+      "value": "3"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "list tables",
+      "runs": 3,
+      "seconds": 0.009007715038023889,
+      "peak_mib": 185.0390625,
+      "received_bytes": 66,
+      "value": "34"
+    },
+    {
+      "reader": "packet",
+      "operation": "list",
+      "runs": 0,
+      "error": "/home/galen.lynch/bench-cold/r164/776259/packet is still 3.9% resident after eviction; this filesystem ignores it"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "list",
+      "runs": 2,
+      "seconds": 0.024164239002857357,
+      "peak_mib": 173.85546875,
+      "received_bytes": 198,
+      "value": "406"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "list",
+      "runs": 3,
+      "seconds": 0.879113356990274,
+      "peak_mib": 193.9765625,
+      "received_bytes": 2772,
+      "value": "232"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "list",
+      "runs": 3,
+      "seconds": 0.007750387012492865,
+      "peak_mib": 184.99609375,
+      "received_bytes": 0,
+      "value": "211"
+    }
+  ]
+}
