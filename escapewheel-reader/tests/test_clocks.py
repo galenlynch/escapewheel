@@ -8,6 +8,7 @@ from escapewheel_reader import ResourceNotFoundError
 from escapewheel_reader.clocks import (
     BOUND,
     ClockGraph,
+    _Map,
     align,
     anchors,
     declared_bound,
@@ -289,3 +290,13 @@ def test_a_range_inverts_down_a_chain_onto_exactly_the_stored_ticks():
 def test_a_range_beyond_every_anchor_inverts_to_nothing():
     starts, _ = stored_intervals(CHAIN, 2, 1, (10**9, 10**9 + 10), 1.0)
     assert starts.size == 0
+
+
+@pytest.mark.parametrize("anchor_t", [ANCHOR_T, np.delete(ANCHOR_T, [3, 4])])
+def test_placement_matches_the_distance_to_the_nearest_anchor(anchor_t):
+    """With or without a hole, inside the anchors and past either end."""
+    edge = _Map(anchor_t, ANCHOR_P[: anchor_t.size], BOUND)
+    ticks = np.arange(anchor_t[0] - 3 * AP, anchor_t[-1] + 3 * AP, 997, dtype=np.int64)
+    _, placed = edge(ticks)
+    assert placed.tolist() == (np.interp(ticks, edge.knots, edge.distance) <= edge.span).tolist()
+    assert edge.holes == (anchor_t.size < ANCHOR_T.size)

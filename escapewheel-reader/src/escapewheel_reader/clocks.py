@@ -132,6 +132,8 @@ class _Map:
         distance[2:-2:2] = gap / 2
         distance[0] = distance[-1] = far
         self.knots, self.distance = knots, distance
+        # No tick between the first and last anchor lies farther than half a gap from one.
+        self.holes = bool(gap.max(initial=0.0) / 2 > self.span)
 
     def __call__(self, ticks: NDArray[np.int64]) -> tuple[NDArray[np.int64], NDArray[np.bool_]]:
         """Return the parent ticks and whether each is defined, as :func:`align` does."""
@@ -140,6 +142,9 @@ class _Map:
         # an order of magnitude faster than gathering the bracketing pairs and computing them
         # here; its search starts from the last answer, so ticks in order cost least.
         parent = np.rint(np.interp(ticks, anchor_t, anchor_p)).astype(np.int64)
+        # Without a hole every tick between the end anchors is placed, and one past an end is
+        # placed within the span of it, so the distance need not be interpolated at all.
+        keep = None if self.holes else np.ones(ticks.size, dtype=bool)
         # Outside the anchor span np.interp clamps to the terminal value, which is a wrong answer
         # rather than a missing one, so both ends are recomputed with the globally fitted rate,
         # applied from the terminal anchor's own parent tick. The fit's intercept is not
@@ -152,7 +157,9 @@ class _Map:
             if end.any():
                 offsets = (ticks[end] - tick).astype(np.float64)
                 parent[end] = parent_tick + np.rint(self.slope * offsets).astype(np.int64)
-        return parent, np.interp(ticks, self.knots, self.distance) <= self.span
+                if keep is not None:
+                    keep[end] = np.abs(offsets) <= self.span
+        return parent, np.interp(ticks, self.knots, self.distance) <= self.span if keep is None else keep
 
     def reach(self) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
         """Return the closed tick intervals this map places, found against :meth:`__call__` itself.
@@ -514,8 +521,8 @@ _CHUNK_ROWS = 1 << 20
 _NULL_CLOCK = -(2**62)
 
 
-def _clock_ids(column: Any) -> NDArray[np.int64]:
-    """Return each row's clock ID as int64, a null as `_NULL_CLOCK`.
+def _clock_ids(column: Any) -> NDArray[np.integer[Any]]:
+    """Return each row's clock ID in its stored width, a null as `_NULL_CLOCK` in int64.
 
     An identifier is an integer, so the ID is its own group key and nothing is hashed.
     """
@@ -523,7 +530,7 @@ def _clock_ids(column: Any) -> NDArray[np.int64]:
         column = column.dictionary.take(column.indices)
     if column.null_count:
         column = pc.fill_null(column.cast(pa.int64()), _NULL_CLOCK)
-    return np.asarray(column.to_numpy(zero_copy_only=False), dtype=np.int64)
+    return np.asarray(column.to_numpy(zero_copy_only=False))
 
 
 def stored_intervals(

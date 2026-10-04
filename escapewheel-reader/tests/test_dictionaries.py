@@ -50,3 +50,12 @@ def test_lookup_refuses_a_parent_holding_a_key_twice():
     parent = pa.table({"unit_id": pa.array([1, 1], I32), "clock_id": pa.array([5, 6], I32)})
     with pytest.raises(ValueError, match="more than one row"):
         lookup([ROWS.column("unit_id")], parent, ["unit_id"], "clock_id")
+
+
+@pytest.mark.parametrize("values", [pa.array([5, 6, 7], I32), pa.array(["a", "b", "c"])])
+def test_lookup_by_runs_matches_lookup_by_row(values):
+    """Keys stored in runs, as a child sorted by its parent's key is, take the per-run path."""
+    parent = pa.table({"unit_id": pa.array([3, 1, 2], I32), "value": values})
+    keys = pa.chunked_array([pa.array([1] * 5 + [2] * 3, I32), pa.array([2, 9, 9, 3], I32)])
+    expected = pa.chunked_array([values.take(pa.array([1] * 5 + [2] * 4 + [None] * 2 + [0]))]).combine_chunks()
+    assert lookup([keys], parent, ["unit_id"], "value").to_pylist() == expected.to_pylist()

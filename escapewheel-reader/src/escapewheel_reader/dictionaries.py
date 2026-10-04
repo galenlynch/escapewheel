@@ -98,6 +98,9 @@ def lookup(keys: Sequence[Any], parent: pa.Table, parent_keys: Sequence[str], co
         raise ValueError("the parent holds a key on more than one row")
     local = [plain(key).cast(parent.schema.field(name).type) for key, name in zip(keys, parent_keys, strict=True)]
     if len(local) == 1:
+        by_runs = _lookup_runs(local[0], parent.column(parent_keys[0]), parent.column(column))
+        if by_runs is not None:
+            return by_runs
         return pc.take(
             parent.column(column), pc.index_in(local[0], value_set=parent.column(parent_keys[0]).combine_chunks())
         )
@@ -108,6 +111,32 @@ def lookup(keys: Sequence[Any], parent: pa.Table, parent_keys: Sequence[str], co
         {**{k: parent.column(n) for k, n in zip(named, parent_keys, strict=True)}, "value": parent.column(column)}
     )
     return rows.join(values, keys=named, join_type="left outer").sort_by("row").column("value")
+
+
+#: Runs of one key, as a share of rows, past which :func:`lookup` hashes every row instead.
+CLUSTERED = 0.25
+
+
+def _lookup_runs(keys: Any, parent_keys: Any, parent_values: Any) -> Any:
+    """Look up each run of equal integer keys once and repeat its value, or None where that does not pay.
+
+    A child table stored by its parent's key, as spikes are by unit, holds a few thousand runs in
+    hundreds of millions of rows, and hashing every row costs four times this.
+    """
+    if not pa.types.is_integer(keys.type) or keys.null_count or len(keys) < 2:
+        return None
+    flat = keys.to_numpy()
+    starts = np.flatnonzero(flat[1:] != flat[:-1]) + 1
+    if len(starts) > CLUSTERED * len(flat):
+        return None
+    firsts = np.concatenate(([0], starts))
+    found = parent_values.take(
+        pc.index_in(pa.array(flat[firsts]), value_set=pa.chunked_array(parent_keys).combine_chunks())
+    )
+    lengths = np.diff(np.append(firsts, len(flat)))
+    if found.null_count or not (pa.types.is_integer(found.type) or pa.types.is_floating(found.type)):
+        return found.take(pa.array(np.repeat(np.arange(len(firsts)), lengths)))
+    return pa.array(np.repeat(found.to_numpy(), lengths), type=found.type)
 
 
 def key_filter(wanted: pa.Table, keys: Sequence[str]) -> tuple[pc.Expression, bool]:
