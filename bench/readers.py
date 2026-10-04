@@ -18,9 +18,9 @@ NWB is assumed to hold its spike times in seconds on the packet's reference cloc
 whether the readers agreed. `region units` counts the units with an electrode in one region and
 reads their trains; the NWB has no electrode coordinates of its own, so pynwb and lazynwb reach a
 unit's region through `location` where the units table has it and through its electrodes where not.
-`one train` asks for the train on the reference clock, which the packet reads from
-`analysis.spike_events`; `one train stored` asks for its ticks as recorded, from `core.spike_events`.
-DuckDB and the NWB readers hold one form each, so they answer both the same way.
+The packet's spikes are read from `analysis.spike_events`, already on the reference clock, except
+in `one train stored`, which reads one unit's ticks as recorded from `core.spike_events`; the NWB
+holds one form, so its readers answer both train operations the same way.
 
 Either store may be an `s3://` URI. A remote cell is cold because its process is fresh, and it
 records the bytes the host received. Credentials come from the environment: run
@@ -79,7 +79,7 @@ def run_packet(plan: dict, operation: str) -> object:
     if operation == "trials":
         return [packet.table(name).num_rows for name in plan["trial_tables"]]
     if operation == "every spike":
-        return pc.sum(packet.table("core.spike_events", columns=["t_tick"])["t_tick"]).as_py()
+        return pc.sum(packet.table("analysis.spike_events", columns=["t_tick"])["t_tick"]).as_py()
     if operation == "10 s window":
         lo, hi = plan["window_tick"]
         return packet.table("analysis.spike_events", columns=["t_tick"], t_tick=(lo, hi - 1)).num_rows
@@ -94,7 +94,7 @@ def run_packet(plan: dict, operation: str) -> object:
         inside = where.filter(pc.equal(where["region_label"], plan["region"]))["electrode_id"]
         links = packet.table("core.unit_electrodes", columns=["unit_id", "electrode_id"])
         units = pc.unique(links.filter(pc.is_in(links["electrode_id"], value_set=inside))["unit_id"])
-        spikes = packet.scan("core.spike_events").to_table(
+        spikes = packet.scan("analysis.spike_events").to_table(
             columns=["unit_id"], filter=ds.field("unit_id").isin(units.to_pylist())
         )
         return len(units), spikes.num_rows
@@ -102,7 +102,7 @@ def run_packet(plan: dict, operation: str) -> object:
 
 
 REGION_UNITS = (
-    "SELECT count(DISTINCT s.unit_id) AS units, count(*) AS spikes FROM core_spike_events s "
+    "SELECT count(DISTINCT s.unit_id) AS units, count(*) AS spikes FROM analysis_spike_events s "
     "WHERE s.unit_id IN (SELECT link.unit_id FROM core_unit_electrodes link "
     "JOIN core_electrode_coordinates c USING (session_id, electrode_id) WHERE c.region_label = '{region}')"
 )
@@ -121,9 +121,7 @@ def run_packet_sql(plan: dict, operation: str) -> object:
 
         # The reader leaves credentials to its caller; these are the environment's.
         connection = duckdb.connect()
-        connection.execute(
-            f"CREATE SECRET store (TYPE s3, PROVIDER credential_chain, CHAIN 'env', REGION '{plan['region_aws']}')"
-        )
+        connection.execute(benchkit.duckdb_s3_secret(plan["region_aws"]))
         return packet.duckdb(connection=connection, for_query=query).sql(query).to_arrow_table()
 
     if operation == "open":
@@ -135,13 +133,14 @@ def run_packet_sql(plan: dict, operation: str) -> object:
     if operation == "trials":
         return [sql(f"SELECT * FROM {name.replace('.', '_')}").num_rows for name in plan["trial_tables"]]
     if operation == "every spike":
-        return sql("SELECT sum(t_tick) AS s FROM core_spike_events")["s"][0].as_py()
+        return sql("SELECT sum(t_tick) AS s FROM analysis_spike_events")["s"][0].as_py()
     if operation == "10 s window":
         lo, hi = plan["window_tick"]
         query = f"SELECT count(*) AS n FROM analysis_spike_events WHERE t_tick >= {lo} AND t_tick < {hi}"
         return sql(query)["n"][0].as_py()
     if operation in ("one train", "one train stored"):
-        return sql(f"SELECT t_tick FROM core_spike_events WHERE unit_id = {plan['unit_id']}").num_rows
+        table = "analysis_spike_events" if operation == "one train" else "core_spike_events"
+        return sql(f"SELECT t_tick FROM {table} WHERE unit_id = {plan['unit_id']}").num_rows
     if operation == "region units":
         found = sql(REGION_UNITS.format(region=plan["region"])).to_pylist()[0]
         return found["units"], found["spikes"]

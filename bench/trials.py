@@ -299,9 +299,7 @@ def connection(plan: dict):
     con = duckdb.connect()
     if benchkit.is_remote(plan["packet"]):
         # The reader leaves credentials to its caller.
-        con.execute(
-            f"CREATE SECRET store (TYPE s3, PROVIDER credential_chain, CHAIN 'env', REGION '{plan['region_aws']}')"
-        )
+        con.execute(benchkit.duckdb_s3_secret(plan["region_aws"]))
     return con
 
 

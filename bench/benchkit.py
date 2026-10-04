@@ -50,6 +50,13 @@ def is_remote(store: str | Path) -> bool:
     return str(store).startswith(REMOTE)
 
 
+def duckdb_s3_secret(region: str) -> str:
+    """DuckDB's S3 secret: the environment's credentials where exported, else unsigned, for a public bucket."""
+    if os.environ.get("AWS_ACCESS_KEY_ID"):
+        return f"CREATE SECRET store (TYPE s3, PROVIDER credential_chain, CHAIN 'env', REGION '{region}')"
+    return f"CREATE SECRET store (TYPE s3, REGION '{region}')"
+
+
 def required_store(value: str | None, variable: str, what: str) -> str:
     """Resolve a local path or an object-store URI; a URI is checked by the first read of it."""
     raw = value or os.environ.get(variable)
