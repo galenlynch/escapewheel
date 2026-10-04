@@ -18,6 +18,9 @@ NWB is assumed to hold its spike times in seconds on the packet's reference cloc
 whether the readers agreed. `region units` counts the units with an electrode in one region and
 reads their trains; the NWB has no electrode coordinates of its own, so pynwb and lazynwb reach a
 unit's region through `location` where the units table has it and through its electrodes where not.
+`one train` asks for the train on the reference clock, which the packet reads from
+`analysis.spike_events`; `one train stored` asks for its ticks as recorded, from `core.spike_events`.
+DuckDB and the NWB readers hold one form each, so they answer both the same way.
 
 Either store may be an `s3://` URI. A remote cell is cold because its process is fresh, and it
 records the bytes the host received. Credentials come from the environment: run
@@ -50,6 +53,7 @@ OPERATIONS = (
     "every spike",
     "10 s window",
     "one train",
+    "one train stored",
     "region units",
 )
 
@@ -63,7 +67,7 @@ NWB_ARRAYS = ("spike_times", "electrodes", "extremum_channel", "waveform_mean", 
 def run_packet(plan: dict, operation: str) -> object:
     """One operation through the reader's PyArrow path."""
     import pyarrow.compute as pc
-    from escapewheel_reader import open_packet, spike_times
+    from escapewheel_reader import STORED, open_packet, spike_times
 
     packet = open_packet(plan["packet"])
     if operation == "open":
@@ -81,6 +85,8 @@ def run_packet(plan: dict, operation: str) -> object:
         return packet.table("analysis.spike_events", columns=["t_tick"], t_tick=(lo, hi - 1)).num_rows
     if operation == "one train":
         return spike_times(packet, plan["unit_id"]).num_rows
+    if operation == "one train stored":
+        return spike_times(packet, plan["unit_id"], clock=STORED).num_rows
     if operation == "region units":
         import pyarrow.dataset as ds
 
@@ -134,7 +140,7 @@ def run_packet_sql(plan: dict, operation: str) -> object:
         lo, hi = plan["window_tick"]
         query = f"SELECT count(*) AS n FROM analysis_spike_events WHERE t_tick >= {lo} AND t_tick < {hi}"
         return sql(query)["n"][0].as_py()
-    if operation == "one train":
+    if operation in ("one train", "one train stored"):
         return sql(f"SELECT t_tick FROM core_spike_events WHERE unit_id = {plan['unit_id']}").num_rows
     if operation == "region units":
         found = sql(REGION_UNITS.format(region=plan["region"])).to_pylist()[0]
@@ -178,7 +184,7 @@ def run_pynwb(plan: dict, operation: str) -> object:
     if operation == "10 s window":
         times = np.asarray(units.spike_times.data[:])
         return int(np.count_nonzero((times >= lo) & (times < hi)))
-    if operation == "one train":
+    if operation in ("one train", "one train stored"):
         # No index on the identifying columns, so finding a named unit is a scan of them.
         labels, probes = column("ks_unit_id"), column("device_name")
         found = np.flatnonzero((labels.astype(str) == plan["unit_label"]) & (probes == plan["probe_name"]))
@@ -234,7 +240,7 @@ def run_lazynwb(plan: dict, operation: str) -> object:
     if operation == "10 s window":
         inside = pl.element().filter((pl.element() >= lo) & (pl.element() < hi))
         return int(frame.select(pl.col("spike_times").list.eval(inside).list.len().sum()).collect().item())
-    if operation == "one train":
+    if operation in ("one train", "one train stored"):
         # The documented pattern: scalar predicates push down, then the ragged column is fetched.
         picked = frame.filter(
             pl.col("ks_unit_id") == int(plan["unit_label"]), pl.col("device_name") == plan["probe_name"]
