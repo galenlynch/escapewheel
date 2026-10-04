@@ -16,16 +16,18 @@ The operations:
 - `rate on clock` maps every spike of `core.spike_events` onto the reference clock and counts
   spikes per second, through `on_clock` over a stream against over a table. Peak memory is the
   difference.
-- `region window` is the spikes of one region's units in a 60 s window, in seconds: `where` and
-  `tick_range` on the stored ticks, then `on_clock` and `seconds`, against mapping the whole table
-  and filtering after.
+- `good region window` is the spikes of one region's single units in a 60 s window, in seconds,
+  answered whole inside the clock. Lazily, the label and the region narrow the small tables as
+  they are read, and the units they leave narrow the spike scan with `where` and `tick_range`
+  before `on_clock` and `seconds`; eagerly, every table is read whole, every spike mapped, and
+  the filters applied after.
 - `one session` reads the spikes of one packet of a two-packet `PacketSet`: `session_key` as a
   constraint, which skips the other packet's files, against reading both and filtering.
 - `duckdb window` and `polars window` count each unit's spikes in the window from
   `analysis.spike_events`, from `Packet.scan` against from a table read whole.
 
-The region's units and the window are settled before any clock starts, so both arms answer the
-same question from the same inputs. Either store may be an `s3://` URI; a remote cell records the
+The window is settled before any clock starts, so both arms answer the same question from the
+same inputs. Either store may be an `s3://` URI; a remote cell records the
 bytes the host received, so run nothing else on the network meanwhile.
 
     uv run python lazy.py --packet P [--other Q] [--json-out results/x.json]
@@ -48,7 +50,7 @@ OPERATIONS = (
     "first rows",
     "spikes per unit",
     "rate on clock",
-    "region window",
+    "good region window",
     "one session",
     "duckdb window",
     "polars window",
@@ -77,6 +79,17 @@ def summed(counts: list) -> tuple[int, int]:
     for count in counts:
         total[: len(count)] += count
     return int(np.count_nonzero(total)), int(total.sum())
+
+
+def chosen_units(units, links, coordinates) -> list[int]:
+    """The units with an electrode at a kept coordinate, from three tables already filtered."""
+    import pyarrow.compute as pc
+
+    keys = ["session_id", "electrode_id"]
+    inside = links.join(coordinates.select(keys), keys, join_type="inner").select(["session_id", "unit_id"])
+    return pc.unique(
+        inside.join(units.select(["session_id", "unit_id"]), ["session_id", "unit_id"], join_type="inner")["unit_id"]
+    ).to_pylist()
 
 
 def run(arm: str, plan: dict, operation: str) -> object:
@@ -108,22 +121,35 @@ def run(arm: str, plan: dict, operation: str) -> object:
             return summed([per_second(mapped["t_tick"], plan)])
         stream = on_clock(packet, packet.scanner(CORE, columns=["unit_id", "t_tick"]), resource_id=CORE)
         return summed([per_second(batch["t_tick"], plan) for batch in stream])
-    if operation == "region window":
-        units = plan["region_units"]
+    if operation == "good region window":
         if eager:
+            every = packet.table("core.units")
+            coordinates = packet.table("core.electrode_coordinates")
+            units = chosen_units(
+                every.filter(pc.equal(every["quality_label"], plan["quality"])),
+                packet.table("core.unit_electrodes"),
+                coordinates.filter(pc.equal(coordinates["region_label"], plan["region"])),
+            )
             mapped = on_clock(packet, packet.table(CORE, columns=["unit_id", "t_tick"]), resource_id=CORE)
             inside = pc.and_(
                 pc.is_in(mapped["unit_id"], pa.array(units, pa.int32())), pc.greater_equal(mapped["t_tick"], lo)
             )
             found = seconds(packet, mapped.filter(pc.and_(inside, pc.less(mapped["t_tick"], hi))))
         else:
+            units = chosen_units(
+                packet.table("core.units", columns=["session_id", "unit_id"], quality_label=plan["quality"]),
+                packet.table("core.unit_electrodes", columns=["session_id", "unit_id", "electrode_id"]),
+                packet.table(
+                    "core.electrode_coordinates", columns=["session_id", "electrode_id"], region_label=plan["region"]
+                ),
+            )
             narrowed = packet.scanner(
                 CORE,
                 columns=["unit_id", "t_tick"],
                 filter=where(unit_id=units) & tick_range(packet, CORE, (lo, hi - 1)),
             )
             found = seconds(packet, on_clock(packet, narrowed, resource_id=CORE)).read_all()
-        return found.num_rows, round(pc.sum(found["t_second"]).as_py(), 3)
+        return len(units), found.num_rows, round(pc.sum(found["t_second"]).as_py(), 3)
     if operation == "one session":
         pair = open_packets([plan["other"], plan["packet"]])
         if eager:
@@ -154,7 +180,7 @@ def run(arm: str, plan: dict, operation: str) -> object:
     raise ValueError(operation)
 
 
-def make_plan(packet_path: str, other: str | None, window: tuple[float, float], region: str) -> dict:
+def make_plan(packet_path: str, other: str | None, window: tuple[float, float], region: str, quality: str) -> dict:
     """Settle, from the packet, every value a child would otherwise read before its clock starts."""
     from escapewheel_reader import open_packet
 
@@ -164,20 +190,24 @@ def make_plan(packet_path: str, other: str | None, window: tuple[float, float], 
         "FROM core_sessions s JOIN core_clocks c ON c.clock_id = s.reference_clock_id"
     ).to_pylist()[0]
     rate = origin["num"] // origin["den"]
+    # Only to print beside the table; each arm resolves the units itself, inside its clock.
     units = packet.sql(
         "SELECT DISTINCT link.unit_id FROM core_unit_electrodes link "
-        f"JOIN core_electrode_coordinates c USING (session_id, electrode_id) WHERE c.region_label = '{region}'"
+        "JOIN core_electrode_coordinates c USING (session_id, electrode_id) "
+        "JOIN core_units u USING (session_id, unit_id) "
+        f"WHERE c.region_label = '{region}' AND u.quality_label = '{quality}'"
     )
     return {
         "packet": packet_path,
         "other": other,
         "region": region,
+        "quality": quality,
         "region_aws": os.environ.get("AWS_REGION", "us-west-2"),
         "t_zero": origin["t0"],
         "rate": rate,
         "window_tick": [origin["t0"] + round(offset * rate) for offset in window],
         "window_s": list(window),
-        "region_units": sorted(units["unit_id"].to_pylist()),
+        "chosen_units": units.num_rows,
     }
 
 
@@ -208,7 +238,8 @@ def main() -> None:
         metavar=("FROM_S", "TO_S"),
         help="window in seconds after the packet's time origin",
     )
-    parser.add_argument("--region", default="MD", help="region label for `region window`")
+    parser.add_argument("--region", default="MD", help="region label for `good region window`")
+    parser.add_argument("--quality", default="sua", help="quality label for `good region window`")
     parser.add_argument("--repeat", type=int, default=1, help="cold runs per cell; the median is reported")
     parser.add_argument("--memory-max", help="kill a cell at this size, such as 64G, rather than swap")
     parser.add_argument("--json-out", type=Path, help="write the result here as JSON")
@@ -219,7 +250,7 @@ def main() -> None:
         return child(*args.child, json.loads(args.plan))
 
     packet = benchkit.required_store(args.packet, "BENCH_PACKET", "the packet")
-    plan = make_plan(packet, args.other, tuple(args.window), args.region)
+    plan = make_plan(packet, args.other, tuple(args.window), args.region, args.quality)
     operations = [op for op in args.operations if op != "one session" or args.other]
     stores = [packet] + ([args.other] if args.other else [])
     result = {
@@ -230,7 +261,8 @@ def main() -> None:
         "cells": [],
     }
     print(f"packet {packet} (core {result['core_version']}, {result['packet_bytes'] / 1e9:.2f} GB)")
-    print(f"window {args.window[0]:g}-{args.window[1]:g} s; {len(plan['region_units'])} units in {args.region}\n")
+    chosen = f"{plan['chosen_units']} {args.quality} units in {args.region}"
+    print(f"window {args.window[0]:g}-{args.window[1]:g} s; {chosen}\n")
     remote = benchkit.is_remote(packet)
     print(f"{'operation':16s}" + "".join(f"{arm:>22s}" for arm in args.arms))
     for operation in operations:
