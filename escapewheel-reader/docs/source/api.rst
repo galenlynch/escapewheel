@@ -34,6 +34,7 @@ Reading tables
    where
    tick_range
    tick_bounds
+   ragged
    STORED
 
 Clocks and seconds
@@ -167,6 +168,7 @@ Errors
    NotAligned
    Unanchored
    AmbiguousRun
+   Unordered
    StaleSupport
    UnresolvableChannelIndex
    ClockMismatch
@@ -246,6 +248,7 @@ A module's page carries its docstring; its public names are documented above.
    packet
    packet_set
    predicates
+   gathering
    runs
    manifest
    resources

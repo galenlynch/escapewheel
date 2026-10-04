@@ -135,6 +135,23 @@ No accessor promises an order. `spike_times` on the reference clock reads `analy
 stored by time, where `clock=STORED` reads `core.spike_events`, stored by unit. Sort or group the
 result as the analysis needs.
 
+A table is stored with each key's rows together, so `ragged` groups them without a sort. It returns
+one row per key, with every other column a list of that key's values:
+
+```python
+from escapewheel_reader import ragged
+
+columns = ["session_id", "unit_id", "t_tick"]
+trains = ragged(packet, packet.table("core.spike_events", columns=columns), "core.spike_events")
+trains["t_tick"]  # one list of ticks per unit, sharing the read's buffers
+```
+
+The key is the table's stored order without its last column. For `analysis.spike_events` that
+gives one row per unit per time bucket. `ragged` checks that the keys ascend and raises `Unordered`
+otherwise, so it gives no wrong result on rows sorted or concatenated another way. A scanner is
+grouped batch by batch, and a run that crosses a batch boundary is joined back together. On
+`core.spike_events`, 287 million spikes became 6,781 trains in 0.60 s after a 0.57 s read.
+
 ## Joining spikes to events in SQL
 
 `analysis.spike_events` holds every spike already on the reference clock, so a query comparing

@@ -32,6 +32,8 @@ packet_set
     Many packets as one relation.
 predicates
     Row constraints as Arrow expressions, on stored values or on a clock.
+gathering
+    A table's rows gathered into one row per key.
 runs
     Which of several coexisting sortings or curations to read.
 manifest, resources, location
@@ -97,11 +99,13 @@ from .errors import (
     SourcesError,
     StaleSupport,
     Unanchored,
+    Unordered,
     UnresolvableAxis,
     UnresolvableChannelIndex,
     UnresolvedSource,
     UnsupportedCodecError,
 )
+from .gathering import ragged
 from .location import Location, check_sources, read_sources
 from .manifest import Manifest, RegistryBinding, Resource
 from .observation import (
@@ -165,6 +169,7 @@ __all__ = [
     "TableResource",
     "TickAxis",
     "Unanchored",
+    "Unordered",
     "UnresolvableAxis",
     "UnresolvableChannelIndex",
     "Unresolved",
@@ -194,6 +199,7 @@ __all__ = [
     "origin",
     "preferred_run",
     "quote",
+    "ragged",
     "rate",
     "rate_of",
     "read_pool",

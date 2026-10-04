@@ -11,7 +11,7 @@
 - :class:`Refused` -- the data is readable and the operation asked of it has no one right answer:
   :class:`NoTimeOrigin`, :class:`AmbiguousRun`, :class:`UnresolvableChannelIndex`,
   :class:`UnresolvableAxis`, :class:`MultiSessionUnresolved`, :class:`NotAligned`,
-  :class:`Unanchored`, :class:`ClockMismatch`, :class:`StaleSupport`.
+  :class:`Unanchored`, :class:`ClockMismatch`, :class:`Unordered`, :class:`StaleSupport`.
 - :class:`NotDeclared` -- what was asked for is declared by neither the packet nor its registry.
 - :class:`PhysicalProfileError` -- the bundled profile descriptor is malformed or inconsistent.
 """
@@ -254,6 +254,15 @@ class ClockMismatch(Refused, ValueError):
     """
 
 
+class Unordered(Refused, ValueError):
+    """A key's rows are not together, so gathering them would need a sort.
+
+    A table is stored with each key's rows as neighbours (Part 03 §5.3), and a reader may not
+    depend on that. Rows that were sorted otherwise, or concatenated from several reads, are
+    refused rather than sorted, which would hold the whole table to gather one key.
+    """
+
+
 class StaleSupport(Refused, ValueError):
     """A table carries a support that no longer describes it.
 
@@ -297,6 +306,7 @@ __all__ = [
     "SourcesError",
     "StaleSupport",
     "Unanchored",
+    "Unordered",
     "UnresolvableAxis",
     "UnresolvableChannelIndex",
     "UnresolvedSource",
