@@ -6,7 +6,7 @@ arms must return the same value.
 - `eager` reads the table the question touches whole into a `pyarrow.Table`, through
   `Packet.table` or `PacketSet.table`, and answers in memory.
 - `lazy` narrows before reading: a Scanner with a pushed-down filter, a mapping over a batch
-  stream, or a Dataset handed to DuckDB or Polars, which push their own filter into the scan.
+  stream, a Dataset handed to DuckDB, or a Polars scan, which push their own filter into the scan.
 
 The operations:
 
@@ -24,7 +24,8 @@ The operations:
 - `one session` reads the spikes of one packet of a two-packet `PacketSet`: `session_key` as a
   constraint, which skips the other packet's files, against reading both and filtering.
 - `duckdb window` and `polars window` count each unit's spikes in the window from
-  `analysis.spike_events`, from `Packet.scan` against from a table read whole.
+  `analysis.spike_events`, from `Packet.scan` or `TableResource.scan_polars` against from a table
+  read whole.
 
 The window is settled before any clock starts, so both arms answer the same question from the
 same inputs. Either store may be an `s3://` URI; a remote cell records the
@@ -169,7 +170,7 @@ def run(arm: str, plan: dict, operation: str) -> object:
         spikes = (
             pl.from_arrow(packet.table(ANALYSIS, columns=["unit_id", "t_tick"])).lazy()
             if eager
-            else pl.scan_pyarrow_dataset(packet.scan(ANALYSIS))
+            else packet.table_resource(ANALYSIS).scan_polars()
         )
         found = (
             spikes.filter(pl.col("t_tick").is_between(lo, hi - 1))

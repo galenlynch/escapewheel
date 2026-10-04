@@ -89,6 +89,7 @@ def readers(session: str, out: Path) -> None:
         *([f"{day}-readers-{session}-r164-list-packet.json"] if session == "776259" else []),
         f"{day}-readers-{session}-r164-final.json",
         f"{day}-readers-{session}-r164-region.json",
+        f"{day}-readers-{session}-r164-natural.json",
     )
     remote = cells(
         f"{nwb_day}-readers-{session}-r164-s3.json",
@@ -97,6 +98,7 @@ def readers(session: str, out: Path) -> None:
         f"{day}-readers-{session}-r164-s3-list-lazynwb.json",
         f"{day}-readers-{session}-r164-s3-final.json",
         f"{day}-readers-{session}-r164-s3-region.json",
+        f"{day}-readers-{session}-r164-s3-natural.json",
     )
 
     def packet(found, op):
@@ -128,7 +130,7 @@ def readers(session: str, out: Path) -> None:
 GO_CUE_ARMS = [
     ("packet aligned_spikes", "Escapewheel", "Escapewheel: aligned_spikes"),
     ("packet duckdb", "Escapewheel", "Escapewheel: DuckDB"),
-    ("packet dataset", "Escapewheel", "Escapewheel: PyArrow dataset"),
+    ("packet scanner", "Escapewheel", "Escapewheel: PyArrow scanner"),
     ("packet polars", "Escapewheel", "Escapewheel: Polars"),
     ("packet pandas", "Escapewheel", "Escapewheel: pandas"),
     ("lazynwb intervals", "lazynwb", "lazynwb: intervals"),
@@ -144,11 +146,12 @@ def go_cue(session: str, out: Path) -> None:
     analysis = "go-cue spikes"
     stores = {
         "seconds, local NVMe": cells(
-            f"2026-10-03-trials-{session}-r164.json", f"2026-10-03-trials-{session}-r164-final.json"
+            *(
+                f"2026-10-03-trials-{session}-r164{tag}.json"
+                for tag in ("", "-final", "-natural", *(["-natural-duckdb"] if session == "776259" else []))
+            )
         ),
-        "seconds, S3": cells(
-            f"2026-10-03-trials-{session}-r164-s3.json", f"2026-10-03-trials-{session}-r164-s3-final.json"
-        ),
+        "seconds, S3": cells(*(f"2026-10-03-trials-{session}-r164-s3{tag}.json" for tag in ("", "-final", "-natural"))),
     }
     fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
     rows = np.arange(len(GO_CUE_ARMS))
@@ -179,8 +182,8 @@ LAZY_OPERATIONS = [
 
 
 def lazy(session: str, out: Path) -> None:
-    local = cells(f"2026-10-03-lazy-{session}-r164.json", f"2026-10-03-lazy-{session}-r164-good.json")
-    remote = cells(f"2026-10-03-lazy-{session}-r164-s3.json", f"2026-10-03-lazy-{session}-r164-s3-good.json")
+    local = cells(*(f"2026-10-03-lazy-{session}-r164{tag}.json" for tag in ("", "-good", "-natural")))
+    remote = cells(*(f"2026-10-03-lazy-{session}-r164-s3{tag}.json" for tag in ("", "-good", "-natural")))
     labels = [label for _, label in LAZY_OPERATIONS]
     fig, axes = plt.subplots(1, 4, figsize=(18, 4.8), sharey=True)
     panels = [

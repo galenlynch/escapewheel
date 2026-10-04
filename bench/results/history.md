@@ -27,6 +27,17 @@ are in [`../SUMMARY.md`](../SUMMARY.md), built from these files:
   split the test into `is_in` tests of 50 values instead, the window through `spike_times` took
   2.18 s locally and 3.18 s from S3 on 776259, against 0.089 s and 1.15 s before it; those runs
   were not kept.
+- `*-<script>-<session>-r164[-s3]-natural*.json`: every arm whose code changed when each arm was
+  made to read as its library's users write it. The files record a dirty `5fed7043`, whose reader
+  is `b3843f9d`'s: the scripts ran uncommitted, as the commit after it records them. The shared NumPy analysis searches each unit's sorted train for
+  every cue instead of searching the cues for every spike; the packet's pandas and scanner arms read
+  `core.spike_events` onto the reference clock; pynwb reads its spike column whole and its DuckDB
+  arm takes the ASOF join when no spike can fall in two windows; lazynwb's `get_df` reads
+  `spike_times` alone; the units in MD go through `Packet.table` predicates; and the lazy Polars
+  window scans through `scan_polars`. They supersede the same cells of `-final.json` and of the
+  NWB runs above, and the whole-table pandas, read_pool and `needed columns` arms were dropped.
+  `-natural-duckdb.json` is pynwb's DuckDB arm on 776259 from the NVMe, rerun after that arm
+  changed mid-run.
 - `*-lazy-<session>-r164[-s3].json`: the other lazy operations, at `42ae6f0a` locally and `c87fe92d`
   from S3. The local file also holds an earlier `region window` operation, superseded by
   `good region window`.

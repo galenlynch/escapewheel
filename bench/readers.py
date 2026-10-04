@@ -121,16 +121,12 @@ def run_packet(plan: dict, operation: str) -> object:
     if operation == "one train stored":
         return spike_times(packet, plan["unit_id"], clock=STORED).num_rows
     if operation == "region units":
-        import pyarrow.dataset as ds
-
-        where = packet.table("core.electrode_coordinates", columns=["electrode_id", "region_label"])
-        inside = where.filter(pc.equal(where["region_label"], plan["region"]))["electrode_id"]
-        links = packet.table("core.unit_electrodes", columns=["unit_id", "electrode_id"])
-        units = pc.unique(links.filter(pc.is_in(links["electrode_id"], value_set=inside))["unit_id"])
-        spikes = packet.scan("core.spike_events").to_table(
-            columns=["unit_id"], filter=ds.field("unit_id").isin(units.to_pylist())
+        inside = packet.table("core.electrode_coordinates", columns=["electrode_id"], region_label=plan["region"])
+        links = packet.table(
+            "core.unit_electrodes", columns=["unit_id"], electrode_id=inside["electrode_id"].to_pylist()
         )
-        return len(units), spikes.num_rows
+        units = pc.unique(links["unit_id"]).to_pylist()
+        return len(units), packet.table("core.spike_events", columns=["unit_id"], unit_id=units).num_rows
     raise ValueError(operation)
 
 

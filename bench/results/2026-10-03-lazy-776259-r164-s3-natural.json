@@ -1,0 +1,75 @@
+{
+  "environment": {
+    "date": "2026-10-04",
+    "commit": "5fed7043+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      2.64,
+      1.05,
+      2.35
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_776259_2025-04-09_17-25-12/packet",
+    "other": null,
+    "region": "MD",
+    "quality": "sua",
+    "region_aws": "us-west-2",
+    "t_zero": 361746131863,
+    "rate": 31250,
+    "window_tick": [
+      361749256863,
+      361751131863
+    ],
+    "window_s": [
+      100.0,
+      160.0
+    ],
+    "chosen_units": 111
+  },
+  "core_version": "0.18.0",
+  "packet_bytes": 1219662231,
+  "cells": [
+    {
+      "arm": "eager",
+      "operation": "polars window",
+      "runs": 3,
+      "seconds": 6.0027138339937665,
+      "peak_mib": 7447.875,
+      "received_bytes": 516809628,
+      "value": "(5873, 2105849)"
+    },
+    {
+      "arm": "lazy",
+      "operation": "polars window",
+      "runs": 3,
+      "seconds": 0.8820657409960404,
+      "peak_mib": 332.08984375,
+      "received_bytes": 18053600,
+      "value": "(5873, 2105849)"
+    }
+  ]
+}
