@@ -8,39 +8,40 @@ trial's cue. Its value is the trials with a lick and the median and mean latency
 
 `go-cue rasters` is what a raster plot of every unit draws: each spike within the closed window
 [-1, +2] s of a go cue, as its unit, its trial and its time from the cue in seconds, one row per
-(spike, cue) pair, grouped by unit and then trial so each unit's raster is one stretch of rows. Any
-table-like form serves, flat or a list per (unit, trial). No two cues in the sessions measured lie
-within a window's width, so no spike belongs to two windows; an arm relying on that checks it and
-refuses otherwise. Its value is the pairs, the units with any, the sums of squared counts per unit
-and per (unit, trial), the summed seconds from cue, and whether the rows came grouped.
+(spike, cue) pair, each unit's together so its raster is drawn without a pass over every unit's,
+and trials in any order, since a scatter places a spike by its trial rather than its row. Any
+table-like form serves: flat rows, a list of (trial, t) per unit, or a list of t per (unit, trial).
+Its value is the pairs, the units with any, the sums of squared counts per unit and per (unit,
+trial), the summed seconds from cue, and whether each unit's rows came together.
 
 The arms:
 
-- pandas: the columns each analysis uses read into pandas, each spike's cue found by
-  `np.searchsorted` and each cue's lick by `merge_asof`. The packet's arm reads
-  `core.spike_events` through `Packet.table` onto the reference clock in seconds; it and the NWB
-  are stored unit by unit, so the raster comes out grouped. pynwb reads its trials with
+- pandas: the columns each analysis uses read into pandas, and each cue's lick found by
+  `merge_asof`. Spikes are stored as ascending runs, so each run is searched for the windows of the
+  cues that can reach it, and the slices found, not the spikes, are ordered by unit. The packet's runs are
+  `analysis.spike_events`'s, one per unit per time bucket and already on the reference clock, read
+  through `Packet.table`; the NWB's are its units' trains. pynwb reads its trials with
   `to_dataframe` and its spikes as the ragged column's flat data and index, and lazynwb reads the
   units' `spike_times` alone with `get_df`.
-- PyArrow: the packet through `Packet.scanner`, its batches handed to NumPy. Spikes come from
-  `analysis.spike_events`, already on the reference clock, where each unit is an ascending run per
-  time bucket: every run is searched for the cues near it at once, and the slices found, not the
-  spikes, are ordered into the raster.
+- PyArrow: the packet through `Packet.scanner`, its batches handed to the pandas arms' run search.
 - Polars: the packet through `TableResource.scan_polars` and the NWB through lazynwb's `scan_nwb`.
 - SQL: the packet through DuckDB, the NWB through lazynwb's Polars `SQLContext`, and pynwb's frames
   through DuckDB.
-
-The Polars and SQL arms join spikes to cues on bins twice the window's width, each cue entered
-under the bin its window opens in and the next, and keep the exact window after: a hash join, where
-an ASOF join sorts every spike and a range join tests every pair. Each orders by unit and trial.
-- Helpers, for rasters only: the reader's `aligned_spikes`, whose window is symmetric, so it is
-  asked for +-2 s and narrowed to -1 s, and which names a trial by its cue's tick; and lazynwb's
+- Helpers: the reader's `aligned_spikes`, whose window is symmetric, so it is asked for +-2 s and
+  narrowed to -1 s, and which names a trial by its cue's tick; and lazynwb's
   `get_spike_times_in_intervals`, which returns a list per (unit, trial) and whose window excludes
   its end.
 
-The packet's Polars, PyArrow and SQL arms read lick and cue ticks as stored, which holds because
-both are on the reference clock in the packets measured. Every other convention, cold cells,
-stores and credentials, is `readers.py`'s.
+The Polars and SQL arms join spikes to cues on bins twice the window's width, each cue entered
+under the bin its window opens in and the next, and keep the exact window after: a hash join, where
+an ASOF join sorts every spike and a range join tests every pair. Each then gathers a unit's
+rows by whichever its engine does faster: DuckDB lists each unit's (trial, t) pairs, Polars sorts
+by unit, and Polars SQL, which has no struct constructor, lists the trials and the times side by
+side.
+
+The packet's arms read lick and cue ticks as stored, which holds because both are on the reference
+clock in the packets measured. Every other convention, cold cells, stores and credentials, is
+`readers.py`'s.
 
     uv run python trials.py --packet P --nwb N [--json-out results/x.json]
     uv run python trials.py --child ARM ANALYSIS --plan PLAN   # one cell, as JSON
@@ -70,16 +71,6 @@ NWB_LICKS = ("left_lick_time", "right_lick_time")
 
 
 # What each arm returns is checked here, after its clock stops; how it gets there is its own.
-
-
-def disjoint(go, before, after) -> None:
-    """Refuse cues whose windows overlap, where a spike would belong to two and an as-of match finds one."""
-    import numpy as np
-
-    go = np.sort(np.asarray(go, dtype=float))
-    gaps = np.diff(go[~np.isnan(go)])
-    if len(gaps) and gaps.min() <= before + after:
-        raise ValueError(f"two go cues lie {gaps.min()} apart, inside one window's width")
 
 
 def lick_summary(found, per_second: float = 1.0) -> dict:
@@ -113,37 +104,90 @@ def pandas_latencies(go, licks):
     return (found["t"] - found["g"]).to_numpy()
 
 
-def pandas_raster(spikes, trials):
-    """Each spike's cue found by `np.searchsorted`, the spikes' own order kept.
+def pandas_raster(spikes, trials, before, after, per_second: float = 1.0, runs=("unit",)):
+    """The raster as a DataFrame, from `spikes` holding `unit`, `t` and `runs`, and `trials` holding `trial` and `g`.
 
-    `spikes` holds `unit` and `t`, `trials` holds `trial` and `g`, all in seconds. The latest cue
-    whose window has opened is the only one that can hold a spike, since windows do not overlap.
-    An `IntervalIndex` lookup answers the same a hundred times slower.
+    A run is a stretch of rows where every `runs` column holds one value, and `t` ascends within it.
     """
     import numpy as np
     import pandas as pd
 
     trials = trials.dropna(subset="g").sort_values("g")
-    go = trials["g"].to_numpy()
-    disjoint(go, BEFORE, AFTER)
-    t = spikes["t"].to_numpy()
-    cue = np.searchsorted(go, t + BEFORE, side="right") - 1
-    hit = (cue >= 0) & (t <= go[np.maximum(cue, 0)] + AFTER)
-    cue = cue[hit]
-    return pd.DataFrame(
-        {
-            "unit": spikes["unit"].to_numpy()[hit],
-            "trial": trials["trial"].to_numpy()[cue],
-            "t": t[hit] - go[cue],
-        }
+    keys = [spikes[name].to_numpy() for name in runs]
+    starts = np.flatnonzero(np.logical_or.reduce([key[1:] != key[:-1] for key in keys])) + 1
+    found = run_raster(
+        spikes["t"].to_numpy(),
+        spikes["unit"].to_numpy(),
+        np.concatenate(([0], starts)),
+        trials["g"].to_numpy(),
+        trials["trial"].to_numpy(),
+        before,
+        after,
+        per_second,
     )
+    return pd.DataFrame(found)
+
+
+def run_raster(times, units, starts, go, trial, before, after, per_second: float = 1.0) -> dict:
+    """The raster from spikes stored as ascending runs beginning at `starts`, with `go` ascending."""
+    return grouped_rows(*run_slices(times, units, starts, go, before, after), go, trial, per_second)
+
+
+def run_slices(times, units, starts, go, before, after):
+    """Each run's spikes in each cue window reaching it, as slices: unit, cue position, length, and ticks from cue.
+
+    Each run is searched only for the windows of the cues that can reach it, so a spike outside
+    every window is never touched; searching the cues once per spike instead costs more than the
+    rest of the analysis.
+    """
+    import numpy as np
+
+    if not len(times):
+        empty = np.zeros(0, dtype=np.int64)
+        return units[:0], empty, empty, times[:0]
+    stops = np.append(starts[1:], len(times))
+    opened, closed = go - before, go + after
+    first = np.searchsorted(closed, times[starts], side="left")
+    last = np.searchsorted(opened, times[stops - 1], side="right")
+    lo, hi, cue = [np.zeros(0, dtype=np.int64)], [np.zeros(0, dtype=np.int64)], [np.zeros(0, dtype=np.int64)]
+    for a, b, f, z in zip(starts.tolist(), stops.tolist(), first.tolist(), last.tolist(), strict=True):
+        if z > f:
+            run = times[a:b]
+            lo.append(a + np.searchsorted(run, opened[f:z], side="left"))
+            hi.append(a + np.searchsorted(run, closed[f:z], side="right"))
+            cue.append(np.arange(f, z))
+    lo, cue = np.concatenate(lo), np.concatenate(cue)
+    lengths = np.concatenate(hi) - lo
+    kept = lengths > 0
+    lo, cue, lengths = lo[kept], cue[kept], lengths[kept]
+    return units[lo], cue, lengths, times[spans(lo, lengths)] - np.repeat(go[cue], lengths)
+
+
+def grouped_rows(unit, cue, lengths, offsets, go, trial, per_second: float = 1.0) -> dict:
+    """Flat raster rows from :func:`run_slices`, each unit's together: the slices are ordered, not the spikes."""
+    import numpy as np
+
+    order = np.argsort(unit, kind="stable")
+    starts, lengths = (np.cumsum(lengths) - lengths)[order], lengths[order]
+    return {
+        "unit": np.repeat(unit[order], lengths),
+        "trial": np.repeat(trial[cue[order]], lengths),
+        "t": offsets[spans(starts, lengths)] / per_second,
+    }
+
+
+def spans(starts, lengths):
+    """Positions covering each span `[start, start + length)`, in turn."""
+    import numpy as np
+
+    return np.repeat(starts - (np.cumsum(lengths) - lengths), lengths) + np.arange(lengths.sum())
 
 
 def raster_summary(found) -> dict:
-    """What a raster holds, from any table-like form with `unit`, `trial` and `t`, flat or a list per (unit, trial).
+    """What a raster holds, from flat rows, lists of (trial, t) or of each per unit, or lists of t per (unit, trial).
 
     Counts per unit and per (unit, trial) agree across arms whatever they number units and trials
-    by; `ordered` says each unit's raster is one stretch of rows, its trials ascending.
+    by.
     """
     import numpy as np
     import polars as pl
@@ -156,14 +200,17 @@ def raster_summary(found) -> dict:
         frame = pl.DataFrame(found)
     else:
         frame = pl.from_arrow(found)
+    unit = frame["unit"].to_numpy()
+    grouped = len(unit) == 0 or int((unit[1:] != unit[:-1]).sum()) + 1 == len(np.unique(unit))
+    if "spikes" in frame.columns:
+        frame = frame.explode("spikes").unnest("spikes")
+    elif frame.schema["trial"] == pl.List:
+        frame = frame.explode("trial", "t")
     if frame.schema["t"] == pl.List:
         frame = frame.filter(pl.col("t").list.len() > 0)
         cells = frame.select("unit", "trial", n=pl.col("t").list.len(), s=pl.col("t").list.sum())
-        unit, trial = cells["unit"].to_numpy(), cells["trial"].to_numpy()
     else:
-        unit, trial = frame["unit"].to_numpy(), frame["trial"].to_numpy()
         cells = frame.group_by("unit", "trial").agg(n=pl.len(), s=pl.col("t").sum())
-    step = (unit[1:] > unit[:-1]) | ((unit[1:] == unit[:-1]) & (trial[1:] >= trial[:-1]))
     per_unit = cells.group_by("unit").agg(pl.col("n").sum())["n"].to_numpy()
     n = cells["n"].to_numpy()
     return {
@@ -173,7 +220,7 @@ def raster_summary(found) -> dict:
         "cells": len(n),
         "cell_sq": int((n.astype(np.int64) ** 2).sum()),
         "offset_s": round(float(cells["s"].sum()), 1),
-        "ordered": bool(step.all()),
+        "grouped": bool(grouped),
     }
 
 
@@ -191,9 +238,10 @@ def open_packet(plan: dict):
 
 
 def run_packet_pandas(plan: dict, analysis: str) -> object:
-    """The columns each analysis uses into pandas, read by `Packet.table` onto the reference clock and in seconds.
+    """The columns each analysis uses into pandas, read by `Packet.table`.
 
-    Spikes come from `analysis.spike_events`, already on the reference clock.
+    Licks and cues are read onto the reference clock in seconds; spikes come from
+    `analysis.spike_events`, already on it, with the bucket that delimits each unit's run.
     """
     import pandas as pd
 
@@ -206,11 +254,16 @@ def run_packet_pandas(plan: dict, analysis: str) -> object:
     if analysis == "lick latency":
         licks = read("core.events", ["stream_id", "t_tick"], stream_id=lick_streams(packet))
         return lick_summary(pandas_latencies(trials["go_cue_start_second"], licks["t_second"]))
-    # Stored by unit and then time, so the raster comes out grouped with no sort.
-    spikes = read("core.spike_events", ["unit_id", "t_tick"])
+    rate = plan["rate"]
+    cues = packet.table(plan["trials"], columns=["trial_id", "go_cue_start_tick"]).to_pandas()
+    spikes = packet.table(SPIKES, columns=["time_bucket_tick", "unit_id", "t_tick"]).to_pandas()
     return pandas_raster(
-        spikes.rename(columns={"unit_id": "unit", "t_second": "t"}),
-        trials.rename(columns={"trial_id": "trial", "go_cue_start_second": "g"}),
+        spikes.rename(columns={"time_bucket_tick": "bucket", "unit_id": "unit", "t_tick": "t"}),
+        cues.rename(columns={"trial_id": "trial", "go_cue_start_tick": "g"}),
+        BEFORE * rate,
+        AFTER * rate,
+        rate,
+        runs=("bucket", "unit"),
     )
 
 
@@ -255,7 +308,6 @@ def polars_raster(spikes, trials, before, after, per_second: float = 1.0):
     """The raster as a Polars plan over (unit, t), joined to the (trial, g) cues on bins."""
     import polars as pl
 
-    disjoint(trials["g"], before, after)
     # Twice the window, so a float rounding at a bin's edge cannot carry a window into a third bin.
     width = 2 * (before + after)
     t, g = pl.col("t"), pl.col("g")
@@ -265,7 +317,7 @@ def polars_raster(spikes, trials, before, after, per_second: float = 1.0):
         .join(cues, on="bin")
         .filter(t.is_between(g - before, g + after))
         .select("unit", "trial", t=(t - g) / per_second)
-        .sort("unit", "trial")
+        .sort("unit")
         .collect(engine="streaming")
     )
 
@@ -293,61 +345,17 @@ def run_packet_scanner(plan: dict, analysis: str) -> object:
         first = licks[np.minimum(after, len(licks) - 1)]
         found = (after < len(licks)) & (first < np.append(go[1:], np.iinfo(np.int64).max))
         return lick_summary(first[found] - go[found], rate)
-    found = [
-        windows(batch["unit_id"].to_numpy(), batch["t_tick"].to_numpy(), go, BEFORE * rate, AFTER * rate)
-        for batch in packet.scanner(SPIKES, columns=["unit_id", "t_tick"]).to_batches()
-    ]
-    return pa.table(
-        raster(*(np.concatenate(part) for part in zip(*found, strict=True)), trials["trial_id"].to_numpy(), rate)
-    )
-
-
-def spans(starts, lengths):
-    """Positions covering each span `[start, start + length)`, in turn."""
-    import numpy as np
-
-    return np.repeat(starts - (np.cumsum(lengths) - lengths), lengths) + np.arange(lengths.sum())
-
-
-def windows(units, times, go, before, after):
-    """Each run's spikes in each cue window reaching it, as slices: unit, cue position, length, and ticks from cue.
-
-    `analysis.spike_events` holds each unit as an ascending run per time bucket. A key offsetting
-    each run past the last searches every run's windows in one call, and ordering the slices
-    rather than the spikes groups the raster.
-    """
-    import numpy as np
-
-    if not len(times):
-        empty = np.zeros(0, dtype=np.int64)
-        return empty, empty, empty, empty
-    starts = np.concatenate(([0], np.flatnonzero((units[1:] != units[:-1]) | (times[1:] < times[:-1])) + 1))
-    ends = np.append(starts[1:], len(times))
-    first = np.searchsorted(go, times[starts] - after, side="left")
-    near = np.maximum(np.searchsorted(go, times[ends - 1] + before, side="right") - first, 0)
-    run, cue = np.repeat(np.arange(len(starts)), near), spans(first, near)
-    origin = int(times.min())
-    width = int(times.max()) - origin + 1
-    key = np.repeat(np.arange(len(starts)) * width, ends - starts) + (times - origin)
-    lo = np.searchsorted(key, run * width + np.clip(go[cue] - before - origin, 0, width - 1), side="left")
-    hi = np.searchsorted(key, run * width + np.clip(go[cue] + after - origin, 0, width - 1), side="right")
-    lengths = hi - lo
-    kept = lengths > 0
-    lo, lengths, run, cue = lo[kept], lengths[kept], run[kept], cue[kept]
-    return units[starts][run], cue, lengths, times[spans(lo, lengths)] - np.repeat(go[cue], lengths)
-
-
-def raster(unit, cue, lengths, offsets, trial, per_second):
-    """The slices of :func:`windows` ordered by unit and then trial, a stable sort keeping each unit's runs in time."""
-    import numpy as np
-
-    order = np.lexsort((cue, unit))
-    starts, lengths = (np.cumsum(lengths) - lengths)[order], lengths[order]
-    return {
-        "unit": np.repeat(unit[order], lengths),
-        "trial": np.repeat(trial[cue[order]], lengths),
-        "t": offsets[spans(starts, lengths)] / per_second,
-    }
+    trial = trials["trial_id"].to_numpy()
+    found = []
+    # A run cut across two batches yields two slices of one window, which the grouping keeps together.
+    for batch in packet.scanner(SPIKES, columns=["time_bucket_tick", "unit_id", "t_tick"]).to_batches():
+        if batch.num_rows:
+            bucket, unit = batch["time_bucket_tick"].to_numpy(), batch["unit_id"].to_numpy()
+            starts = np.flatnonzero((bucket[1:] != bucket[:-1]) | (unit[1:] != unit[:-1])) + 1
+            starts = np.concatenate(([0], starts))
+            found.append(run_slices(batch["t_tick"].to_numpy(), unit, starts, go, BEFORE * rate, AFTER * rate))
+    parts = [np.concatenate(part) for part in zip(*found, strict=True)]
+    return pa.table(grouped_rows(*parts, go, trial, rate))
 
 
 LICK_SQL = """
@@ -366,13 +374,12 @@ FROM analysis_spike_events s
 JOIN (SELECT trial_id, go_cue_start_tick AS g, (go_cue_start_tick - {before}) // {width} + k AS bin
       FROM {trials}, (VALUES (0), (1)) AS shift(k)) c
   ON s.t_tick // {width} = c.bin AND s.t_tick BETWEEN c.g - {before} AND c.g + {after}
-ORDER BY unit, trial
 """
 
-CUE_GAP_SQL = """
-SELECT min(d) FROM (
-  SELECT go_cue_start_tick - lag(go_cue_start_tick) OVER (ORDER BY go_cue_start_tick) AS d FROM {trials})
-"""
+
+# Each unit's (trial, t) pairs as one list: faster than sorting the rows by unit, and one list
+# keeps each pair together where two would leave their orders to the engine.
+BY_UNIT = "SELECT unit, list({{'trial': trial, 't': t}}) AS spikes FROM ({query}) GROUP BY unit"
 
 
 def connection(plan: dict):
@@ -397,12 +404,9 @@ def run_packet_duckdb(plan: dict, analysis: str) -> object:
         return lick_summary(found["latency"].to_numpy(), rate)
     before, after = BEFORE * rate, AFTER * rate
     packet.duckdb(connection=con, tables=("analysis.spike_events", plan["trials"]))
-    gap = con.sql(CUE_GAP_SQL.format(trials=trials)).fetchone()[0]
-    if gap is not None and gap <= before + after:
-        raise ValueError(f"two go cues lie {gap} ticks apart, inside one window's width")
     width = 2 * (before + after)
     query = SPIKE_SQL.format(trials=trials, before=before, after=after, width=width, rate=rate)
-    return con.sql(query).to_arrow_table()
+    return con.sql(BY_UNIT.format(query=query)).to_arrow_table()
 
 
 def run_packet_aligned(plan: dict, analysis: str) -> object:
@@ -417,8 +421,7 @@ def run_packet_aligned(plan: dict, analysis: str) -> object:
     found = (
         aligned_spikes(packet, "go_cue", half, connection=con)
         .filter(f"t_rel_tick BETWEEN {-BEFORE * rate} AND {AFTER * rate}")
-        .select(f"unit_id AS unit, event_tick AS trial, t_rel_tick / {rate} AS t")
-        .order("unit, trial")
+        .aggregate(f"unit_id AS unit, list({{'trial': event_tick, 't': t_rel_tick / {rate}}}) AS spikes", "unit_id")
         .to_arrow_table()
     )
     return found
@@ -459,8 +462,9 @@ def run_pynwb_pandas(plan: dict, analysis: str) -> object:
     trials, other = nwb_frames(plan, analysis)
     if analysis == "lick latency":
         return lick_summary(pandas_latencies(trials["goCue_start_time"], other["t"]))
-    # Stored unit by unit and in time within each, so the raster comes out grouped with no sort.
-    return pandas_raster(other, pd.DataFrame({"trial": trials.index, "g": trials["goCue_start_time"].to_numpy()}))
+    # Stored unit by unit, each train ascending, so a unit is a run.
+    trials = pd.DataFrame({"trial": trials.index, "g": trials["goCue_start_time"].to_numpy()})
+    return pandas_raster(other, trials, BEFORE, AFTER)
 
 
 NWB_LICK_SQL = """
@@ -476,7 +480,6 @@ FROM spikes s
 JOIN (SELECT trial, goCue_start_time AS g, floor((goCue_start_time - {before}) / {width})::BIGINT + k AS bin
       FROM trials, (VALUES (0), (1)) AS shift(k)) c
   ON floor(s.t / {width})::BIGINT = c.bin AND s.t BETWEEN c.g - {before} AND c.g + {after}
-ORDER BY s.unit, c.trial
 """
 
 
@@ -491,11 +494,8 @@ def run_pynwb_duckdb(plan: dict, analysis: str) -> object:
         con.register("licks", other)
         return lick_summary(con.sql(NWB_LICK_SQL).fetchnumpy()["latency"])
     con.register("spikes", other)
-    gap = con.sql(CUE_GAP_SQL.format(trials="trials").replace("go_cue_start_tick", "goCue_start_time")).fetchone()[0]
-    if gap is not None and gap <= BEFORE + AFTER:
-        raise ValueError(f"two go cues lie {gap} s apart, inside one window's width")
     width = 2 * (BEFORE + AFTER)
-    return con.sql(NWB_SPIKE_SQL.format(before=BEFORE, after=AFTER, width=width)).to_arrow_table()
+    return con.sql(BY_UNIT.format(query=NWB_SPIKE_SQL.format(before=BEFORE, after=AFTER, width=width))).to_arrow_table()
 
 
 def quiet_lazynwb():
@@ -532,7 +532,7 @@ def run_lazynwb_pandas(plan: dict, analysis: str) -> object:
     trains = list(units["spike_times"])
     unit = np.repeat(np.arange(len(trains)), [len(train) for train in trains])
     spikes = pd.DataFrame({"unit": unit, "t": np.concatenate(trains)})
-    return pandas_raster(spikes, pd.DataFrame({"trial": trials["_table_index"].to_numpy(), "g": go}))
+    return pandas_raster(spikes, pd.DataFrame({"trial": trials["_table_index"].to_numpy(), "g": go}), BEFORE, AFTER)
 
 
 def run_lazynwb_polars(plan: dict, analysis: str) -> object:
@@ -586,8 +586,9 @@ JOIN (SELECT _table_index AS trial, goCue_start_time AS g,
       FROM trials) c
   ON s.bin = c.bin
 WHERE s.t >= c.g - {before} AND s.t <= c.g + {after}
-ORDER BY s.unit, c.trial
 """
+
+POLARS_BY_UNIT = "SELECT unit, ARRAY_AGG(trial) AS trial, ARRAY_AGG(t) AS t FROM ({query}) GROUP BY unit"
 
 
 def run_lazynwb_sql(plan: dict, analysis: str) -> object:
@@ -599,7 +600,8 @@ def run_lazynwb_sql(plan: dict, analysis: str) -> object:
     )
     if analysis == "lick latency":
         return lick_summary(context.execute(POLARS_LICK_SQL).collect()["latency"].to_numpy())
-    return context.execute(POLARS_SPIKE_SQL.format(before=BEFORE, after=AFTER, width=2 * (BEFORE + AFTER))).collect()
+    query = POLARS_SPIKE_SQL.format(before=BEFORE, after=AFTER, width=2 * (BEFORE + AFTER))
+    return context.execute(POLARS_BY_UNIT.format(query=query)).collect()
 
 
 def run_lazynwb_intervals(plan: dict, analysis: str) -> object:

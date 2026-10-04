@@ -1,0 +1,159 @@
+{
+  "environment": {
+    "date": "2026-10-04",
+    "commit": "94b68298+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      4.0,
+      3.45,
+      1.99
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r164/776259/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      },
+      {
+        "path": "/home/galen.lynch/bench-cold/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "/home/galen.lynch/bench-cold/r164/776259/packet",
+    "nwb": "/home/galen.lynch/bench-cold/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+    "region_aws": "us-west-2",
+    "trials": "dynamic_foraging.trials",
+    "clock": 12,
+    "rate": 31250
+  },
+  "core_version": "0.18.0",
+  "memory_max": "80G",
+  "once_above": null,
+  "cells": [
+    {
+      "arm": "packet pandas",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 3.4797058700351045,
+      "peak_mib": 13076.9765625,
+      "received_bytes": 3847,
+      "value": "{'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'cells': 3509227, 'cell_sq': 25500533250, 'offset_s': 48471239.7, 'grouped': True}"
+    },
+    {
+      "arm": "packet scanner",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 2.680546219984535,
+      "peak_mib": 7548.3046875,
+      "received_bytes": 1856,
+      "value": "{'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'cells': 3509227, 'cell_sq': 25500533250, 'offset_s': 48471239.7, 'grouped': True}"
+    },
+    {
+      "arm": "packet polars",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 2.851815322996117,
+      "peak_mib": 8652.69140625,
+      "received_bytes": 4944,
+      "value": "{'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'cells': 3509227, 'cell_sq': 25500533250, 'offset_s': 48471239.7, 'grouped': True}"
+    },
+    {
+      "arm": "packet duckdb",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 0.7919569910154678,
+      "peak_mib": 5573.58984375,
+      "received_bytes": 4991,
+      "value": "{'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'cells': 3509227, 'cell_sq': 25500533250, 'offset_s': 48471239.7, 'grouped': True}"
+    },
+    {
+      "arm": "packet aligned_spikes",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 1.007450972974766,
+      "peak_mib": 6766.6015625,
+      "received_bytes": 1956,
+      "value": "{'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'cells': 3509227, 'cell_sq': 25500533250, 'offset_s': 48471239.7, 'grouped': True}"
+    },
+    {
+      "arm": "pynwb pandas",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 4.366257231973577,
+      "peak_mib": 9411.45703125,
+      "received_bytes": 3938,
+      "value": "{'pairs': 99452477, 'units': 6774, 'sum_sq': 9120460562185, 'cells': 3509221, 'cell_sq': 25499993525, 'offset_s': 48470721.2, 'grouped': True}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 2.846789142990019,
+      "peak_mib": 10247.7265625,
+      "received_bytes": 4921,
+      "value": "{'pairs': 99452477, 'units': 6774, 'sum_sq': 9120460562185, 'cells': 3509221, 'cell_sq': 25499993525, 'offset_s': 48470721.2, 'grouped': True}"
+    },
+    {
+      "arm": "lazynwb pandas",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 15.467650518985465,
+      "peak_mib": 24057.91015625,
+      "received_bytes": 129257,
+      "value": "{'pairs': 99452477, 'units': 6774, 'sum_sq': 9120460562185, 'cells': 3509221, 'cell_sq': 25499993525, 'offset_s': 48470721.2, 'grouped': True}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 26.88119290000759,
+      "peak_mib": 17796.83203125,
+      "received_bytes": 53635,
+      "value": "{'pairs': 99452477, 'units': 6774, 'sum_sq': 9120460562185, 'cells': 3509221, 'cell_sq': 25499993525, 'offset_s': 48470721.2, 'grouped': True}"
+    },
+    {
+      "arm": "lazynwb sql",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 26.201519146037754,
+      "peak_mib": 25861.0859375,
+      "received_bytes": 44296,
+      "value": "{'pairs': 99452477, 'units': 6774, 'sum_sq': 9120460562185, 'cells': 3509221, 'cell_sq': 25499993525, 'offset_s': 48470721.2, 'grouped': True}"
+    },
+    {
+      "arm": "lazynwb intervals",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 59.12470117799239,
+      "peak_mib": 17806.15625,
+      "received_bytes": 116968,
+      "value": "{'pairs': 99452477, 'units': 6774, 'sum_sq': 9120460562185, 'cells': 3509221, 'cell_sq': 25499993525, 'offset_s': 48470721.2, 'grouped': True}"
+    }
+  ],
+  "disagreements": [
+    "go-cue rasters: {'pairs': 99453482, 'units': 6774, 'sum_sq': 9120651850060, 'cells': 3509227, 'cell_sq': 25500533250, 'grouped': True}, offset_s 48471239.7-48471239.7 from packet pandas, packet scanner, packet polars, packet duckdb, packet aligned_spikes",
+    "go-cue rasters: {'pairs': 99452477, 'units': 6774, 'sum_sq': 9120460562185, 'cells': 3509221, 'cell_sq': 25499993525, 'grouped': True}, offset_s 48470721.2-48470721.2 from pynwb pandas, pynwb duckdb, lazynwb pandas, lazynwb polars, lazynwb sql, lazynwb intervals"
+  ]
+}
