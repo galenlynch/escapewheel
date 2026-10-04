@@ -379,12 +379,14 @@ class Packet:
         seconds : bool, default False
             Add a seconds column per coordinate, by :func:`~escapewheel_reader.clocks.seconds`.
             The coordinates must be on the reference clock, as `on_clock=True` leaves them.
-        **where : str, int, float, bool, tuple, or None
-            Column constraints. A scalar means equality, a two-item tuple means a closed range,
-            and ``None`` leaves the column unconstrained. A constraint applies to the values as
-            stored, except that with `on_clock` one on a coordinate applies on the output clock,
-            through :func:`~escapewheel_reader.predicates.tick_range`. Without it, a range on a
-            coordinate whose rows are on several clocks compares ticks of different clocks.
+        **where : str, int, float, bool, tuple, list, set, or None
+            Column constraints. A scalar means equality, a two-item tuple a closed range, a list
+            or set membership, and ``None`` leaves the column unconstrained. A constraint tests
+            the column as returned: a coordinate's stored tick without `on_clock`, and its tick
+            on the output clock with it, through :func:`~escapewheel_reader.predicates.tick_range`.
+            Every row returned therefore satisfies every constraint as read. Without `on_clock`,
+            a range on a coordinate whose rows are on several clocks compares ticks of different
+            clocks.
 
         Returns
         -------

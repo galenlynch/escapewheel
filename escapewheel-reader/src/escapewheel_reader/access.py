@@ -150,10 +150,10 @@ def events(
     session_id : int, optional
         Keep only this session.
     t_tick : tuple of int, optional
-        Keep only events within this closed tick range, stated on the clock the result
-        comes back on -- so a range and the ticks it selects are always in the same space.
-        A loose translation of it is pushed into the Parquet reader for pruning and the
-        exact one applied after mapping.
+        Keep only events within this closed tick range, tested on the ticks as returned: on
+        `clock`, the reference clock by default, or as stored with `clock=STORED`. It is pushed
+        into the Parquet reader exactly, through :func:`~escapewheel_reader.predicates.tick_range`,
+        so row groups outside it are never read.
     clock : int or 'stored', optional
         The clock to return ticks on. Defaults to :func:`~escapewheel_reader.clocks.reference_clock`;
         pass :data:`STORED` for the ticks the file holds.
@@ -235,9 +235,9 @@ def spike_times(
     session_id : int, optional
         Restrict every session-scoped input used by the read to this session.
     t_tick : tuple of int, optional
-        Keep only spikes within this closed tick range, stated on the clock the result
-        comes back on, not on the unit's stored clock -- a range and the ticks it selects
-        are always in the same space. Pass `clock=STORED` for both in stored ticks.
+        Keep only spikes within this closed tick range, tested on the ticks as returned: on
+        `clock`, the reference clock by default, not on the unit's stored clock; or as stored
+        with `clock=STORED`.
     clock : int or 'stored', optional
         The clock to return ticks on. Defaults to :func:`~escapewheel_reader.clocks.reference_clock`;
         pass :data:`STORED` for the ticks the file holds. Mapping drops a spike the anchors
