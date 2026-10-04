@@ -139,56 +139,33 @@ result as the analysis needs.
 
 `analysis.spike_events` holds every spike already on the reference clock, so a query comparing
 spikes with behavioural events starts there rather than mapping `core.spike_events` itself.
-`aligned_spikes` and `assigned_spikes` answer the common questions; written by hand, the join to
-use is an **ASOF join** wherever each spike belongs to at most one event. DuckDB answers an ASOF
-join with one sorted pass, where a range join (`BETWEEN` two bounds) compares each spike against
-every window it might fall in. Counting 287 million spikes within −1 s to +2 s of 708 go cues took
-46 s as a range join and 5.4 s as the ASOF join below, with identical results:
+`aligned_spikes` and `assigned_spikes` answer the common questions. Written by hand, a window join
+is fastest as a hash join on **bins as wide as the window**. A window then spans at most two
+adjacent bins, so each event is entered under both, and the `BETWEEN` keeps the exact window.
+Counting 287 million spikes within −1 s to +2 s of 708 go cues took 0.40 s and peaked at 314 MiB
+this way. The ASOF join, which sorts every spike first, took 6.1 s and peaked at 21 GiB, and a plain
+range join took 46 s. All three gave identical counts:
 
 ```python
 packet.sql("""
     SELECT s.unit_id, count(*) AS spikes, sum(s.t_tick - t.go_cue_start_tick) AS ticks_from_cue
     FROM analysis_spike_events s
-    ASOF JOIN dynamic_foraging_trials t ON s.t_tick + 31250 >= t.go_cue_start_tick  -- 1 s
-    WHERE s.t_tick <= t.go_cue_start_tick + 62500                                   -- 2 s
+    JOIN (SELECT go_cue_start_tick, (go_cue_start_tick - 31250) // 93750 + k AS bin  -- 1 s before, 3 s wide
+          FROM dynamic_foraging_trials, (VALUES (0), (1)) AS shift(k)) t
+      ON s.t_tick // 93750 = t.bin
+     AND s.t_tick BETWEEN t.go_cue_start_tick - 31250 AND t.go_cue_start_tick + 62500
     GROUP BY s.unit_id
 """)
 ```
 
-The ASOF join pairs each spike with the latest cue whose window has opened, and the `WHERE` drops it
-if that window has already closed. That keeps every pair only while no two windows overlap; where
-they do, a spike belongs to both windows and the ASOF join keeps only the later one, so overlapping
-windows need the range join. `windows_disjoint(packet, event_type, half_window)` checks this, and
-`aligned_spikes` uses it to choose between the two joins.
+The bin join is exact whether or not windows overlap. An ASOF join is exact only where they do not:
+it pairs a spike with the latest window to have opened, so a spike in two windows keeps only the
+later one. `windows_disjoint(packet, event_type, half_window)` says which case holds.
 
-The ASOF join sorts every spike before it pairs any, so the query above peaks at 21 GiB. Run over
-slices of time, one query at a time, it holds only a slice's spikes: 16 slices took 6.9 s and
-peaked at 2.0 GiB, with the same counts. Each slice is joined against every cue, so a spike near a
-slice's edge still finds its window, and a unit's totals add across slices:
-
-```python
-import numpy as np
-import pyarrow as pa
-
-QUERY = """
-    SELECT s.unit_id, count(*) AS spikes, sum(s.t_tick - t.go_cue_start_tick) AS ticks_from_cue
-    FROM (SELECT * FROM analysis_spike_events WHERE t_tick >= {lo} AND t_tick < {hi}) s
-    ASOF JOIN dynamic_foraging_trials t ON s.t_tick + 31250 >= t.go_cue_start_tick
-    WHERE s.t_tick <= t.go_cue_start_tick + 62500
-    GROUP BY s.unit_id
-"""
-span = packet.sql("SELECT min(t_tick) AS lo, max(t_tick) AS hi FROM analysis_spike_events").to_pylist()[0]
-edges = np.linspace(span["lo"], span["hi"] + 1, 17).astype(np.int64)  # 16 slices
-slices = [packet.sql(QUERY.format(lo=lo, hi=hi)) for lo, hi in zip(edges[:-1], edges[1:])]
-per_unit = pa.concat_tables(slices).group_by("unit_id").aggregate([("spikes", "sum"), ("ticks_from_cue", "sum")])
-```
-
-The slices must be separate queries. Joined into one with `UNION ALL`, DuckDB runs them together
-and the peak returns to 13 GiB. DuckDB's own `SET memory_limit` also bounds the join, by spilling
-to disk, but took twice as long at 4 GB.
-
-`aligned_spikes` and `assigned_spikes` take a slice as `t_tick=(lo, hi)`. The range is closed,
-so adjacent slices are `(lo, next_lo - 1)`.
+`aligned_spikes` and `assigned_spikes` take `t_tick=(lo, hi)` to read only the spikes in a closed
+range of ticks, with every event still eligible. Adjacent ranges are `(lo, next_lo - 1)`.
+`assigned_spikes(to="preceding")` is an ASOF join and sorts the spikes it reads, so looping over
+ranges bounds its memory.
 
 ## Reading checks only what reading needs
 

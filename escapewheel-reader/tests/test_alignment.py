@@ -102,10 +102,10 @@ def test_disjoint_windows_return_each_spike_once(aligned_packet):
     assert sorted(r[3] for r in rows) == [90, 100, 190, 210]
 
 
-def test_the_asof_shortcut_returns_the_same_rows(aligned_packet):
-    """The optimisation is invisible: the disjoint path must agree with the range join."""
+@pytest.mark.parametrize("half", [0, 1, 10, 30, 44, 45, 50, 55, 60, 99, 100, 101, 150, 250])
+def test_the_bin_join_returns_the_range_join_rows(aligned_packet, half):
+    """Binning is invisible, for disjoint and overlapping windows and with a window edge on a spike."""
     con = aligned_packet.duckdb(tables=("analysis.spike_events", "core.events", "core.event_streams"))
-    half = 30
     reference = con.sql(
         "SELECT s.t_tick, e.t_tick FROM analysis_spike_events s "
         "JOIN (SELECT e.session_id, e.t_tick FROM core_events e JOIN core_event_streams m "
@@ -113,7 +113,6 @@ def test_the_asof_shortcut_returns_the_same_rows(aligned_packet):
         f"ON s.session_id = e.session_id "
         f"AND s.t_tick BETWEEN e.t_tick - {half} AND e.t_tick + {half}"
     ).fetchall()
-    assert windows_disjoint(aligned_packet, "cue", half)
     got = [(r[3], r[2]) for r in aligned_spikes(aligned_packet, "cue", half).fetchall()]
     assert sorted(got) == sorted(reference)
 

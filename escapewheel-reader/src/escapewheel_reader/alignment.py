@@ -147,9 +147,8 @@ def _spikes(session_id: int | None, t_tick: tuple[int, int] | None = None) -> st
 def windows_disjoint(packet: PacketLike, event_type: str, half_window: int, *, session_id: int | None = None) -> bool:
     """Whether every pair of windows is disjoint, so one spike falls in at most one.
 
-    Costs about 1.3 ms over a few thousand events, against seconds for the query it decides --
-    which is why :func:`aligned_spikes` can afford to ask every time rather than requiring the
-    caller to know.
+    Where they are, an ASOF join written by hand returns every pair; where they overlap, it keeps
+    only a spike's later event. Costs about 1.3 ms over a few thousand events.
 
     Parameters
     ----------
@@ -193,9 +192,8 @@ def aligned_spikes(
     event-aligned histogram counts: every event contributes its own window and a spike near
     both belongs to both. Where that is not wanted, the question is :func:`assigned_spikes`.
 
-    Uses an ASOF join when :func:`windows_disjoint` says one spike can match at most one event,
-    which is 4.6x faster and returns the identical rows, and a range join otherwise. The choice
-    is an optimisation and never changes the result.
+    Joins on bins as wide as the window, so each spike is compared only with the events whose
+    windows can reach its bin, whether or not the windows overlap.
 
     Parameters
     ----------
@@ -209,10 +207,8 @@ def aligned_spikes(
         Restrict to one session.
     t_tick : tuple of int, optional
         Read only the spikes in this closed range of reference-clock ticks; every event stays
-        eligible, so a spike near the range's edge still meets its own. The ASOF join sorts
-        every spike it reads, so a caller looping over adjacent ranges, ``(lo, next_lo - 1)``,
-        holds one range's spikes at a time: 16 ranges of 287 million spikes peaked at 2.2 GiB
-        where one query peaked at 21 GiB, in about the same time.
+        eligible, so a spike near the range's edge still meets its own. Adjacent ranges are
+        ``(lo, next_lo - 1)``.
     connection : duckdb.DuckDBPyConnection, optional
         Register into this connection rather than a new one.
 
@@ -242,15 +238,19 @@ def aligned_spikes(
     _clock(packet, con, event_type, session_id)
     spikes, events = _spikes(session_id, t_tick), _events(event_type, session_id)
     same = _same_session(packet, session_id)
-    if windows_disjoint(packet, event_type, half_window, session_id=session_id):
-        join = f"ASOF JOIN {events} e ON {same}s.t_tick >= e.t_tick - {half_window}"
-        where = f"WHERE s.t_tick <= e.t_tick + {half_window}"
-    else:
-        join = f"JOIN {events} e ON {same}s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window}"
-        where = ""
+    # A window no wider than a bin spans at most two adjacent bins, so entering each event under
+    # both lets a hash join on the bin find every pair; an ASOF join sorts every spike instead, and
+    # a range join compares each with every window. DuckDB's `//` truncates, which only widens the
+    # bin around zero.
+    width = max(2 * half_window, 1)
+    binned = (
+        f"(SELECT e.*, (e.t_tick - {half_window}) // {width} + shift.k AS bin "
+        f"FROM {events} e, (VALUES (0), (1)) AS shift(k))"
+    )
     return con.sql(
-        f"SELECT s.session_id, s.unit_id, e.t_tick AS event_tick, "
-        f"s.t_tick, s.t_tick - e.t_tick AS t_rel_tick FROM {spikes} s {join} {where}"
+        f"SELECT s.session_id, s.unit_id, e.t_tick AS event_tick, s.t_tick, s.t_tick - e.t_tick AS t_rel_tick "
+        f"FROM {spikes} s JOIN {binned} e ON {same}s.t_tick // {width} = e.bin "
+        f"AND s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window}"
     )
 
 
