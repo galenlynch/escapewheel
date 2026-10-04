@@ -1,0 +1,76 @@
+{
+  "environment": {
+    "date": "2026-10-04",
+    "commit": "a0737796+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      2.71,
+      9.36,
+      14.55
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r164/776259/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "/home/galen.lynch/bench-cold/r164/776259/packet",
+    "other": null,
+    "region": "MD",
+    "quality": "sua",
+    "region_aws": "us-west-2",
+    "t_zero": 361746131863,
+    "rate": 31250,
+    "window_tick": [
+      361749256863,
+      361751131863
+    ],
+    "window_s": [
+      100.0,
+      160.0
+    ],
+    "chosen_units": 111
+  },
+  "core_version": "0.18.0",
+  "packet_bytes": 1219662231,
+  "cells": [
+    {
+      "arm": "eager",
+      "operation": "rate on clock",
+      "runs": 3,
+      "seconds": 4.20827449898934,
+      "peak_mib": 12389.73828125,
+      "received_bytes": 22688,
+      "value": "(6388, 286896563)"
+    },
+    {
+      "arm": "lazy",
+      "operation": "rate on clock",
+      "runs": 3,
+      "seconds": 3.1912531559937634,
+      "peak_mib": 1748.5234375,
+      "received_bytes": 3921,
+      "value": "(6388, 286896563)"
+    }
+  ]
+}

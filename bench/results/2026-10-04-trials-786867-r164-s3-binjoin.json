@@ -1,0 +1,112 @@
+{
+  "environment": {
+    "date": "2026-10-04",
+    "commit": "94b68298+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      3.12,
+      4.84,
+      5.59
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb.zarr",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+    "nwb": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb.zarr",
+    "region_aws": "us-west-2",
+    "trials": "dynamic_foraging.trials",
+    "clock": 10,
+    "rate": 31250
+  },
+  "core_version": "0.18.0",
+  "memory_max": "80G",
+  "once_above": 300.0,
+  "cells": [
+    {
+      "arm": "packet aligned_spikes",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 5.358851263008546,
+      "peak_mib": 3639.6875,
+      "received_bytes": 257771608,
+      "value": "{'pairs': 45723853, 'units': 4503, 'sum_sq': 1128781346809, 'cells': 1819758, 'cell_sq': 3045641097, 'offset_s': 21717983.1, 'ordered': True}"
+    },
+    {
+      "arm": "packet duckdb",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 5.084783363039605,
+      "peak_mib": 3107.98046875,
+      "received_bytes": 257387162,
+      "value": "{'pairs': 45723853, 'units': 4503, 'sum_sq': 1128781346809, 'cells': 1819758, 'cell_sq': 3045641097, 'offset_s': 21717983.1, 'ordered': True}"
+    },
+    {
+      "arm": "packet polars",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 3.8146425409941003,
+      "peak_mib": 4526.25390625,
+      "received_bytes": 258004736,
+      "value": "{'pairs': 45723853, 'units': 4503, 'sum_sq': 1128781346809, 'cells': 1819758, 'cell_sq': 3045641097, 'offset_s': 21717983.1, 'ordered': True}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 55.390726056008134,
+      "peak_mib": 9133.09765625,
+      "received_bytes": 559896614,
+      "value": "{'pairs': 45723415, 'units': 4503, 'sum_sq': 1128758494307, 'cells': 1819758, 'cell_sq': 3045580545, 'offset_s': 21717848.9, 'ordered': True}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 100.96541647799313,
+      "peak_mib": 9180.421875,
+      "received_bytes": 607563205,
+      "value": "{'pairs': 45723415, 'units': 4503, 'sum_sq': 1128758494307, 'cells': 1819758, 'cell_sq': 3045580545, 'offset_s': 21717848.9, 'ordered': True}"
+    },
+    {
+      "arm": "lazynwb sql",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 99.56000804103678,
+      "peak_mib": 11848.94921875,
+      "received_bytes": 615620144,
+      "value": "{'pairs': 45723415, 'units': 4503, 'sum_sq': 1128758494307, 'cells': 1819758, 'cell_sq': 3045580545, 'offset_s': 21717848.9, 'ordered': True}"
+    }
+  ],
+  "disagreements": [
+    "go-cue rasters: {'pairs': 45723853, 'units': 4503, 'sum_sq': 1128781346809, 'cells': 1819758, 'cell_sq': 3045641097, 'ordered': True}, offset_s 21717983.1-21717983.1 from packet aligned_spikes, packet duckdb, packet polars",
+    "go-cue rasters: {'pairs': 45723415, 'units': 4503, 'sum_sq': 1128758494307, 'cells': 1819758, 'cell_sq': 3045580545, 'ordered': True}, offset_s 21717848.9-21717848.9 from pynwb duckdb, lazynwb polars, lazynwb sql"
+  ]
+}

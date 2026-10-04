@@ -1,0 +1,239 @@
+{
+  "environment": {
+    "date": "2026-10-04",
+    "commit": "a0737796+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      2.86,
+      8.75,
+      14.19
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb.zarr",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+    "nwb": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb.zarr",
+    "region_aws": "us-west-2",
+    "trials": "dynamic_foraging.trials",
+    "clock": 10,
+    "rate": 31250
+  },
+  "core_version": "0.18.0",
+  "memory_max": "80G",
+  "once_above": 300.0,
+  "cells": [
+    {
+      "arm": "packet pandas",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 1.6916099869995378,
+      "peak_mib": 203.0078125,
+      "received_bytes": 308169,
+      "value": "{'trials': 424, 'median_ms': 154.336, 'mean_ms': 2003.166}"
+    },
+    {
+      "arm": "packet pandas",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 8.980118039995432,
+      "peak_mib": 9042.05078125,
+      "received_bytes": 240341098,
+      "value": "{'pairs': 45723852, 'units': 4503, 'sum_sq': 1128781331066, 'cells': 1819758, 'cell_sq': 3045641002, 'offset_s': 21717984.1, 'ordered': True}"
+    },
+    {
+      "arm": "pynwb pandas",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 44.57090753200464,
+      "peak_mib": 212.40625,
+      "received_bytes": 3711422,
+      "value": "{'trials': 424, 'median_ms': 154.336, 'mean_ms': 2003.166}"
+    },
+    {
+      "arm": "pynwb pandas",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 55.25674289802555,
+      "peak_mib": 6375.87890625,
+      "received_bytes": 559222752,
+      "value": "{'pairs': 45723415, 'units': 4503, 'sum_sq': 1128758494307, 'cells': 1819758, 'cell_sq': 3045580545, 'offset_s': 21717848.9, 'ordered': True}"
+    },
+    {
+      "arm": "lazynwb pandas",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 4.2995110810152255,
+      "peak_mib": 262.046875,
+      "received_bytes": 763521,
+      "value": "{'trials': 424, 'median_ms': 154.336, 'mean_ms': 2003.166}"
+    },
+    {
+      "arm": "lazynwb pandas",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 99.59270442597335,
+      "peak_mib": 12366.9453125,
+      "received_bytes": 630394093,
+      "value": "{'pairs': 45723415, 'units': 4503, 'sum_sq': 1128758494307, 'cells': 1819758, 'cell_sq': 3045580545, 'offset_s': 21717848.9, 'ordered': True}"
+    },
+    {
+      "arm": "packet polars",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 0.40794824302429333,
+      "peak_mib": 209.28515625,
+      "received_bytes": 126225,
+      "value": "{'trials': 424, 'median_ms': 154.336, 'mean_ms': 2003.166}"
+    },
+    {
+      "arm": "packet polars",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 8.44644634902943,
+      "peak_mib": 5239.37890625,
+      "received_bytes": 258103252,
+      "value": "{'pairs': 45723853, 'units': 4503, 'sum_sq': 1128781346809, 'cells': 1819758, 'cell_sq': 3045641097, 'offset_s': 21717983.1, 'ordered': True}"
+    },
+    {
+      "arm": "packet scanner",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 0.6579330920358188,
+      "peak_mib": 203.0078125,
+      "received_bytes": 161931,
+      "value": "{'trials': 424, 'median_ms': 154.336, 'mean_ms': 2003.166}"
+    },
+    {
+      "arm": "packet scanner",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 4.265051752969157,
+      "peak_mib": 3403.4765625,
+      "received_bytes": 256451094,
+      "value": "{'pairs': 45723853, 'units': 4503, 'sum_sq': 1128781346809, 'cells': 1819758, 'cell_sq': 3045641097, 'offset_s': 21717983.1, 'ordered': True}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 0.5783107050228864,
+      "peak_mib": 249.60546875,
+      "received_bytes": 329451,
+      "value": "{'trials': 424, 'median_ms': 154.336, 'mean_ms': 2003.166}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 101.50541804404929,
+      "peak_mib": 9173.39453125,
+      "received_bytes": 606001722,
+      "value": "{'pairs': 45723415, 'units': 4503, 'sum_sq': 1128758494307, 'cells': 1819758, 'cell_sq': 3045580545, 'offset_s': 21717848.9, 'ordered': True}"
+    },
+    {
+      "arm": "packet duckdb",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 0.8822020139778033,
+      "peak_mib": 203.0078125,
+      "received_bytes": 174827,
+      "value": "{'trials': 424, 'median_ms': 154.336, 'mean_ms': 2003.166}"
+    },
+    {
+      "arm": "packet duckdb",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 6.230153719952796,
+      "peak_mib": 10855.609375,
+      "received_bytes": 258225702,
+      "value": "{'pairs': 45723853, 'units': 4503, 'sum_sq': 1128781346809, 'cells': 1819758, 'cell_sq': 3045641097, 'offset_s': 21717983.1, 'ordered': True, 'join': 'asof'}"
+    },
+    {
+      "arm": "lazynwb sql",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 1.2458781820023432,
+      "peak_mib": 299.8984375,
+      "received_bytes": 353474,
+      "value": "{'trials': 424, 'median_ms': 154.336, 'mean_ms': 2003.166}"
+    },
+    {
+      "arm": "lazynwb sql",
+      "analysis": "go-cue rasters",
+      "runs": 1,
+      "seconds": 336.0667280720081,
+      "peak_mib": 31235.90625,
+      "received_bytes": 606847270,
+      "value": "{'pairs': 45723415, 'units': 4503, 'sum_sq': 1128758494307, 'cells': 1819758, 'cell_sq': 3045580545, 'offset_s': 21717848.9, 'ordered': True}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "lick latency",
+      "runs": 3,
+      "seconds": 46.167698197008576,
+      "peak_mib": 247.04296875,
+      "received_bytes": 3736279,
+      "value": "{'trials': 424, 'median_ms': 154.336, 'mean_ms': 2003.166}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 56.606279670028016,
+      "peak_mib": 16718.046875,
+      "received_bytes": 559994683,
+      "value": "{'pairs': 45723415, 'units': 4503, 'sum_sq': 1128758494307, 'cells': 1819758, 'cell_sq': 3045580545, 'offset_s': 21717848.9, 'ordered': True, 'join': 'asof'}"
+    },
+    {
+      "arm": "packet aligned_spikes",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 7.9629431999637745,
+      "peak_mib": 9056.578125,
+      "received_bytes": 261722709,
+      "value": "{'pairs': 45723853, 'units': 4503, 'sum_sq': 1128781346809, 'cells': 1819758, 'cell_sq': 3045641097, 'offset_s': 21717983.1, 'ordered': True, 'join': 'asof'}"
+    },
+    {
+      "arm": "lazynwb intervals",
+      "analysis": "go-cue rasters",
+      "runs": 3,
+      "seconds": 57.43924126395723,
+      "peak_mib": 8667.42578125,
+      "received_bytes": 562728855,
+      "value": "{'pairs': 45723415, 'units': 4503, 'sum_sq': 1128758494307, 'cells': 1819758, 'cell_sq': 3045580545, 'offset_s': 21717848.9, 'ordered': True}"
+    }
+  ],
+  "disagreements": [
+    "go-cue rasters: {'pairs': 45723852, 'units': 4503, 'sum_sq': 1128781331066, 'cells': 1819758, 'cell_sq': 3045641002, 'ordered': True}, offset_s 21717984.1-21717984.1 from packet pandas",
+    "go-cue rasters: {'pairs': 45723415, 'units': 4503, 'sum_sq': 1128758494307, 'cells': 1819758, 'cell_sq': 3045580545, 'ordered': True}, offset_s 21717848.9-21717848.9 from pynwb pandas, lazynwb pandas, lazynwb polars, lazynwb sql, pynwb duckdb, lazynwb intervals",
+    "go-cue rasters: {'pairs': 45723853, 'units': 4503, 'sum_sq': 1128781346809, 'cells': 1819758, 'cell_sq': 3045641097, 'ordered': True}, offset_s 21717983.1-21717983.1 from packet polars, packet scanner, packet duckdb, packet aligned_spikes"
+  ]
+}

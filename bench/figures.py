@@ -90,6 +90,7 @@ def readers(session: str, out: Path) -> None:
         f"{day}-readers-{session}-r164-final.json",
         f"{day}-readers-{session}-r164-region.json",
         f"{day}-readers-{session}-r164-natural.json",
+        f"2026-10-04-readers-{session}-r164-contents.json",
     )
     remote = cells(
         f"{nwb_day}-readers-{session}-r164-s3.json",
@@ -99,6 +100,7 @@ def readers(session: str, out: Path) -> None:
         f"{day}-readers-{session}-r164-s3-final.json",
         f"{day}-readers-{session}-r164-s3-region.json",
         f"{day}-readers-{session}-r164-s3-natural.json",
+        f"2026-10-04-readers-{session}-r164-s3-contents.json",
     )
 
     def packet(found, op):
@@ -143,15 +145,12 @@ GO_CUE_ARMS = [
 
 
 def go_cue(session: str, out: Path) -> None:
-    analysis = "go-cue spikes"
+    analysis = "go-cue rasters"
     stores = {
         "seconds, local NVMe": cells(
-            *(
-                f"2026-10-03-trials-{session}-r164{tag}.json"
-                for tag in ("", "-final", "-natural", *(["-natural-duckdb"] if session == "776259" else []))
-            )
+            *(f"2026-10-04-trials-{session}-r164-{tag}.json" for tag in ("rasters", "binjoin"))
         ),
-        "seconds, S3": cells(*(f"2026-10-03-trials-{session}-r164-s3{tag}.json" for tag in ("", "-final", "-natural"))),
+        "seconds, S3": cells(*(f"2026-10-04-trials-{session}-r164-s3-{tag}.json" for tag in ("rasters", "binjoin"))),
     }
     fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
     rows = np.arange(len(GO_CUE_ARMS))
@@ -165,7 +164,7 @@ def go_cue(session: str, out: Path) -> None:
         ax.grid(axis="x", alpha=0.3)
         ax.set_axisbelow(True)
     axes[0].invert_yaxis()
-    fig.suptitle(f"{session}: every unit's spikes within [-1, +2] s of each go cue, cold")
+    fig.suptitle(f"{session}: every unit's go-cue raster, spikes within [-1, +2] s of each cue, cold")
     fig.tight_layout(rect=(0, 0, 1, 0.94))
     fig.savefig(out / f"go-cue-{session}.png", dpi=150)
 
@@ -182,8 +181,14 @@ LAZY_OPERATIONS = [
 
 
 def lazy(session: str, out: Path) -> None:
-    local = cells(*(f"2026-10-03-lazy-{session}-r164{tag}.json" for tag in ("", "-good", "-natural")))
-    remote = cells(*(f"2026-10-03-lazy-{session}-r164-s3{tag}.json" for tag in ("", "-good", "-natural")))
+    local = cells(
+        *(f"2026-10-03-lazy-{session}-r164{tag}.json" for tag in ("", "-good", "-natural")),
+        f"2026-10-04-lazy-{session}-r164-clock.json",
+    )
+    remote = cells(
+        *(f"2026-10-03-lazy-{session}-r164-s3{tag}.json" for tag in ("", "-good", "-natural")),
+        f"2026-10-04-lazy-{session}-r164-s3-clock.json",
+    )
     labels = [label for _, label in LAZY_OPERATIONS]
     fig, axes = plt.subplots(1, 4, figsize=(18, 4.8), sharey=True)
     panels = [
