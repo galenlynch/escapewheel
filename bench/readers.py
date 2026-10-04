@@ -89,7 +89,7 @@ def run_packet(plan: dict, operation: str) -> object:
         return packet.table("analysis.spike_events", columns=["t_tick"], t_tick=(lo, hi - 1)).num_rows
     if operation == "10 s spike_times":
         lo, hi = plan["window_tick"]
-        return spike_times(packet, t_tick=(lo, hi - 1)).num_rows
+        return spike_times(packet, units=packet.table("core.units"), t_tick=(lo, hi - 1)).num_rows
     if operation == "one train":
         return spike_times(packet, plan["unit_id"]).num_rows
     if operation == "one train stored":
