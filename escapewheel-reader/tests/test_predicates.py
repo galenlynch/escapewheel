@@ -2,6 +2,7 @@
 
 import pyarrow as pa
 import pyarrow.dataset as pads
+import pyarrow.parquet as pq
 
 from escapewheel_reader import open_packet, where
 
@@ -26,3 +27,13 @@ def test_a_scanner_ands_its_filter_with_its_constraints(packet_root):
     assert found.num_rows >= 1
     assert set(found.column("t_tick").to_pylist()) == {first}
     assert set(found.column("stream_id").to_pylist()) == {stream}
+
+
+def test_a_long_membership_still_prunes_row_groups(tmp_path):
+    """PyArrow tests a long `is_in` against no row group's statistics, so `where` splits it."""
+    path = tmp_path / "units.parquet"
+    pq.write_table(pa.table({"unit_id": pa.array(range(10_000), pa.int32())}), path, row_group_size=100)
+    wanted = list(range(5_000, 5_200, 2)) + [9_999]
+    fragment = next(pads.dataset(path).get_fragments())
+    assert len(fragment.split_by_row_group(where(unit_id=wanted))) == 3
+    assert pads.dataset(path).to_table(filter=where(unit_id=set(wanted)))["unit_id"].to_pylist() == wanted

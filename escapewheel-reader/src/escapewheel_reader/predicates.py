@@ -19,7 +19,7 @@ import pyarrow.dataset as pads
 from numpy.typing import NDArray
 
 from . import clocks
-from .dictionaries import decoded
+from .dictionaries import any_of, decoded, one_of
 from .errors import NotAligned, NotDeclared
 from .protocols import PacketLike, PacketSetLike
 
@@ -45,7 +45,7 @@ def expression(constraints: Mapping[str, Predicate]) -> pads.Expression | None:
             low, high = value
             term = (field >= low) & (field <= high)
         elif isinstance(value, (list, set, frozenset)):
-            term = field.isin(list(value))
+            term = one_of(column, value)
         else:
             term = field == value
         found = term if found is None else found & term
@@ -110,7 +110,7 @@ def tick_range(
     >>> packet.scanner("core.events", filter=tick_range(packet, "core.events", (lo, hi)))  # doctest: +SKIP
     """
     if isinstance(source, PacketSetLike):
-        return _any(
+        return any_of(
             [
                 pads.field("packet_key").isin([packet_key])
                 & tick_range(member, resource_id, span, clock=clocks.shared_clock(member, clock), column=column)
@@ -135,7 +135,7 @@ def tick_range(
             rows = reach.parent.filter(pc.equal(clock_values, pa.scalar(name, clock_values.type)))
             keys = _keys_in(rows, reach.keys)
             terms.append(keys if reached is None else keys & _within(ticks, reached))
-    return _any(terms) if terms else pc.scalar(False)
+    return any_of(terms) if terms else pc.scalar(False)
 
 
 def tick_bounds(
@@ -255,7 +255,7 @@ def _reach(
 
 
 def _within(ticks: pads.Expression, intervals: tuple[NDArray[np.int64], NDArray[np.int64]]) -> pads.Expression:
-    return _any([(ticks >= int(lo)) & (ticks <= int(hi)) for lo, hi in zip(*intervals, strict=True)])
+    return any_of([(ticks >= int(lo)) & (ticks <= int(hi)) for lo, hi in zip(*intervals, strict=True)])
 
 
 def _keys_in(rows: pa.Table, keys: Sequence[tuple[str, str]]) -> pads.Expression:
@@ -267,18 +267,12 @@ def _keys_in(rows: pa.Table, keys: Sequence[tuple[str, str]]) -> pads.Expression
     ours, theirs = min(keys, key=lambda pair: len(pc.unique(rows.column(pair[1]))))
     found = pc.unique(rows.column(theirs)).drop_null()
     if len(keys) == 1:
-        return pads.field(ours).isin(found)
+        return one_of(ours, found)
     rest = [pair for pair in keys if pair != (ours, theirs)]
     values = rows.column(theirs)
-    return _any([(pads.field(ours) == value) & _keys_in(rows.filter(pc.equal(values, value)), rest) for value in found])
-
-
-def _any(terms: Sequence[pads.Expression]) -> pads.Expression:
-    """OR `terms` as a balanced tree, whose depth stays logarithmic in their number."""
-    if len(terms) == 1:
-        return terms[0]
-    middle = len(terms) // 2
-    return _any(terms[:middle]) | _any(terms[middle:])
+    return any_of(
+        [(pads.field(ours) == value) & _keys_in(rows.filter(pc.equal(values, value)), rest) for value in found]
+    )
 
 
 def on_clock_constraints(
@@ -301,7 +295,7 @@ def on_clock_constraints(
         else:
             spans = [(int(value), int(value))]
         terms = [tick_range(packet, resource_id, span, clock=clock, column=name) for span in spans]
-        found = both(found, _any(terms) if terms else pc.scalar(False))
+        found = both(found, any_of(terms) if terms else pc.scalar(False))
     return found
 
 

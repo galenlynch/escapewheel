@@ -7,6 +7,7 @@
 - :func:`join` -- an Arrow join on keys that may be dictionaries or differ in width.
 - :func:`lookup` -- the parent value each row's key names, in the rows' order.
 - :func:`key_filter` / :func:`within` -- rows whose keys together match a wanted row.
+- :func:`one_of` / :func:`any_of` -- membership and disjunction as expressions a scan prunes by.
 
 Arrow cannot sort a dictionary column, and `group_by` fails across row groups until
 `Table.unify_dictionaries` reconciles them. Its joins take no dictionary key and no keys of
@@ -117,10 +118,33 @@ def key_filter(wanted: pa.Table, keys: Sequence[str]) -> tuple[pc.Expression, bo
     their values, which one key, or one session, always is.
     """
     wanted = decoded(wanted.select(list(keys)))
-    tests = [pc.field(key).isin(pc.unique(wanted.column(key).drop_null())) for key in keys]
+    tests = [one_of(key, pc.unique(wanted.column(key).drop_null())) for key in keys]
     combinations = reduce(lambda n, key: n * len(pc.unique(wanted.column(key))), keys, 1)
     exact = combinations == wanted.group_by(list(keys)).aggregate([]).num_rows
     return reduce(lambda a, b: a & b, tests), exact
+
+
+#: The most values one `is_in` test may hold and still be checked against row-group statistics;
+#: past it PyArrow keeps every row group.
+PRUNABLE_VALUES = 50
+
+
+def one_of(column: str, values: Any) -> pc.Expression:
+    """Test `column` for membership in `values`, as sorted runs short enough for row groups to prune by."""
+    found = pc.unique(values if isinstance(values, (pa.Array, pa.ChunkedArray)) else pa.array(list(values)))
+    if len(found) <= PRUNABLE_VALUES:
+        return pc.field(column).isin(found)
+    ordered = found.take(pc.sort_indices(found))
+    runs = range(0, len(ordered), PRUNABLE_VALUES)
+    return any_of([pc.field(column).isin(ordered[start : start + PRUNABLE_VALUES]) for start in runs])
+
+
+def any_of(terms: Sequence[pc.Expression]) -> pc.Expression:
+    """OR `terms` as a balanced tree, whose depth stays logarithmic in their number."""
+    if len(terms) == 1:
+        return terms[0]
+    middle = len(terms) // 2
+    return any_of(terms[:middle]) | any_of(terms[middle:])
 
 
 def within(table: pa.Table, wanted: pa.Table, keys: Sequence[str]) -> pa.Table:
