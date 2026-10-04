@@ -1,5 +1,6 @@
 import json
 
+import pyarrow.compute as pc
 import pytest
 from packet_fixture import SESSION_NAME, SUBJECT
 
@@ -249,3 +250,23 @@ def test_a_reader_resolves_a_source_whose_name_has_a_space(packet_root, tmp_path
     packet = open_packet(packet_root, sources=[doc])
     where = packet.location.resolve("processing/data", "raw nwb")
     assert where.uri == "s3://bucket/session.nwb/processing/data"
+
+
+def test_contents_lists_each_table_column(packet_root):
+    pkt = open_packet(packet_root)
+    listed = pkt.contents()
+    sessions = listed.filter(pc.equal(listed["resource_id"], "core.sessions"))
+    schema = pkt.table_resource("core.sessions").schema()
+    assert sessions["name"].to_pylist() == schema.names
+    assert sessions["type"].to_pylist() == [str(t) for t in schema.types]
+    assert set(listed["resource_id"].to_pylist()) == {r.resource_id for r in pkt.resources()}
+    assert pkt.contents(content_class="analysis").num_rows == 0
+
+
+def test_contents_from_declarations_names_each_declared_column(packet_root):
+    pkt = open_packet(packet_root)
+    listed = pkt.contents(stored=False)
+    sessions = listed.filter(pc.equal(listed["resource_id"], "core.sessions"))
+    declared = pkt.resource("core.sessions").declaration["table"]["columns"]
+    assert sessions["name"].to_pylist() == [c["name"] for c in declared]
+    assert sessions["type"].to_pylist() == [c["type"] for c in declared]

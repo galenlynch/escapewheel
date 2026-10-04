@@ -27,6 +27,8 @@ functions does:
 
 ```python
 packet.manifest.sessions  # the sessions the manifest declares
+packet.contents()  # every resource, with each table's columns and types
+packet.contents(stored=False)  # the same from the registries, reading no table
 packet.table("core.events", stream_id=1)  # any table, constraints pushed into the Parquet reader
 packet.sql("SELECT count(*) FROM core_units")  # DuckDB over the tables the query names
 packet.array_resource("core.waveform_mean").shape  # no Zarr needed to describe an array

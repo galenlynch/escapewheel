@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from collections.abc import Collection, Iterable, Mapping
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -120,6 +121,55 @@ class Packet:
             for r in self._manifest.resources
             if (selected_class is None or r.content_class == selected_class) and (kind is None or r.kind == kind)
         )
+
+    def contents(
+        self,
+        *,
+        content_class: str | None = None,
+        kind: str | None = None,
+        stored: bool = True,
+    ) -> pa.Table:
+        """List what each resource holds: a row per table column, and one per other resource.
+
+        A declaration names the columns a table may hold, and only its Parquet footer says which
+        it does. The footers are read at once, so over a store the listing costs about one round
+        trip rather than one per table. An array's shape and dtype are left to
+        :meth:`array_resource`, which reads its metadata document.
+
+        Parameters
+        ----------
+        content_class : str, optional
+            Restrict to one content class, e.g. ``core``.
+        kind : str, optional
+            Restrict to one kind, e.g. ``table``.
+        stored : bool, default True
+            List the columns each table stores, from its footer. False lists the columns its
+            declaration allows, with their declared types, from the bound registries alone, so
+            it reads no table but may name an optional column a table omits.
+
+        Returns
+        -------
+        pyarrow.Table
+            `resource_id` and `kind`, and a column's `name` and `type`, null for a resource that
+            is not a table: the stored Arrow type, or with `stored` False the declared one.
+        """
+
+        def held(resource: Resource) -> list[dict[str, Any]]:
+            row = {"resource_id": resource.resource_id, "kind": resource.kind}
+            if resource.kind == "table" and not stored:
+                declared = (resource.declaration or {}).get("table", {}).get("columns", [])
+                return [{**row, "name": column["name"], "type": column["type"]} for column in declared] or [row]
+            if resource.kind == "table":
+                schema = self.table_resource(resource.resource_id).schema()
+                return [{**row, "name": field.name, "type": str(field.type)} for field in schema]
+            return [row]
+
+        wanted = self.resources(content_class=content_class, kind=kind)
+        if not stored:
+            return pa.Table.from_pylist([row for resource in wanted for row in held(resource)], schema=_CONTENTS)
+        with ThreadPoolExecutor(max(1, min(len(wanted), _LISTING_REQUESTS))) as pool:
+            rows = [row for rows in pool.map(held, wanted) for row in rows]
+        return pa.Table.from_pylist(rows, schema=_CONTENTS)
 
     def resource(self, resource_id: str) -> Resource:
         """Look up one resource by ID.
@@ -537,6 +587,19 @@ class Packet:
             The result.
         """
         return self.duckdb(for_query=query).sql(query).to_arrow_table()
+
+
+#: Footers :meth:`Packet.contents` reads at once.
+_LISTING_REQUESTS = 32
+
+_CONTENTS = pa.schema(
+    [
+        pa.field("resource_id", pa.string(), nullable=False),
+        pa.field("kind", pa.string()),
+        pa.field("name", pa.string()),
+        pa.field("type", pa.string()),
+    ]
+)
 
 
 def open_packet(
