@@ -47,6 +47,7 @@ long; each cell records how many runs its median is of.
 | `stores.py` | Listing a stored packet or NWB, and downloading it to local disk, in seconds and objects. | `--root NAME=URI`, `--stage-dir` |
 | `build.py` | What importing one recipe costs at several source-worker counts: wall time, peak RSS, and when each source's turn and each later step began. Each cell writes a fresh packet; the writer stages beside it, so `--out-root` is the scratch disk measured. | `--recipe`, `--out-root` |
 | `containment.py` | Which block holds each trial: a range join, an ASOF join, a binary search, or a stored key, at four scales. | none; the data is synthetic |
+| `figures.py` | Draws `SUMMARY.md`'s figures for one session from the result files it quotes. | `--session`, `--out` |
 | `benchkit.py` | Shared helpers: path resolution, eviction and its check, child processes, and the environment record. | |
 
 Each script prints a table and, with `--json-out`, writes the same numbers with the date,

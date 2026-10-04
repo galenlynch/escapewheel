@@ -50,6 +50,12 @@ lazynwb each fetch the whole spike column. lazynwb lists the object tree faster 
 does (see the remaining gaps below); pynwb takes about 40 s to open either NWB from S3 before any
 question is asked.
 
+![Seconds and megabytes for each question on 776259, by reader and store](figures/readers-776259.png)
+
+Each bar is a cold median on a log axis; the packet's is the faster of its PyArrow and DuckDB
+paths. `figures/` holds the same three figures for 786867, and `figures.py` redraws them from
+`results/`.
+
 The tables below give every arm. Their columns are the packet through PyArrow (`Packet.table` and
 the accessors) and through DuckDB (`Packet.sql`), pynwb, and lazynwb. "Before" is the packet's
 PyArrow path at `fa060640`, before the reader read lazily and before the changes listed at the end.
@@ -138,6 +144,8 @@ seconds:
 
 Go-cue spikes, in seconds, then peak RSS locally and megabytes received from S3:
 
+![Go-cue spikes on 776259, every arm, local and S3](figures/go-cue-776259.png)
+
 | arm | 776259, NVMe | 776259, S3 | 786867, NVMe | 786867, S3 |
 |---|---|---|---|---|
 | packet, pandas | 14.39 (24.9 GiB) | 20.67 (516 MB) | 6.31 (13.9 GiB) | 9.74 (258 MB) |
@@ -184,6 +192,8 @@ file with `NWBZarrV2IO`. In seconds, then megabytes received:
 and filters it in memory. The lazy arm narrows the scan first, through `Packet.scanner`, `where`,
 `tick_range` and the streaming forms of `on_clock` and `seconds`. In seconds, then peak RSS
 locally and megabytes received from S3:
+
+![Eager against lazy reading on 776259: seconds and memory locally, seconds and bytes from S3](figures/lazy-776259.png)
 
 | operation | store | session | eager | lazy |
 |---|---|---|---|---|
