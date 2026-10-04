@@ -50,9 +50,14 @@ def is_remote(store: str | Path) -> bool:
     return str(store).startswith(REMOTE)
 
 
+def anonymous() -> bool:
+    """Whether to read a store unsigned: no credentials are exported, so the bucket must be public."""
+    return not os.environ.get("AWS_ACCESS_KEY_ID")
+
+
 def duckdb_s3_secret(region: str) -> str:
     """DuckDB's S3 secret: the environment's credentials where exported, else unsigned, for a public bucket."""
-    if os.environ.get("AWS_ACCESS_KEY_ID"):
+    if not anonymous():
         return f"CREATE SECRET store (TYPE s3, PROVIDER credential_chain, CHAIN 'env', REGION '{region}')"
     return f"CREATE SECRET store (TYPE s3, REGION '{region}')"
 

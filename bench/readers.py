@@ -18,6 +18,9 @@ NWB is assumed to hold its spike times in seconds on the packet's reference cloc
 whether the readers agreed. `region units` counts the units with an electrode in one region and
 reads their trains; the NWB has no electrode coordinates of its own, so pynwb and lazynwb reach a
 unit's region through `location` where the units table has it and through its electrodes where not.
+`list` walks the store's full tree: every packet resource with a table's columns and types or an
+array's shape and dtype, every object pynwb builds, or every lazynwb internal path down to datasets
+and table columns. Its value counts the leaves, which differ by format.
 The packet's spikes are read from whichever table answers faster: `analysis.spike_events`, sorted
 by time, for the window, and `core.spike_events`, sorted by unit, for every spike and for units,
 where over a store a time-sorted table costs a request per row group. `one train` is
@@ -50,6 +53,7 @@ import benchkit
 READERS = ("packet", "packet-sql", "pynwb", "lazynwb")
 OPERATIONS = (
     "open",
+    "list",
     "units 5 cols",
     "units all meta",
     "trials",
@@ -68,6 +72,21 @@ FIVE_NWB = ["ks_unit_id", "device_name", "firing_rate", "num_spikes", "default_q
 NWB_ARRAYS = ("spike_times", "electrodes", "extremum_channel", "waveform_mean", "waveform_sd")
 
 
+def packet_tree(packet) -> list[tuple]:
+    """Every resource with what it holds: a table's columns and types, an array's shape and dtype."""
+    tree: list[tuple] = []
+    for resource in packet.resources():
+        if resource.kind == "table":
+            schema = packet.table_resource(resource.resource_id).schema()
+            tree += [(resource.resource_id, field.name, str(field.type)) for field in schema]
+        elif resource.kind == "dense_array":
+            array = packet.array_resource(resource.resource_id)
+            tree.append((resource.resource_id, array.shape, array.dtype))
+        else:
+            tree.append((resource.resource_id, resource.kind))
+    return tree
+
+
 def run_packet(plan: dict, operation: str) -> object:
     """One operation through the reader's PyArrow path."""
     import pyarrow.compute as pc
@@ -76,6 +95,8 @@ def run_packet(plan: dict, operation: str) -> object:
     packet = open_packet(plan["packet"])
     if operation == "open":
         return len(packet.manifest.resources)
+    if operation == "list":
+        return len(packet_tree(packet))
     if operation == "units 5 cols":
         return packet.table("core.units", columns=FIVE_PACKET).num_rows
     if operation == "units all meta":
@@ -120,6 +141,9 @@ def run_packet_sql(plan: dict, operation: str) -> object:
     from escapewheel_reader import open_packet
 
     packet = open_packet(plan["packet"])
+    if operation == "list":
+        # SQL has no listing of its own, so a DuckDB user reads the same tree.
+        return len(packet_tree(packet))
 
     def sql(query: str):
         if not benchkit.is_remote(plan["packet"]):
@@ -159,8 +183,10 @@ def run_pynwb(plan: dict, operation: str) -> object:
     from hdmf_zarr.nwb_zarrv2 import NWBZarrV2IO
 
     # An AIND NWB-Zarr stores its object-reference columns with the pickle codec.
-    options = {"anon": False} if benchkit.is_remote(plan["nwb"]) else None
+    options = {"anon": benchkit.anonymous()} if benchkit.is_remote(plan["nwb"]) else None
     nwb = NWBZarrV2IO(plan["nwb"], "r", allow_pickle=True, storage_options=options).read()
+    if operation == "list":
+        return len(nwb.objects)
     units = nwb.units
     lo, hi = plan["window_s"]
 
@@ -229,6 +255,8 @@ def run_lazynwb(plan: dict, operation: str) -> object:
     import polars as pl
 
     logging.disable(logging.WARNING)
+    if operation == "list":
+        return len(lazynwb.get_internal_paths(plan["nwb"], include_child_datasets=True, include_table_columns=True))
     frame = lazynwb.scan_nwb(plan["nwb"], "/units")
     lo, hi = plan["window_s"]
     if operation == "open":

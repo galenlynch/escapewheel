@@ -347,7 +347,7 @@ def read_nwb(plan: dict):
     from hdmf_zarr.nwb_zarrv2 import NWBZarrV2IO
 
     # An AIND NWB-Zarr stores its object-reference columns with the pickle codec.
-    options = {"anon": False} if benchkit.is_remote(plan["nwb"]) else None
+    options = {"anon": benchkit.anonymous()} if benchkit.is_remote(plan["nwb"]) else None
     return NWBZarrV2IO(plan["nwb"], "r", allow_pickle=True, storage_options=options).read()
 
 
