@@ -166,6 +166,10 @@ def test_an_unscoped_table_carries_no_discriminator(packet_root, tmp_path):
     data = open_packets([packet_root, tmp_path / "session_002"])
     assert "core.subjects" not in data.scoped
     assert set(data.table("core.subjects").column_names) == {"subject_id", "subject_name"}
+    assert set(data.scan("core.subjects").schema.names) == {"subject_id", "subject_name"}
+    assert set(data.scanner("core.subjects").projected_schema.names) == {"subject_id", "subject_name"}
+    with pytest.raises(ValueError, match="not session-scoped"):
+        data.table("core.subjects", session_key=0)
 
 
 def test_one_packet_gets_the_same_shape_as_many(packet_root):
@@ -195,6 +199,7 @@ def test_the_sql_view_projects_the_identity(two):
 def test_the_view_is_a_projection_rather_than_a_join(two):
     """A join cannot be pruned; the projected form must not name `core.sessions` at all."""
     statement = two._view("core.units")
+    assert "AS packet_key" in statement
     assert "AS session_key" in statement
     assert "core_sessions" not in statement and "JOIN" not in statement.upper()
 
@@ -312,8 +317,9 @@ def test_a_multi_session_packet_refuses_a_table_that_cannot_say_which(packet_roo
     data = open_packets([root])
     assert len(data.sessions) == 2
     assert data.table("core.units").column("session_key").to_pylist() == [0, 0]
-    with pytest.raises(MultiSessionUnresolved, match="core.clock_anchors"):
-        data.table("core.clock_anchors")
+    for read in (data.table, data.scan, data.scanner):
+        with pytest.raises(MultiSessionUnresolved, match="core.clock_anchors"):
+            read("core.clock_anchors")
 
 
 def test_an_already_opened_packet_may_be_handed_over(packet_root):

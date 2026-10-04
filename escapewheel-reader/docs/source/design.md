@@ -233,13 +233,16 @@ key alongside (Part 05 §13.1). The relation has the same shape for one packet o
 analysis written against one session runs unchanged against many.
 
 `PacketSet.scan` is that union as one Arrow dataset, each packet's files a fragment whose partition
-fields are its session's `session_key` and `session_name`, so a filter on either skips other
-packets' files without opening them. A packet holding several sessions cannot label its files with
-one key, so `scan` refuses a session-scoped resource there, and `scanner` and `table` project the
-key from `session_id` instead. A clock ID is unique only within its packet, so `tick_range` over a
-packet set tests each packet's terms under its `session_key` values, and the transforms resolve
-each row's clocks in the packet its `session_key` names. For the same reason a clock named over a
-packet set must be every packet's reference clock.
+field is the packet's `packet_key`, so a filter on it skips other packets' files without opening
+them. A partition field is constant per file, and one packet's file can hold several sessions, so
+the file can be labelled with its packet but not its session. `packet_key` with the stored
+`session_id` identifies the session, which satisfies §13.1's discriminator; `scanner` and `table`
+add `session_key` and `session_name` per row as scalar expressions over the two, and a constraint
+on either becomes one on `packet_key` and `session_id`, which prunes. An unscoped table such as
+`core.subjects` gets none of the three. A clock ID is unique only within its packet, so `tick_range`
+over a packet set tests each packet's terms under its `packet_key`, and the transforms resolve each
+row's clocks in the packet its `packet_key` names. For the same reason a clock named over a packet
+set must be every packet's reference clock.
 
 ## Locations and URIs
 

@@ -7,8 +7,9 @@
 - :class:`Session` -- one packet's session, and the ``session_key`` the packet set gave it.
 - :func:`session_scoped` -- the tables a registry scopes to a session.
 
-An identifier is assigned within its packet, so rows from two packets are told apart by
-``session_key``, never by their identifiers.
+An identifier is assigned within its packet, so rows of a session-scoped table from two packets are
+told apart by ``packet_key`` and ``session_id`` together, or by ``session_key``, the one number each
+such pair is given; never by their identifiers.
 """
 
 from __future__ import annotations
@@ -38,10 +39,11 @@ from .sql import sql_name
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from duckdb import DuckDBPyConnection
 
-#: The columns a packet set projects onto every session-scoped table. `session_key` is the
-#: session discriminator; `session_name` is the label permitted beside one, and promises nothing
-#: about what two packets' matching labels denote.
-PROJECTED = ("session_key", "session_name")
+#: The columns a packet set projects onto every session-scoped table. `packet_key` names the packet
+#: a row came from, and with the stored `session_id` it identifies the session; `session_key`
+#: numbers that pair; `session_name` is the label permitted beside them, and promises nothing about
+#: what two packets' matching labels denote.
+PROJECTED = ("packet_key", "session_key", "session_name")
 
 #: What :func:`duck.connect` says of a packet set where DuckDB is absent.
 READS_WITHOUT_SQL = "A packet set is readable without it through table(), which goes through PyArrow."
@@ -89,6 +91,8 @@ class Session:
         The discriminator. Numbered by the packet set as it opened the packets, so it is stable
         for one packet set and means nothing outside it, as an assigned identifier means nothing
         outside its packet.
+    packet_key : int
+        The position of the packet this session was read from, among the packets the set opened.
     packet_id : str
         The packet this session was read from.
     session_id : int
@@ -98,6 +102,7 @@ class Session:
     """
 
     session_key: int
+    packet_key: int
     packet_id: str
     session_id: int
     session_name: str | None
@@ -147,12 +152,13 @@ class PacketSet:
         first query runs.
         """
         numbered, key = [], 0
-        for packet in packets:
+        for packet_key, packet in enumerate(packets):
             rows = packet.table(CORE_SESSIONS).to_pylist()
             for row in sorted(rows, key=lambda r: r["session_id"]):
                 numbered.append(
                     Session(
                         session_key=key,
+                        packet_key=packet_key,
                         packet_id=packet.manifest.packet_id,
                         session_id=row["session_id"],
                         session_name=row.get("session_name"),
@@ -185,6 +191,23 @@ class PacketSet:
         """Every session across every packet, numbered."""
         return self._sessions
 
+    def session_table(self) -> pa.Table:
+        """Return every session as a table, for joining `session_key` onto a :meth:`scan`.
+
+        Returns
+        -------
+        pyarrow.Table
+            `packet_key`, `session_id`, `session_key` and `session_name`, one row per session.
+        """
+        return pa.table(
+            {
+                "packet_key": pa.array([s.packet_key for s in self._sessions], pa.int32()),
+                "session_id": pa.array([s.session_id for s in self._sessions], pa.int32()),
+                "session_key": pa.array([s.session_key for s in self._sessions], pa.int32()),
+                "session_name": pa.array([s.session_name for s in self._sessions], pa.string()),
+            }
+        )
+
     @property
     def scoped(self) -> frozenset[str]:
         """Which resources carry a session discriminator."""
@@ -205,8 +228,8 @@ class PacketSet:
     ) -> DuckDBPyConnection:
         """Register each resource as one view over every packet that holds it.
 
-        A session-scoped view carries `session_key` and `session_name`, projected as scalar
-        expressions over `session_id` rather than joined from `core.sessions`. A query planner
+        A session-scoped view carries `packet_key`, `session_key` and `session_name`, projected as
+        scalar expressions over `session_id` rather than joined from `core.sessions`. A query planner
         can prune the projection when a query does not select it.
 
         Nothing is registered unless asked for, for the reason `Packet.duckdb` says: binding a
@@ -277,12 +300,13 @@ class PacketSet:
         return f"SELECT *, {self._identity(packet, resource_id)} FROM '{base}'"
 
     def _identity(self, packet: Packet, resource_id: str) -> str:
-        """Return the projected `session_key` and `session_name` for one packet's rows.
+        """Return the projected `packet_key`, `session_key` and `session_name` for one packet's rows.
 
         A scalar expression over a column already being scanned, so a query not selecting it
         can have the expression pruned and read nothing extra.
         """
         held = self._by_packet[packet.manifest.packet_id]
+        packet_key = f"{self._packet_key(packet)} AS packet_key"
         if "session_id" in _column_names(packet, resource_id):
             keys = " ".join(f"WHEN {s.session_id} THEN {s.session_key}" for s in held.values())
             labels = " ".join(
@@ -291,7 +315,9 @@ class PacketSet:
                 else f"WHEN {s.session_id} THEN NULL"
                 for s in held.values()
             )
-            return f"CASE session_id {keys} END AS session_key, CASE session_id {labels} END AS session_name"
+            return (
+                f"{packet_key}, CASE session_id {keys} END AS session_key, CASE session_id {labels} END AS session_name"
+            )
         if len(held) != 1:
             raise MultiSessionUnresolved(
                 f"{resource_id} is session-scoped, carries no session_id, and "
@@ -300,15 +326,17 @@ class PacketSet:
             )
         only = next(iter(held.values()))
         label = _literal(only.session_name)
-        return f"{only.session_key} AS session_key, {label} AS session_name"
+        return f"{packet_key}, {only.session_key} AS session_key, {label} AS session_name"
 
     # -- Arrow ----------------------------------------------------------------------
 
     def scan(self, resource_id: str) -> pads.Dataset:
         """Open one resource across every packet holding it as one lazy dataset.
 
-        Each packet's files are fragments whose partition fields are its session's `session_key`
-        and `session_name`, so a filter on either skips other packets' files unopened.
+        Each packet's files are fragments whose partition field is `packet_key`, so a filter on it
+        skips other packets' files unopened. With the stored `session_id`, `packet_key` identifies
+        a session-scoped row's session; :meth:`session_table` gives each pair's `session_key` and
+        `session_name`, which :meth:`scanner` and :meth:`table` add per row.
 
         Parameters
         ----------
@@ -318,39 +346,40 @@ class PacketSet:
         Returns
         -------
         pyarrow.dataset.Dataset
-            A union of each packet's files, with `session_key` and `session_name` added to a
-            session-scoped resource and nulls for a column only some packets hold.
+            A union of each packet's files, with `packet_key` added to a session-scoped resource
+            and nulls for a column only some packets hold.
 
         Raises
         ------
         MultiSessionUnresolved
-            If the resource is session-scoped and a packet holding it holds several sessions,
-            whose rows no one constant can label; :meth:`scanner` and :meth:`table` project
-            `session_key` from `session_id` instead.
+            If the resource is session-scoped and lacks `session_id` in a packet holding several
+            sessions, whose rows nothing then tells apart.
         ResourceNotFoundError
             If no packet of the packet set holds the resource.
         """
         scoped = resource_id in self._scoped
         holding = self._holding(resource_id)
-        for packet in holding:
-            if scoped and len(self._by_packet[packet.manifest.packet_id]) > 1:
-                raise MultiSessionUnresolved(
-                    f"{packet.manifest.packet_id} holds several sessions, so its {resource_id} files carry no "
-                    "one session_key; read it through scanner() or table(), which project it from session_id"
-                )
+        if scoped:
+            for packet in holding:
+                self._distinguishable(packet, resource_id)
         bases = [cast(pads.FileSystemDataset, packet.scan(resource_id)) for packet in holding]
-        schema = self._unified(holding, resource_id, [base.schema for base in bases])
+        schema = pa.unify_schemas([base.schema for base in bases], promote_options="permissive")
+        if scoped:
+            schema = schema.append(pa.field("packet_key", pa.int32()))
         children = []
         for packet, base in zip(holding, bases, strict=True):
             fragments = list(base.get_fragments())
-            label = self._label(packet) if scoped else pc.scalar(True)
+            label = pc.field("packet_key") == pa.scalar(self._packet_key(packet), pa.int32())
             children.append(
                 pads.FileSystemDataset.from_paths(
                     [fragment.path for fragment in fragments],
                     schema=schema,
                     format=base.format,
                     filesystem=base.filesystem,
-                    partitions=[fragment.partition_expression & label for fragment in fragments],
+                    partitions=[
+                        fragment.partition_expression & label if scoped else fragment.partition_expression
+                        for fragment in fragments
+                    ],
                 )
             )
         return pads.dataset(children)  # type: ignore[arg-type]  # the stubs omit a list of datasets
@@ -365,30 +394,37 @@ class PacketSet:
     ) -> pads.Scanner:
         """Scan one resource across every packet holding it, with constraints pushed down.
 
-        Takes :meth:`Packet.scanner`'s arguments; `session_key` and `session_name` are constraints
-        like any column. Where a packet holding the resource holds several sessions, each packet
-        is scanned in turn with its `session_key` projected from `session_id`, keyword constraints
-        reach each packet's files and `filter` applies to the batches read.
+        Takes :meth:`Packet.scanner`'s arguments. A session-scoped resource gains `packet_key`,
+        `session_key` and `session_name`, the last two computed per row from `packet_key` and
+        `session_id`. A keyword constraint on any of the three becomes one on `packet_key` and
+        `session_id` and prunes other packets' files; `filter` is tested before they are computed,
+        so it may name `packet_key` but not `session_key` or `session_name`.
 
         Returns
         -------
         pyarrow.dataset.Scanner
             A scanner over every packet's matching rows.
+
+        Raises
+        ------
+        MultiSessionUnresolved
+            As :meth:`scan` raises it.
         """
-        if all(len(self._by_packet[p.manifest.packet_id]) == 1 for p in self._holding(resource_id)):
-            return self.scan(resource_id).scanner(
-                columns=columns, filter=both(expression(where), filter), memory_pool=read_pool()
-            )
-        schema = self._stamped_schema(resource_id)
-        batches = (
-            stamped
-            for packet, constraints in self._constrained(resource_id, where)
-            for batch in packet.scanner(resource_id, filter=expression(constraints)).to_batches()
-            for stamped in _conformed(
-                self._stamp(packet, resource_id, pa.Table.from_batches([batch])), schema
-            ).to_batches()
+        dataset = self.scan(resource_id)
+        stored = [name for name in dataset.schema.names if name not in PROJECTED]
+        wanted = stored if columns is None else [c for c in columns if c not in PROJECTED]
+        projection: dict[str, pads.Expression] = {name: pc.field(name) for name in wanted}
+        if resource_id in self._scoped:
+            key, label = self._per_row(resource_id)
+            projection |= {"packet_key": pc.field("packet_key"), "session_key": key, "session_name": label}
+            if columns is not None:
+                projection = {name: projection[name] for name in [*wanted, *(c for c in columns if c in PROJECTED)]}
+        rest, selected = self._identity_constraints(resource_id, where)
+        return dataset.scanner(
+            columns=projection,  # type: ignore[arg-type]  # the stubs omit a projection mapping
+            filter=both(both(expression(rest), selected), filter),
+            memory_pool=read_pool(),
         )
-        return pads.Scanner.from_batches(batches, schema=schema, columns=columns, filter=filter)
 
     def table(
         self,
@@ -401,19 +437,20 @@ class PacketSet:
     ) -> pa.Table:
         """Read one resource across every packet that holds it, as one Arrow table.
 
-        Takes :meth:`Packet.table`'s arguments, applied in each packet, with `session_key` and
-        `session_name` as constraints like any column; `on_clock` maps onto each packet's
-        reference clock. The
-        identity is appended the same way the SQL view projects it, so the two agree. Goes
-        through PyArrow, so a packet set stays readable with the ``sql`` extra absent.
+        Takes :meth:`Packet.table`'s arguments, applied in each packet, with `packet_key`,
+        `session_key` and `session_name` as constraints like any column; `on_clock` maps onto
+        each packet's reference clock. The identity is appended the same way the SQL view
+        projects it, so the two agree. Goes through PyArrow, so a packet set stays readable with
+        the ``sql`` extra absent.
 
         Parameters
         ----------
         resource_id : str
             Dotted resource ID.
         columns : list of str, optional
-            Read only these columns. `session_key` and `session_name` are always added to a
-            session-scoped resource, and asking for them alone still reads `session_id`.
+            Read only these columns. `packet_key`, `session_key` and `session_name` are always
+            added to a session-scoped resource, and asking for them alone still reads
+            `session_id`.
         on_clock, seconds, **where
             As :meth:`Packet.table` takes them, except that a clock ID must be every packet's
             reference clock, since it names a different clock in each.
@@ -430,8 +467,9 @@ class PacketSet:
         ResourceNotFoundError
             If no packet of the packet set holds the resource.
         """
+        rest, _ = self._identity_constraints(resource_id, where)
         parts = []
-        for packet, constraints in self._constrained(resource_id, where):
+        for packet, session_ids in self._reached(resource_id, where):
             wanted = columns
             if columns is not None and resource_id in self._scoped:
                 wanted = [c for c in columns if c not in PROJECTED]
@@ -439,12 +477,13 @@ class PacketSet:
                     wanted = [*wanted, "session_id"]
             if not isinstance(on_clock, bool):
                 shared_clock(packet, on_clock)
+            constraints = rest if session_ids is None else {**rest, "session_id": session_ids}
             part = packet.table(resource_id, columns=wanted, on_clock=on_clock, seconds=seconds, **constraints)
             if resource_id in self._scoped:
                 part = self._stamp(packet, resource_id, part)
             parts.append(part)
         if not parts:
-            return self._stamped_schema(resource_id).empty_table()
+            return self.scanner(resource_id, columns=columns).projected_schema.empty_table()
         return pa.concat_tables(parts, promote_options="permissive")
 
     def _holding(self, resource_id: str) -> list[Packet]:
@@ -454,78 +493,98 @@ class PacketSet:
             raise ResourceNotFoundError(f"no packet in this packet set declares {resource_id}", resource_id=resource_id)
         return holding
 
-    def _unified(self, holding: Sequence[Packet], resource_id: str, schemas: Sequence[pa.Schema]) -> pa.Schema:
-        """Every packet's columns under one schema, with the identity last for a scoped resource."""
-        schema = pa.unify_schemas(list(schemas), promote_options="permissive")
-        if resource_id in self._scoped:
-            schema = schema.append(pa.field("session_key", pa.int32())).append(pa.field("session_name", pa.string()))
-        return schema
+    def _packet_key(self, packet: Packet) -> int:
+        return self._packets.index(packet)
 
-    def _stamped_schema(self, resource_id: str) -> pa.Schema:
-        holding = self._holding(resource_id)
-        return self._unified(holding, resource_id, [packet.scan(resource_id).schema for packet in holding])
+    def _distinguishable(self, packet: Packet, resource_id: str) -> None:
+        """Refuse a scoped resource whose rows cannot say which of the packet's sessions they are in."""
+        count = len(self._by_packet[packet.manifest.packet_id])
+        if count > 1 and "session_id" not in _column_names(packet, resource_id):
+            raise MultiSessionUnresolved(
+                f"{resource_id} is session-scoped, carries no session_id, and "
+                f"{packet.manifest.packet_id} holds {count} sessions"
+            )
 
-    def _label(self, packet: Packet) -> pads.Expression:
-        """Build the partition expression naming a one-session packet's session."""
-        (session,) = self._by_packet[packet.manifest.packet_id].values()
-        key = pc.field("session_key") == pa.scalar(session.session_key, pa.int32())
-        name = pc.field("session_name")
-        return key & (name.is_null() if session.session_name is None else name == session.session_name)
+    def _per_row(self, resource_id: str) -> tuple[pads.Expression, pads.Expression]:
+        """Build `session_key` and `session_name` as expressions over `packet_key` and `session_id`."""
+        conditions, keys, labels = [], [], []
+        for packet in self._holding(resource_id):
+            sessions = list(self._by_packet[packet.manifest.packet_id].values())
+            in_packet = pc.field("packet_key") == pa.scalar(self._packet_key(packet), pa.int32())
+            for session in sessions:
+                on_session = pc.field("session_id") == pa.scalar(session.session_id, pa.int32())
+                conditions.append(in_packet if len(sessions) == 1 else in_packet & on_session)
+                keys.append(pa.scalar(session.session_key, pa.int32()))
+                labels.append(pa.scalar(session.session_name, pa.string()))
+        struct = pc.make_struct(*conditions)
+        return pc.case_when(struct, *keys), pc.case_when(struct, *labels)
 
-    def _constrained(
+    def _identity_constraints(
         self, resource_id: str, where: Mapping[str, Predicate]
-    ) -> list[tuple[Packet, dict[str, Predicate]]]:
-        """Each packet a read reaches, with constraints on `session_key` and `session_name` made its own.
+    ) -> tuple[dict[str, Predicate], pads.Expression | None]:
+        """Split `where` into stored-column constraints and an expression for the identity ones.
 
-        A packet none of whose sessions match is skipped; where some do, they become a constraint
-        on `session_id`, which a packet's files hold.
+        The expression is on `packet_key` and `session_id`, which the files hold, so it prunes.
+        """
+        rest = {name: value for name, value in where.items() if name not in PROJECTED}
+        if not any(where.get(name) is not None for name in PROJECTED):
+            return rest, None
+        terms = [
+            pc.field("packet_key") == pa.scalar(self._packet_key(packet), pa.int32())
+            if session_ids is None
+            else (pc.field("packet_key") == pa.scalar(self._packet_key(packet), pa.int32()))
+            & pc.field("session_id").isin(session_ids)
+            for packet, session_ids in self._reached(resource_id, where)
+        ]
+        if not terms:
+            return rest, pc.scalar(False)
+        selected = terms[0]
+        for term in terms[1:]:
+            selected = selected | term
+        return rest, selected
+
+    def _reached(self, resource_id: str, where: Mapping[str, Predicate]) -> list[tuple[Packet, list[int] | None]]:
+        """Each packet a read reaches, with the `session_id` values its identity constraints keep.
+
+        None keeps every session of the packet. A packet none of whose sessions match is left out.
         """
         identity = {name: where[name] for name in PROJECTED if where.get(name) is not None}
-        rest = {name: value for name, value in where.items() if name not in PROJECTED}
-        reached = []
+        if identity and resource_id not in self._scoped:
+            raise ValueError(f"{resource_id} is not session-scoped, so it carries no {', '.join(identity)}")
+        sessions = self.session_table()
+        reached: list[tuple[Packet, list[int] | None]] = []
         for packet in self._holding(resource_id):
-            if not identity or resource_id not in self._scoped:
-                reached.append((packet, rest))
+            if not identity:
+                reached.append((packet, None))
                 continue
-            sessions = list(self._by_packet[packet.manifest.packet_id].values())
-            labels = pa.table(
-                {
-                    "session_id": pa.array([s.session_id for s in sessions], pa.int32()),
-                    "session_key": pa.array([s.session_key for s in sessions], pa.int32()),
-                    "session_name": pa.array([s.session_name for s in sessions], pa.string()),
-                }
-            )
-            matching = labels.filter(cast(pads.Expression, expression(identity))).column("session_id").to_pylist()
+            own = sessions.filter(pc.field("packet_key") == pa.scalar(self._packet_key(packet), pa.int32()))
+            kept = own.filter(cast(pads.Expression, expression(identity))).column("session_id")
+            matching = cast("list[int]", kept.to_pylist())
             if not matching:
                 continue
-            if len(matching) == len(sessions):
-                reached.append((packet, rest))
-            elif "session_id" in _column_names(packet, resource_id):
-                reached.append((packet, {**rest, "session_id": matching}))
+            if len(matching) == own.num_rows:
+                reached.append((packet, None))
             else:
-                raise MultiSessionUnresolved(
-                    f"{resource_id} carries no session_id, so the sessions of {packet.manifest.packet_id} "
-                    "cannot be told apart"
-                )
+                self._distinguishable(packet, resource_id)
+                reached.append((packet, matching))
         return reached
 
-    def _keyed(self, resource_id: str) -> list[tuple[Packet, list[int]]]:
-        """Return each packet holding a resource with the `session_key` values its sessions take."""
-        return [
-            (packet, [s.session_key for s in self._by_packet[packet.manifest.packet_id].values()])
-            for packet in self._holding(resource_id)
-        ]
+    def _keyed(self, resource_id: str) -> list[tuple[Packet, int]]:
+        """Return each packet holding a resource with its `packet_key`."""
+        return [(packet, self._packet_key(packet)) for packet in self._holding(resource_id)]
 
-    def _located(self, session_key: int) -> tuple[Packet, Session]:
-        """Find the packet and session a `session_key` names."""
-        for session in self._sessions:
-            if session.session_key == session_key:
-                packet = next(p for p in self._packets if p.manifest.packet_id == session.packet_id)
-                return packet, session
-        raise KeyError(f"this packet set numbers no session {session_key}")
+    def _member(self, packet_key: int) -> Packet:
+        """Return the packet a `packet_key` names."""
+        if not 0 <= packet_key < len(self._packets):
+            raise KeyError(f"this packet set has no packet {packet_key}")
+        return self._packets[packet_key]
+
+    def _session_ids(self, packet_key: int) -> list[int]:
+        """Return the `session_id` of every session the packet a `packet_key` names holds."""
+        return list(self._by_packet[self._packets[packet_key].manifest.packet_id])
 
     def _stamp(self, packet: Packet, resource_id: str, table: pa.Table) -> pa.Table:
-        """Append `session_key` and `session_name` to one packet's rows.
+        """Append `packet_key`, `session_key` and `session_name` to one packet's rows.
 
         Entirely in Arrow: a lookup over the packet's handful of sessions, then a take. This can
         run over the packet's largest fact tables, so it keeps the operation columnar.
@@ -544,16 +603,12 @@ class PacketSet:
                 f"{resource_id} is session-scoped, carries no session_id, and "
                 f"{packet.manifest.packet_id} holds {len(held)} sessions"
             )
-        return table.append_column("session_key", key_column).append_column("session_name", label_column)
-
-
-def _conformed(table: pa.Table, schema: pa.Schema) -> pa.Table:
-    """`table` under `schema`, with nulls for a column it lacks."""
-    columns = [
-        table.column(field.name) if field.name in table.column_names else pa.nulls(table.num_rows, field.type)
-        for field in schema
-    ]
-    return pa.Table.from_arrays(columns, schema=schema)
+        packet_key = pa.repeat(pa.scalar(self._packet_key(packet), pa.int32()), table.num_rows)
+        return (
+            table.append_column("packet_key", packet_key)
+            .append_column("session_key", key_column)
+            .append_column("session_name", label_column)
+        )
 
 
 def _literal(value: str | None) -> str:

@@ -26,7 +26,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from .clocks import ClockGraph
     from .manifest import Resource
-    from .packet_set import Session
     from .predicates import Predicate
     from .resources import ArrayResource, TableResource
     from .runs import Ambiguity
@@ -137,21 +136,18 @@ class PacketLike(Protocol):
 
 @runtime_checkable
 class PacketSetLike(Protocol):
-    """What a transform or predicate asks of several packets: the packet and session each `session_key` names.
+    """What a transform or predicate asks of several packets: the packet each `packet_key` names.
 
     A clock ID means something only within its packet, so each row is resolved in the packet its
-    `session_key` names. The two methods are the reader's own, so only
+    `packet_key` names. The methods are the reader's own, so only
     :class:`~escapewheel_reader.PacketSet` implements this.
     """
 
-    @property
-    def sessions(self) -> tuple[Session, ...]:
-        """Every packet's sessions, each with its `session_key`."""
-        ...
+    def _member(self, packet_key: int) -> PacketLike: ...
 
-    def _located(self, session_key: int) -> tuple[PacketLike, Session]: ...
+    def _session_ids(self, packet_key: int) -> list[int]: ...
 
-    def _keyed(self, resource_id: str) -> list[tuple[PacketLike, list[int]]]: ...
+    def _keyed(self, resource_id: str) -> list[tuple[PacketLike, int]]: ...
 
 
 __all__ = ["Memo", "PacketLike", "PacketSetLike"]

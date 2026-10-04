@@ -766,7 +766,7 @@ def attach_clocks(source: PacketLike | PacketSetLike, data: Arrow, resource_id: 
     ----------
     source : PacketLike or PacketSet
         The packet the rows came from, or the packet set, whose rows each go to the packet their
-        `session_key` names.
+        `packet_key` names.
     data : pyarrow.Table, RecordBatch, RecordBatchReader, or pyarrow.dataset Scanner or Dataset
         Rows of `resource_id`. Only coordinates they carry get a clock, and each needs the
         columns its clock is reached through.
@@ -986,7 +986,7 @@ def on_clock(
     ----------
     source : PacketLike or PacketSet
         The packet the rows came from, for its anchors and its declared bound, or the packet set,
-        whose rows each map in the packet their `session_key` names; `clock` must then be unset
+        whose rows each map in the packet their `packet_key` names; `clock` must then be unset
         or every packet's reference clock.
     data : pyarrow.Table, RecordBatch, RecordBatchReader, or pyarrow.dataset Scanner or Dataset
         Rows carrying `t_tick` and `clock_id`, or with `resource_id` rows of that resource. A
@@ -1103,7 +1103,7 @@ def seconds(
     ----------
     source : PacketLike or PacketSet
         The packet the rows came from, for its origin and reference rate, or the packet set, whose
-        rows each take the origin of the session their `session_key` names.
+        rows each take the origin of the session their `packet_key` and `session_id` name.
     data : pyarrow.Table, RecordBatch, RecordBatchReader, or pyarrow.dataset Scanner or Dataset
         Rows carrying `t_tick` and `clock_id`, or with `resource_id` rows of that resource. Rows
         already known to be on the reference clock can stay a scan through
@@ -1111,8 +1111,8 @@ def seconds(
     resource_id : str, optional
         The resource the rows are of, whose declaration says which columns are coordinates.
     session_id : int, optional
-        Which session's origin to use. Over a packet set each row's `session_key` says, and
-        naming one is an error.
+        Which session's origin to use. Over a packet set each row's `packet_key` and `session_id`
+        say, and naming one is an error.
 
     Returns
     -------
@@ -1132,11 +1132,15 @@ def seconds(
     """
     if isinstance(source, PacketSetLike):
         if session_id is not None:
-            raise ValueError("session_id names a session within one packet; over a packet set, session_key says")
+            raise ValueError(
+                "session_id names a session within one packet; over a packet set, "
+                "each row says by its packet_key and session_id"
+            )
         return _over_sessions(
             source,
             data,
             lambda member, session, table, parents: _seconds_of(member, session, table, resource_id, parents),
+            by_session=True,
         )
     one = source
     parents: dict[str, pa.Table] | None = None if isinstance(data, (pa.Table, pa.RecordBatch)) else {}
@@ -1226,32 +1230,49 @@ def shared_clock(packet: PacketLike, clock: int | None) -> int | None:
 def _over_sessions(
     members: PacketSetLike,
     data: Arrow,
-    transform: Callable[[PacketLike, int, pa.Table, dict[str, pa.Table] | None], pa.Table],
+    transform: Callable[[PacketLike, int | None, pa.Table, dict[str, pa.Table] | None], pa.Table],
+    *,
+    by_session: bool = False,
 ) -> Arrow:
-    """Apply a per-packet transform to each session's rows of a packet set, by their `session_key`.
+    """Apply a per-packet transform to each packet's rows of a packet set, by their `packet_key`.
 
-    A stream keeps one cache of referenced tables per packet, so each is read once. Rows come back
-    grouped by session.
+    With `by_session`, a packet holding several sessions has its rows split again by `session_id`,
+    and the transform is given each one; otherwise it is given None. A stream keeps one cache of
+    referenced tables per packet, so each is read once. Rows come back grouped by packet.
     """
-    caches: dict[str, dict[str, pa.Table]] | None = None if isinstance(data, (pa.Table, pa.RecordBatch)) else {}
+    caches: dict[int, dict[str, pa.Table]] | None = None if isinstance(data, (pa.Table, pa.RecordBatch)) else {}
 
     def split(table: pa.Table) -> pa.Table:
-        if "session_key" not in table.column_names:
-            raise ValueError("rows read from a packet set need session_key to say which packet each came from")
-        keys = table.column("session_key")
+        if "packet_key" not in table.column_names:
+            raise ValueError("rows read from a packet set need packet_key to say which packet each came from")
+        keys = table.column("packet_key")
         present = sorted(cast("list[int]", pc.unique(keys).drop_null().to_pylist()))
         if not present:
-            # No row says which packet: the first session's maps nothing and gives the schema.
-            present, table = [members.sessions[0].session_key], table.slice(0, 0)
+            # No row says which packet: the first packet maps nothing and gives the schema.
+            present, table = [0], table.slice(0, 0)
         parts = []
         for key in present:
-            packet, session = members._located(key)
+            packet = members._member(key)
             rows = table if len(present) == 1 else table.filter(pc.equal(keys, pa.scalar(key, keys.type)))
-            parents = None if caches is None else caches.setdefault(session.packet_id, {})
-            parts.append(transform(packet, session.session_id, rows, parents))
+            parents = None if caches is None else caches.setdefault(key, {})
+            for session_id, session_rows in _by_session(members._session_ids(key), rows, by_session):
+                parts.append(transform(packet, session_id, session_rows, parents))
         return pa.concat_tables(parts, promote_options="permissive")
 
     return _each(data, split)
+
+
+def _by_session(session_ids: list[int], rows: pa.Table, by_session: bool) -> list[tuple[int | None, pa.Table]]:
+    """Split one packet's rows by `session_id` where the transform needs each session's own."""
+    if not by_session:
+        return [(None, rows)]
+    if len(session_ids) == 1:
+        return [(session_ids[0], rows)]
+    if "session_id" not in rows.column_names:
+        raise ValueError("rows of a packet holding several sessions need session_id to say which each is in")
+    column = rows.column("session_id")
+    present = sorted(cast("list[int]", pc.unique(column).drop_null().to_pylist())) or session_ids[:1]
+    return [(s, rows.filter(pc.equal(column, pa.scalar(s, column.type)))) for s in present]
 
 
 #: Rows a stream is gathered into before a transform runs: a Parquet batch is about 130,000 rows,

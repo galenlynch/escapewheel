@@ -87,7 +87,7 @@ def tick_range(
     ----------
     source : PacketLike or PacketSet
         The packet whose clocks and declarations the expression is built from. Over a packet set,
-        each packet's expression is tested under its `session_key` values, since a clock ID is
+        each packet's expression is tested under its `packet_key`, since a clock ID is
         unique only within its packet, and `clock` must be unset or every packet's reference clock.
     resource_id : str
         The table the expression filters, whose declaration says where each coordinate's clock is.
@@ -112,9 +112,9 @@ def tick_range(
     if isinstance(source, PacketSetLike):
         return _any(
             [
-                pads.field("session_key").isin(keys)
+                pads.field("packet_key").isin([packet_key])
                 & tick_range(member, resource_id, span, clock=clocks.shared_clock(member, clock), column=column)
-                for member, keys in source._keyed(resource_id)
+                for member, packet_key in source._keyed(resource_id)
             ]
         )
     reach = _reach(source, resource_id, span, clock, column)
@@ -155,7 +155,7 @@ def tick_bounds(
     pyarrow.Table
         `clock_id`, `lo` and `hi`, int64, one row per closed interval: a stored tick on `clock_id`
         lands in `span` if and only if it lies in one of its clock's intervals. Over a packet set,
-        `session_key` first, since a clock ID is unique only within its packet.
+        `packet_key` first, since a clock ID is unique only within its packet.
 
     Raises
     ------
@@ -166,10 +166,9 @@ def tick_bounds(
     """
     if isinstance(source, PacketSetLike):
         parts = []
-        for member, keys in source._keyed(resource_id):
+        for member, packet_key in source._keyed(resource_id):
             bounds = tick_bounds(member, resource_id, span, clock=clocks.shared_clock(member, clock), column=column)
-            for key in keys:
-                parts.append(bounds.add_column(0, "session_key", pa.array([key] * bounds.num_rows, pa.int32())))
+            parts.append(bounds.add_column(0, "packet_key", pa.array([packet_key] * bounds.num_rows, pa.int32())))
         return pa.concat_tables(parts)
     reach = _reach(source, resource_id, span, clock, column)
     unplaced = [name for name in reach.present if name not in reach.intervals]

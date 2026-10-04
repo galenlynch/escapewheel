@@ -94,6 +94,10 @@ every_unit = packets.table("core.units")  # rows of both, with session_key and s
 packets.duckdb(tables=["core.units"]).sql("SELECT session_key, count(*) FROM core_units GROUP BY 1")
 ```
 
+Each such row also carries the `packet_key` of the packet it was read from, which with its
+`session_id` names the same session; `packets.session_table()` lists every pair with its
+`session_key` and `session_name`.
+
 ## Reading lazily
 
 The accessors return a `pyarrow.Table`. A read too large to hold, or one handed to another
@@ -119,9 +123,11 @@ takes no further pushdown, so narrow it first. Rows already on the reference clo
 `analysis.spike_events`, can take seconds inside the scan through `seconds_expression(packet)`.
 
 A packet set reads the same way. `PacketSet.scan` makes each packet's files fragments of one
-dataset with `session_key` and `session_name` as partition fields, so a filter on either opens no
-other packet's files. `tick_range` and the transforms take the packet set in place of a packet,
-and resolve each row's clocks in the packet its `session_key` names.
+dataset with `packet_key` as their partition field, so a filter on it opens no other packet's
+files. `PacketSet.scanner` adds `session_key` and `session_name` to each row, and turns a
+constraint on either into one on `packet_key` and `session_id`. `tick_range` and the transforms
+take the packet set in place of a packet, and resolve each row's clocks in the packet its
+`packet_key` names.
 
 No accessor promises an order. `spike_times` on the reference clock reads `analysis.spike_events`,
 stored by time, where `clock=STORED` reads `core.spike_events`, stored by unit. Sort or group the

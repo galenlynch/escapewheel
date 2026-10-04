@@ -1,4 +1,4 @@
-"""A packet set read lazily: one dataset over every packet, and the transforms dispatched by session."""
+"""A packet set read lazily: one dataset over every packet, and the transforms dispatched by packet."""
 
 import json
 import shutil
@@ -10,7 +10,6 @@ import pytest
 from packet_fixture import CLOCK_BEHAVIOUR, CLOCK_PROBE, SESSION, SESSION_NAME, UNITS
 
 from escapewheel_reader import (
-    MultiSessionUnresolved,
     Refused,
     attach_clocks,
     on_clock,
@@ -45,14 +44,16 @@ def pair(dense_root, tmp_path):
     return open_packets([dense_root, _renamed(dense_root, tmp_path, SECOND_NAME)])
 
 
-def _per_packet(pair, read):
-    """Each packet's rows by `read`, stamped with its session as the packet set numbers it."""
+def _per_packet(pair, read, *, identity=True):
+    """Each packet's rows by `read`, stamped with its packet and session as the packet set numbers them."""
     parts = []
     for session in pair.sessions:
-        packet = next(p for p in pair.packets if p.manifest.packet_id == session.packet_id)
-        part = read(packet)
-        part = part.append_column("session_key", pa.array([session.session_key] * part.num_rows, pa.int32()))
-        parts.append(part.append_column("session_name", pa.array([session.session_name] * part.num_rows, pa.string())))
+        part = read(pair.packets[session.packet_key])
+        part = part.append_column("packet_key", pa.array([session.packet_key] * part.num_rows, pa.int32()))
+        if identity:
+            part = part.append_column("session_key", pa.array([session.session_key] * part.num_rows, pa.int32()))
+            part = part.append_column("session_name", pa.array([session.session_name] * part.num_rows, pa.string()))
+        parts.append(part)
     return pa.concat_tables(parts)
 
 
@@ -60,18 +61,29 @@ def _sorted(table, *columns):
     return table.sort_by([(name, "ascending") for name in columns or table.column_names])
 
 
-def test_a_scan_holds_every_packets_rows_under_its_session(pair):
+def test_a_scan_holds_every_packets_rows_under_its_packet(pair):
+    stored = _per_packet(pair, lambda packet: packet.table(SPIKES), identity=False)
+    assert _sorted(pair.scan(SPIKES).to_table()).equals(_sorted(stored))
     expected = _per_packet(pair, lambda packet: packet.table(SPIKES))
-    assert _sorted(pair.scan(SPIKES).to_table()).equals(_sorted(expected))
     assert pair.table(SPIKES).equals(expected)
+    assert _sorted(pair.scanner(SPIKES).to_table()).equals(_sorted(expected))
 
 
-def test_a_filter_on_the_session_skips_the_other_packets_files(pair):
+def test_a_filter_on_the_packet_skips_the_other_packets_files(pair):
     dataset = pair.scan(SPIKES)
-    second = pc.field("session_key") == pa.scalar(1, pa.int32())
+    second = pc.field("packet_key") == pa.scalar(1, pa.int32())
     opened = sum(len(list(child.get_fragments(filter=second))) for child in dataset.children)
     assert opened == len(list(dataset.children[1].get_fragments()))
-    assert set(dataset.to_table(filter=second).column("session_name").to_pylist()) == {SECOND_NAME}
+    named = pair.scanner(SPIKES, session_name=SECOND_NAME).to_table()
+    assert set(named.column("packet_key").to_pylist()) == {1}
+
+
+def test_the_session_table_joins_the_session_onto_a_scan(pair):
+    sessions = pair.session_table()
+    assert sessions.column_names == ["packet_key", "session_id", "session_key", "session_name"]
+    assert sessions.column("session_name").to_pylist() == [SESSION_NAME, SECOND_NAME]
+    joined = pair.scan(SPIKES).to_table().join(sessions, ["packet_key", "session_id"])
+    assert _sorted(joined.select(pair.table(SPIKES).column_names)).equals(_sorted(pair.table(SPIKES)))
 
 
 def test_the_scanner_takes_the_tables_constraints(pair):
@@ -90,16 +102,18 @@ def test_the_table_maps_and_times_each_packet_as_the_packet_does(pair):
 
 def test_a_range_over_the_set_selects_what_each_packets_range_does(pair):
     found = pair.scan(SPIKES).to_table(filter=tick_range(pair, SPIKES, SPAN))
-    expected = _per_packet(pair, lambda packet: packet.scan(SPIKES).to_table(filter=tick_range(packet, SPIKES, SPAN)))
+    expected = _per_packet(
+        pair, lambda packet: packet.scan(SPIKES).to_table(filter=tick_range(packet, SPIKES, SPAN)), identity=False
+    )
     assert _sorted(found).equals(_sorted(expected))
     bounds = tick_bounds(pair, SPIKES, SPAN)
-    assert bounds.column_names == ["session_key", "clock_id", "lo", "hi"]
+    assert bounds.column_names == ["packet_key", "clock_id", "lo", "hi"]
     one = tick_bounds(pair.packets[0], SPIKES, SPAN)
-    assert bounds.filter(where(session_key=1)).drop_columns("session_key").equals(one)
+    assert bounds.filter(where(packet_key=1)).drop_columns("packet_key").equals(one)
 
 
 @pytest.mark.parametrize("form", ["table", "stream"])
-def test_transforms_dispatch_rows_to_the_packet_their_session_names(pair, form):
+def test_transforms_dispatch_rows_to_the_packet_their_packet_key_names(pair, form):
     stored = pair.table(SPIKES)
     data = stored if form == "table" else pair.scanner(SPIKES)
     mapped = on_clock(pair, data, resource_id=SPIKES)
@@ -110,22 +124,22 @@ def test_transforms_dispatch_rows_to_the_packet_their_session_names(pair, form):
         pair,
         lambda packet: seconds(packet, on_clock(packet, packet.table(SPIKES), resource_id=SPIKES), resource_id=SPIKES),
     )
-    columns = ["session_key", "unit_id", "t_tick"]
+    columns = ["packet_key", "unit_id", "t_tick"]
     assert _sorted(timed, *columns).equals(_sorted(expected.select(timed.column_names), *columns))
     attached = attach_clocks(pair, stored, SPIKES)
     assert attached.num_rows == stored.num_rows
 
 
-def test_rows_without_a_session_cannot_be_dispatched(pair):
-    with pytest.raises(ValueError, match="session_key"):
+def test_rows_without_a_packet_cannot_be_dispatched(pair):
+    with pytest.raises(ValueError, match="packet_key"):
         on_clock(pair, pair.packets[0].table(SPIKES), resource_id=SPIKES)
 
 
 @pytest.fixture
-def two_sessions(packet_root, tmp_path):
+def two_sessions(dense_root, tmp_path):
     """One packet holding two sessions, its units all in the first."""
     root = tmp_path / "two_sessions"
-    shutil.copytree(packet_root, root)
+    shutil.copytree(dense_root, root)
     sessions = pq.read_table(root / "tables/core/sessions.parquet")
     pq.write_table(
         pa.concat_tables(
@@ -145,12 +159,16 @@ def two_sessions(packet_root, tmp_path):
 
 
 def test_a_packet_of_several_sessions_is_scanned_through_its_session_ids(two_sessions):
-    with pytest.raises(MultiSessionUnresolved, match="scanner"):
-        two_sessions.scan("core.units")
+    count = two_sessions.packets[0].table("core.units").num_rows
+    assert two_sessions.scan("core.units").count_rows() == count
     assert two_sessions.scanner("core.units").to_table().equals(two_sessions.table("core.units"))
-    assert two_sessions.scanner("core.units", session_key=0).to_table().num_rows == 2
+    assert set(two_sessions.table("core.units").column("session_key").to_pylist()) == {0}
+    assert two_sessions.scanner("core.units", session_key=0).to_table().num_rows == count
     assert two_sessions.scanner("core.units", session_name=SECOND_NAME).to_table().num_rows == 0
     assert two_sessions.table("core.units", session_key=1).num_rows == 0
+    timed = seconds(two_sessions, two_sessions.table(SPIKES, on_clock=True), resource_id=SPIKES)
+    alone = seconds(two_sessions.packets[0], two_sessions.packets[0].table(SPIKES, on_clock=True), resource_id=SPIKES)
+    assert timed.column("t_second").equals(alone.column("t_second"))
 
 
 def test_a_clock_named_across_packets_must_be_the_reference(pair):
@@ -172,5 +190,5 @@ def test_a_clock_named_across_packets_must_be_the_reference(pair):
 
 def test_seconds_over_a_packet_set_takes_the_session_from_each_row(pair):
     mapped = on_clock(pair, pair.table(SPIKES), resource_id=SPIKES)
-    with pytest.raises(ValueError, match="session_key says"):
+    with pytest.raises(ValueError, match="packet_key and session_id"):
         seconds(pair, mapped, resource_id=SPIKES, session_id=SESSION)

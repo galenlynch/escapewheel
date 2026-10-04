@@ -78,11 +78,13 @@ Narwhals needed three workarounds to express the mapping, and its PyArrow backen
 | `PacketSet.scan(rid)` | `pyarrow.dataset.Dataset` over every packet holding the resource |
 | `PacketSet.scanner(rid, *, columns=None, filter=None, **where)` | `pyarrow.dataset.Scanner` |
 
-`PacketSet.scan` makes each packet's files fragments of one dataset, with `session_key` and
-`session_name` as partition fields, so a filter on either skips other packets' files unopened. A
-multi-session packet's fragments cannot carry one constant, so `scan` refuses a session-scoped
-resource there; `scanner` and `table` project `session_key` from `session_id`, and translate a
-filter on it into `session_id` values before the scan.
+`PacketSet.scan` makes each packet's files fragments of one dataset, with `packet_key` as their
+partition field, so a filter on it skips other packets' files unopened. A multi-session packet's
+file cannot carry one session as a constant, so the session is `packet_key` with the stored
+`session_id`; `scanner` and `table` add `session_key` and `session_name` from the two, and
+translate a constraint on either into one on `packet_key` and `session_id` before the scan.
+`session_table()` gives every pair, for a join written elsewhere. An unscoped table carries none
+of the three (Part 05 §13.1).
 
 ### 3.2 Predicates
 
@@ -98,9 +100,9 @@ Each returns a `pyarrow.compute.Expression`, usable on any Dataset or Scanner.
   clock the table does not hold matches nothing, so which clocks are present need not be known.
   Where the clock comes through a reference, as `core.spike_events` reaches it through
   `core.units`, each term is `unit_id in (units on c) & t_tick in [a_c, b_c]`. Over a `PacketSet`
-  the per-packet expressions are ORed under `session_key`, since a clock ID is unique only within
+  the per-packet expressions are ORed under `packet_key`, since a clock ID is unique only within
   its packet. `column` defaults to the table's one coordinate and is required where it has several.
-- `tick_bounds(...)` — the same arguments, returning the intervals as a table of `session_key`,
+- `tick_bounds(...)` — the same arguments, returning the intervals as a table of `packet_key`,
   `clock_id`, `lo` and `hi`, for a predicate written in SQL or Polars.
 - `seconds_expression(packet, column="t_tick", *, session_id=None)` — `(t - t_zero) * den / num`
   as float64, for data already on the reference clock, so seconds can be projected inside a scan.
@@ -112,7 +114,7 @@ since a filter written from bounds has no mapping after it and would keep those 
 
 Over a packet set, a named `clock` must be every packet's reference clock, since any other ID names
 a different clock in each packet; `seconds` refuses `session_id` there, since each row's
-`session_key` names its session.
+`packet_key` and `session_id` name its session.
 
 ### 3.3 Transforms
 
@@ -122,7 +124,7 @@ on_clock(source, data, clock=None, *, resource_id=None, bound=None)
 seconds(source, data, *, resource_id=None, session_id=None)
 ```
 
-`source` is a `Packet`, or a `PacketSet` with rows dispatched by `session_key`. A stream is mapped
+`source` is a `Packet`, or a `PacketSet` with rows dispatched by `packet_key`. A stream is mapped
 batch by batch; the unit-to-clock lookup `attach_clocks` makes is cached per source rather than
 read per batch.
 
