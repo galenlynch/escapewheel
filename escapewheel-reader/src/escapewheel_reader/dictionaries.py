@@ -127,16 +127,32 @@ def key_filter(wanted: pa.Table, keys: Sequence[str]) -> tuple[pc.Expression, bo
 #: The most values one `is_in` test may hold and still be checked against row-group statistics;
 #: past it PyArrow keeps every row group.
 PRUNABLE_VALUES = 50
+#: The most ranges guarding a longer membership: each is a comparison on every row read.
+GUARD_RANGES = 8
 
 
 def one_of(column: str, values: Any) -> pc.Expression:
-    """Test `column` for membership in `values`, as sorted runs short enough for row groups to prune by."""
+    """Test `column` for membership in `values`, in a form row-group statistics can prune by.
+
+    A longer membership is ANDed with an OR of at most `GUARD_RANGES` closed ranges covering its
+    values, split at the widest gaps. Splitting the membership itself would prune as well, but
+    every row would then pay one hash lookup per split.
+    """
     found = pc.unique(values if isinstance(values, (pa.Array, pa.ChunkedArray)) else pa.array(list(values)))
-    if len(found) <= PRUNABLE_VALUES:
-        return pc.field(column).isin(found)
-    ordered = found.take(pc.sort_indices(found))
-    runs = range(0, len(ordered), PRUNABLE_VALUES)
-    return any_of([pc.field(column).isin(ordered[start : start + PRUNABLE_VALUES]) for start in runs])
+    field = pc.field(column)
+    if len(found) <= PRUNABLE_VALUES or found.null_count:
+        return field.isin(found)
+    ordered = found.take(pc.sort_indices(found)).to_pylist()
+    if pa.types.is_integer(found.type) or pa.types.is_floating(found.type):
+        gaps = np.diff(np.asarray(ordered))
+        # An integer gap of one leaves no value out, and every range costs a check per row group.
+        widest = np.argsort(gaps, kind="stable")[::-1][: GUARD_RANGES - 1]
+        cuts = sorted(widest[gaps[widest] > 1] + 1 if pa.types.is_integer(found.type) else widest + 1)
+    else:
+        cuts = [len(ordered) * k // GUARD_RANGES for k in range(1, GUARD_RANGES)]
+    bounds = zip([0, *cuts], [*cuts, len(ordered)], strict=True)
+    guard = any_of([(field >= ordered[lo]) & (field <= ordered[hi - 1]) for lo, hi in bounds if hi > lo])
+    return field.isin(found) & guard
 
 
 def any_of(terms: Sequence[pc.Expression]) -> pc.Expression:

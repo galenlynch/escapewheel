@@ -30,7 +30,7 @@ def test_a_scanner_ands_its_filter_with_its_constraints(packet_root):
 
 
 def test_a_long_membership_still_prunes_row_groups(tmp_path):
-    """PyArrow tests a long `is_in` against no row group's statistics, so `where` splits it."""
+    """PyArrow tests a long `is_in` against no row group's statistics, so `where` guards it with ranges."""
     path = tmp_path / "units.parquet"
     pq.write_table(pa.table({"unit_id": pa.array(range(10_000), pa.int32())}), path, row_group_size=100)
     wanted = list(range(5_000, 5_200, 2)) + [9_999]
