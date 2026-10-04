@@ -266,6 +266,8 @@ def run_lazynwb(plan: dict, operation: str) -> object:
     import polars as pl
 
     logging.disable(logging.WARNING)
+    # Not taken from the environment, unlike s3fs's and PyArrow's credentials.
+    lazynwb.config.anon = benchkit.anonymous()
     if operation == "list tables":
         return len(lazynwb.get_internal_paths(plan["nwb"]))
     if operation == "list":

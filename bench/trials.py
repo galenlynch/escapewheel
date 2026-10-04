@@ -415,6 +415,8 @@ def quiet_lazynwb():
     import lazynwb
 
     logging.disable(logging.WARNING)
+    # Not taken from the environment, unlike s3fs's and PyArrow's credentials.
+    lazynwb.config.anon = benchkit.anonymous()
     return lazynwb
 
 
