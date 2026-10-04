@@ -210,7 +210,7 @@ def test_the_arrow_path_and_the_sql_path_agree(two):
     assert duckdb
     con = two.duckdb(tables=["core.units"])
     from_sql = con.sql("SELECT session_key, unit_id FROM core_units ORDER BY 1, 2").fetchall()
-    arrow = two.table("core.units", columns=["unit_id"])
+    arrow = two.table("core.units", columns=["unit_id", "session_key"])
     from_arrow = sorted(zip(arrow.column("session_key").to_pylist(), arrow.column("unit_id").to_pylist(), strict=True))
     assert from_sql == from_arrow
 

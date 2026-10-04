@@ -437,20 +437,20 @@ class PacketSet:
     ) -> pa.Table:
         """Read one resource across every packet that holds it, as one Arrow table.
 
-        Takes :meth:`Packet.table`'s arguments, applied in each packet, with `packet_key`,
-        `session_key` and `session_name` as constraints like any column; `on_clock` maps onto
-        each packet's reference clock. The identity is appended the same way the SQL view
-        projects it, so the two agree. Goes through PyArrow, so a packet set stays readable with
-        the ``sql`` extra absent.
+        Takes :meth:`Packet.table`'s arguments, with `packet_key`, `session_key` and
+        `session_name` as constraints like any column; `on_clock` maps onto each packet's
+        reference clock. Without a clock, this is :meth:`scanner` read whole, so every packet is
+        one scan. The identity matches the SQL view's projection. Goes through PyArrow, so a
+        packet set stays readable with the ``sql`` extra absent.
 
         Parameters
         ----------
         resource_id : str
             Dotted resource ID.
         columns : list of str, optional
-            Read only these columns. `packet_key`, `session_key` and `session_name` are always
-            added to a session-scoped resource, and asking for them alone still reads
-            `session_id`.
+            Read only these columns, which a session-scoped resource's `packet_key`,
+            `session_key` and `session_name` may be among. All of them by default; the session
+            name costs a string per row, so name the columns where the rows are many.
         on_clock, seconds, **where
             As :meth:`Packet.table` takes them, except that a clock ID must be every packet's
             reference clock, since it names a different clock in each.
@@ -467,20 +467,25 @@ class PacketSet:
         ResourceNotFoundError
             If no packet of the packet set holds the resource.
         """
+        if on_clock is False and not seconds:
+            return self.scanner(resource_id, columns=columns, filter=None, **where).to_table()
         rest, _ = self._identity_constraints(resource_id, where)
+        identity = PROJECTED if columns is None else tuple(c for c in PROJECTED if c in columns)
         parts = []
         for packet, session_ids in self._reached(resource_id, where):
             wanted = columns
             if columns is not None and resource_id in self._scoped:
                 wanted = [c for c in columns if c not in PROJECTED]
-                if "session_id" not in wanted and "session_id" in _column_names(packet, resource_id):
+                if identity and "session_id" not in wanted and "session_id" in _column_names(packet, resource_id):
                     wanted = [*wanted, "session_id"]
             if not isinstance(on_clock, bool):
                 shared_clock(packet, on_clock)
             constraints = rest if session_ids is None else {**rest, "session_id": session_ids}
             part = packet.table(resource_id, columns=wanted, on_clock=on_clock, seconds=seconds, **constraints)
             if resource_id in self._scoped:
-                part = self._stamp(packet, resource_id, part)
+                part = self._stamp(packet, resource_id, part, identity)
+                if columns is not None and "session_id" not in columns and "session_id" in part.column_names:
+                    part = part.drop_columns(["session_id"])
             parts.append(part)
         if not parts:
             return self.scanner(resource_id, columns=columns).projected_schema.empty_table()
@@ -583,32 +588,36 @@ class PacketSet:
         """Return the `session_id` of every session the packet a `packet_key` names holds."""
         return list(self._by_packet[self._packets[packet_key].manifest.packet_id])
 
-    def _stamp(self, packet: Packet, resource_id: str, table: pa.Table) -> pa.Table:
-        """Append `packet_key`, `session_key` and `session_name` to one packet's rows.
+    def _stamp(self, packet: Packet, resource_id: str, table: pa.Table, names: Sequence[str] = PROJECTED) -> pa.Table:
+        """Append the identity columns among `names` to one packet's rows.
 
         Entirely in Arrow: a lookup over the packet's handful of sessions, then a take. This can
-        run over the packet's largest fact tables, so it keeps the operation columnar.
+        run over the packet's largest fact tables, so it keeps the operation columnar and builds
+        only the columns named, a string per row being the costliest.
         """
         held = list(self._by_packet[packet.manifest.packet_id].values())
-        keys = pa.array([s.session_key for s in held], pa.int32())
-        labels = pa.array([s.session_name for s in held], pa.string())
+        at = None
         if "session_id" in table.column_names:
             at = pc.index_in(table.column("session_id"), value_set=pa.array([s.session_id for s in held], pa.int32()))
-            key_column, label_column = pc.take(keys, at), pc.take(labels, at)
-        elif len(held) == 1:
-            key_column = pa.repeat(keys[0], table.num_rows)
-            label_column = pa.repeat(labels[0], table.num_rows)
-        else:
+        elif len(held) > 1 and set(names) - {"packet_key"}:
             raise MultiSessionUnresolved(
                 f"{resource_id} is session-scoped, carries no session_id, and "
                 f"{packet.manifest.packet_id} holds {len(held)} sessions"
             )
-        packet_key = pa.repeat(pa.scalar(self._packet_key(packet), pa.int32()), table.num_rows)
-        return (
-            table.append_column("packet_key", packet_key)
-            .append_column("session_key", key_column)
-            .append_column("session_name", label_column)
-        )
+
+        def per_session(values: pa.Array[Any]) -> pa.Array[Any] | pa.ChunkedArray[Any]:
+            return pa.repeat(values[0], table.num_rows) if at is None else pc.take(values, at)
+
+        for name in names:
+            column: pa.Array[Any] | pa.ChunkedArray[Any]
+            if name == "packet_key":
+                column = pa.repeat(pa.scalar(self._packet_key(packet), pa.int32()), table.num_rows)
+            elif name == "session_key":
+                column = per_session(pa.array([s.session_key for s in held], pa.int32()))
+            else:
+                column = per_session(pa.array([s.session_name for s in held], pa.string()))
+            table = table.append_column(name, column)
+        return table
 
 
 def _literal(value: str | None) -> str:

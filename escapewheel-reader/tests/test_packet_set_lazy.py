@@ -88,8 +88,8 @@ def test_the_session_table_joins_the_session_onto_a_scan(pair):
 
 def test_the_scanner_takes_the_tables_constraints(pair):
     found = pair.scanner(SPIKES, columns=["unit_id", "t_tick", "session_key"], unit_id=UNITS[0], session_key=1)
-    expected = pair.table(SPIKES, columns=["unit_id", "t_tick"], unit_id=UNITS[0], session_key=1)
-    assert found.to_table().equals(expected.select(["unit_id", "t_tick", "session_key"]))
+    expected = pair.table(SPIKES, columns=["unit_id", "t_tick", "session_key"], unit_id=UNITS[0], session_key=1)
+    assert found.to_table().equals(expected)
     assert set(expected.column("session_key").to_pylist()) == {1}
 
 
@@ -98,6 +98,17 @@ def test_the_table_maps_and_times_each_packet_as_the_packet_does(pair):
         return packet.table(SPIKES, on_clock=True, seconds=True, t_tick=SPAN)
 
     assert pair.table(SPIKES, on_clock=True, seconds=True, t_tick=SPAN).equals(_per_packet(pair, read))
+
+
+@pytest.mark.parametrize("on_clock", [False, True])
+def test_the_table_returns_exactly_the_columns_named(pair, on_clock):
+    """An identity column costs a value per row, so it comes back only when named."""
+    alone = pair.packets[0].table(SPIKES, columns=["unit_id", "t_tick"], on_clock=on_clock).column_names
+    bare = pair.table(SPIKES, columns=["unit_id", "t_tick"], on_clock=on_clock)
+    assert bare.column_names == alone
+    keyed = pair.table(SPIKES, columns=["unit_id", "t_tick", "session_name"], on_clock=on_clock)
+    assert keyed.column_names == [*alone, "session_name"]
+    assert keyed.column("t_tick").equals(bare.column("t_tick"))
 
 
 def test_a_range_over_the_set_selects_what_each_packets_range_does(pair):
