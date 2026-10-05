@@ -1,4 +1,4 @@
-# Exceptions to the naming conventions of `spec/tools/conventions.py` for the registries in this
+# Exceptions to the naming conventions of `spec/tools/checkers/registry_conventions.py` for the registries in this
 # directory, each with its reason. An exception is declared, never inferred.
 
 # A metric's name is the vocabulary people search by, so renaming one makes the column match

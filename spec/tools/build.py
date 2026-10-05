@@ -16,7 +16,7 @@ from pathlib import Path
 
 import assemble
 import render
-from canonical import dumps
+from checkers.registry_source import RegistrySourceError, dumps
 from specdoc import GenerationError, replace_generated_region
 
 HERE = Path(__file__).resolve().parent
@@ -262,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote {', '.join(p.name for p in render.main())}")
         print(f"wrote {render_physical_profile().relative_to(TREE)}")
         print(f"wrote {', '.join(str(p.relative_to(TREE)) for p in render_manifest())}")
-    except GenerationError as error:
+    except (GenerationError, RegistrySourceError) as error:
         print(error, file=sys.stderr)
         return 1
     return 0

@@ -66,9 +66,9 @@ def _check_counts() -> tuple[int, int]:
         )
 
     per_document = len(json.loads((ROOT / REGISTRY_CONTRACT).read_text())["invariants"])
-    import conventions
+    from checkers.registry_conventions import convention_failures
 
-    loop = len(conventions.convention_failures({}, {}, {})) - 1
+    loop = len(convention_failures({}, {}, {})) - 1
     return per_document, calls(ast.parse((ROOT / "spec/tools/check.py").read_text()), "check") + loop
 
 

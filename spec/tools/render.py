@@ -17,7 +17,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from conventions import name_columns
+from checkers.registry_conventions import name_columns
 from specdoc import GenerationError, fill_regions, named_regions, region_names, registry_tables
 
 HERE = Path(__file__).resolve().parent

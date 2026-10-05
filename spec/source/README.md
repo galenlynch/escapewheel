@@ -45,8 +45,9 @@ contributing guide describes the copies; edit the tree's file and never a copy.
 ## Where the registry comes from
 
 `logical_schemas.json` is **generated. Do not edit it.** `tools/assemble.py` writes it from a
-directory of TOML, and an extension outside the tree is assembled from its own directory by the
-same module:
+directory of TOML with `tools/checkers/registry_source.py`, and an extension outside the tree is
+assembled from its own directory by the same module, which the validator copies so that
+`escapewheel extension build` runs it:
 
 ```
 core/registry.toml + core/<resource_id>.toml   ──assemble.py──> ../artifacts/logical_schemas.json
@@ -56,7 +57,7 @@ core/registry.toml + core/<resource_id>.toml   ──assemble.py──> ../artif
 published format's keys. A file differs from the document only in spelling, so reading one needs
 nothing beyond Part 02: a table's fields sit at the top of its file rather than under `table`, a
 single-column reference is written on its column, and a rule may invoke the `interval` template,
-which `assemble.py` expands into plain SQL. `canonical.py` fixes the document's key and reference
+which `registry_source.py` expands into plain SQL. It also fixes the document's key and reference
 order, so how a file orders them changes nothing, and `tools/check.py` refuses a table whose
 `session_id` does not lead or whose `metadata` does not close it.
 

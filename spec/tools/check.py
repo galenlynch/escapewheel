@@ -16,9 +16,10 @@ import assemble
 import conventions
 import render
 from build import delivery_schema, fill_manifest_tables, fill_physical_profile
-from canonical import dumps
 from checkers.descriptor import check_physical_profile, override_errors
+from checkers.registry_conventions import NAMING, convention_failures, name_columns
 from checkers.registry_document import check_registry_context_bytes
+from checkers.registry_source import RegistrySourceError, dumps
 from checkers.rule_language import RuleProfileError, check_rule
 from specdoc import GenerationError, Reporter, part_paths, registry_tables
 
@@ -140,13 +141,11 @@ def source_checks(check: Reporter, core: dict) -> None:
 
 def convention_checks(check: Reporter, core: dict) -> None:
     """Check the authoring conventions and report which resources a paired value can name."""
-    for label, bad in conventions.convention_failures(
-        core, conventions.NAMING_EXCEPTIONS, conventions.NAMES_A_KIND
-    ).items():
+    for label, bad in convention_failures(core, conventions.NAMING_EXCEPTIONS, conventions.NAMES_A_KIND).items():
         check(label, bad)
-    named = conventions.name_columns(core)
+    named = name_columns(core)
     print(
-        f"      {len(conventions.NAMING)} conventions over {sum(len(t['columns']) for t in core.values())} columns, "
+        f"      {len(NAMING)} conventions over {sum(len(t['columns']) for t in core.values())} columns, "
         f"{len(conventions.NAMING_EXCEPTIONS)} declared exceptions; "
         f"{sum(named.values())} name columns must be unique within a packet (Part 02 §8.2), "
         f"{len(conventions.NAMES_A_KIND)} name a kind of thing"
@@ -387,7 +386,7 @@ def main() -> int:
         projection_checks(check, registry)
         schema_checks(check, registry)
         rule_checks(check, registry, core)
-    except GenerationError as error:
+    except (GenerationError, RegistrySourceError) as error:
         print(error, file=sys.stderr)
         return 1
 
