@@ -744,9 +744,11 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0" },
     { name = "pyarrow", specifier = ">=25.0.1" },
+    { name = "xarray", marker = "extra == 'xarray'", specifier = ">=2025.7" },
     { name = "zarr", marker = "extra == 'arrays'", specifier = ">=3" },
+    { name = "zarr", marker = "extra == 'xarray'", specifier = ">=3" },
 ]
-provides-extras = ["sql", "polars", "arrays"]
+provides-extras = ["sql", "polars", "arrays", "xarray"]
 
 [package.metadata.requires-dev]
 dev = [

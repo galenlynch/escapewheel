@@ -32,6 +32,9 @@ polars = ["polars>=1.0"]
 # Zarr is optional for the same reason: an array declares its shape, chunking and codecs in a
 # JSON document, so what an array *is* costs nothing, and only reading values needs a library.
 arrays = ["zarr>=3"]
+# An array as an xarray Dataset, its axes as coordinates (`xarray_backend.py`). 2025.7 is the first
+# release with the coordinate-transform indexes a tick axis needs.
+xarray = ["xarray>=2025.7", "zarr>=3"]
 
 [project.urls]
 Repository = "https://github.com/galenlynch/escapewheel/"
@@ -41,6 +44,9 @@ Issues = "https://github.com/galenlynch/escapewheel/issues"
 # 07 names the CLI `escapewheel`; later packages extend it with their own subcommands
 # rather than claiming a different name.
 escapewheel = "escapewheel_reader.scripts.cli:main"
+
+[project.entry-points."xarray.backends"]
+escapewheel = "escapewheel_reader.xarray_backend:EscapewheelBackend"
 
 [dependency-groups]
 types = [

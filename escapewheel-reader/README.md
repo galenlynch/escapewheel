@@ -152,6 +152,28 @@ otherwise, so it gives no wrong result on rows sorted or concatenated another wa
 grouped batch by batch, and a run that crosses a batch boundary is joined back together. On
 `core.spike_events`, 287 million spikes became 6,781 trains in 0.60 s after a 0.57 s read.
 
+## Reading arrays with xarray
+
+With the `xarray` extra, an array opens as a Dataset whose coordinates are its axes, and its
+values are read only where selected:
+
+```python
+import xarray as xr
+
+waves = xr.open_dataset(
+    packet, engine="escapewheel", resource_id=["core.waveform_mean", "core.waveform_sd"],
+    columns={"unit": ["quality_label"]},
+)
+one = waves.waveform_mean.sel(unit_id=1475)  # in uV, one read of one unit
+one.electrode_id.where(one.channel_present, drop=True)  # the contacts this unit's channels are
+```
+
+A labelled axis is indexed by the key its labels hold, `unit_id` here. A dependent axis, such as
+each unit's own channels, gets a 2-D coordinate, and where a unit has fewer channels than the axis
+`channel_present` is false and the values are NaN. A tick axis's `tick` coordinate is computed per
+position, and `sel(tick=slice(a, b))` selects the closed window exactly. `xr.open_datatree(packet,
+engine="escapewheel")` opens every catalogued array, one node each.
+
 ## Joining spikes to events in SQL
 
 `analysis.spike_events` holds every spike already on the reference clock, so a query comparing
@@ -204,6 +226,7 @@ readable with no SQL engine. Each extra adds a capability:
 |---|---|
 | `sql` | SQL over a packet or packet set (`Packet.sql`, `Packet.duckdb`, `PacketSet.duckdb`), and spike-to-event alignment |
 | `arrays` | an array's values, locally or from an object store, reached as its packet's tables are; its shape, dtype, chunking and codecs need no extra |
+| `xarray` | an array as an xarray Dataset, its axes as coordinates (`engine="escapewheel"`) |
 | `polars` | a table as a lazy Polars frame (`TableResource.scan_polars`) |
 
 ## Resources and their handles

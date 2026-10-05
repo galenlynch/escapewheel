@@ -177,6 +177,19 @@ Errors
    MultiSessionUnresolved
    PhysicalProfileError
 
+Reading arrays with xarray
+--------------------------
+
+The ``xarray`` extra registers ``engine="escapewheel"`` with :func:`xarray.open_dataset` and
+:func:`xarray.open_datatree`; nothing here is imported from the package itself.
+
+.. autosummary::
+   :toctree: generated
+
+   xarray_backend.EscapewheelBackend
+   xarray_backend.TickIndex
+   xarray_backend.Ticks
+
 Support tier
 ------------
 
@@ -255,6 +268,7 @@ A module's page carries its docstring; its public names are documented above.
    manifest
    resources
    arrow_store
+   xarray_backend
    location
    errors
    sql
