@@ -3,7 +3,7 @@ import json
 import pytest
 
 import escapewheel_dev as ew
-from escapewheel_dev.registry import CORE
+from escapewheel_dev.registry import CORE, EXTENSIONS_VARIABLE
 
 
 def test_core_comes_first_and_every_extension_follows():
@@ -49,3 +49,28 @@ def test_table_lookup_crosses_registries():
         ew.table("core.units").column("no_such_column")
     with pytest.raises(KeyError):
         ew.table("no.such_table")
+
+
+def test_an_extension_outside_the_checkout_is_read_from_the_variable(tmp_path, monkeypatch):
+    document = json.loads((ew.ROOT / "extensions" / "vr_foraging.json").read_text())
+    document["extension_id"] = document["registry_id"] = "outside"
+    document["resources"] = {
+        f"outside.{resource_id.partition('.')[2]}": declaration
+        for resource_id, declaration in document["resources"].items()
+    }
+    directory = tmp_path / "authored"
+    directory.mkdir()
+    (directory / "outside.json").write_text(json.dumps(document))
+    monkeypatch.setenv(EXTENSIONS_VARIABLE, str(directory))
+    ew.registries.cache_clear()
+    try:
+        assert ew.registry("outside").path == directory / "outside.json"
+        assert ew.table("outside.sites").registry == "outside"
+    finally:
+        ew.registries.cache_clear()
+
+
+def test_a_missing_path_in_the_variable_is_refused(tmp_path, monkeypatch):
+    monkeypatch.setenv(EXTENSIONS_VARIABLE, str(tmp_path / "absent.json"))
+    with pytest.raises(FileNotFoundError, match="absent.json"):
+        ew.extension_paths()

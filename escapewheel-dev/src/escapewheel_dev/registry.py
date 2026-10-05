@@ -1,6 +1,7 @@
 """The current core and extension registries, as typed records over their JSON documents."""
 
 import json
+import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from functools import cache
@@ -14,6 +15,9 @@ from ._root import ROOT
 CORE = ROOT / "spec" / "artifacts" / "logical_schemas.json"
 #: Where extension documents sit, each one a `*.json` file.
 EXTENSION_DIRECTORIES = (ROOT / "extensions", ROOT / "escapewheel-aind" / "extensions")
+#: The environment variable naming extensions outside this checkout: documents, or directories of
+#: them, separated as `PATH` is. One sharing a registry ID with a document here replaces it.
+EXTENSIONS_VARIABLE = "ESCAPEWHEEL_DEV_EXTENSIONS"
 
 
 @dataclass(frozen=True)
@@ -158,11 +162,23 @@ def load(path: Path) -> Registry:
     )
 
 
+def extension_paths() -> list[Path]:
+    """Return every extension document read: this checkout's, then those `EXTENSIONS_VARIABLE` names."""
+    named = [Path(entry).expanduser() for entry in os.environ.get(EXTENSIONS_VARIABLE, "").split(os.pathsep) if entry]
+    for path in named:
+        if not path.exists():
+            raise FileNotFoundError(f"{EXTENSIONS_VARIABLE} names {path}, which does not exist")
+    directories = [*EXTENSION_DIRECTORIES, *(path for path in named if path.is_dir())]
+    return [
+        *(path for directory in directories for path in sorted(directory.glob("*.json"))),
+        *(path for path in named if path.is_file()),
+    ]
+
+
 @cache
 def registries() -> Mapping[str, Registry]:
-    """Return core and every extension in the working tree, by registry ID, core first."""
-    paths = [CORE, *(path for directory in EXTENSION_DIRECTORIES for path in sorted(directory.glob("*.json")))]
-    loaded = [load(path) for path in paths]
+    """Return core and every extension `extension_paths` finds, by registry ID, core first."""
+    loaded = [load(path) for path in [CORE, *extension_paths()]]
     return {registry.registry_id: registry for registry in loaded}
 
 
@@ -268,6 +284,7 @@ def rule(rule_id: str) -> Rule:
 
 __all__ = [
     "CORE",
+    "EXTENSIONS_VARIABLE",
     "EXTENSION_DIRECTORIES",
     "Column",
     "Reference",
@@ -275,6 +292,7 @@ __all__ = [
     "Rule",
     "Table",
     "columns",
+    "extension_paths",
     "load",
     "references_to",
     "registries",
