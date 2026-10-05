@@ -31,8 +31,16 @@ location as a URI, which the adapter opens for itself". The clause reads instead
 adapter may rely on, and the reference writer does not keep it, so an adapter written against
 Part 09 alone fails when it opens a path relative to its working directory.
 
-This change removes the clause and states the rule an adapter can rely on in Part 12 §4, which owns
-what a build supplies an adapter.
+An adapter can open its source at `root` only if the value it receives names the source wherever
+the adapter runs, and no section says that it must. The same schema lets a recipe state a local
+`root` relative to the recipe, and nothing requires a build to resolve that before supplying it, so
+a build passing `data/s001` through unchanged would leave an adapter nothing to open but a path
+relative to its working directory. Part 12 §4 also describes `root` as "a URI", which a local path
+is not, though a local path is what a recipe most often names.
+
+This change removes the clause and states, in Part 12 §4, which owns what a build supplies an
+adapter, what `root` is: an absolute local path or a URI, which a build resolves from the recipe and
+an adapter opens without depending on where it runs.
 
 The change is structural because it replaces a sentence inside Part 09 §5.7. Appending a section
 would leave that sentence promising a working directory beside a rule that denies one.
@@ -45,7 +53,8 @@ Both amended sections already carry canonical anchors, `ew-extension-delivery` a
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | Part 09 §5.7, first paragraph: where a raw source needs converting first, a recipe names a command, an argument list run in the source's own root and never a shell line | replace in place | same section | the command is an argument list and never a shell line, as before; no working directory is promised | §3.1 |
-| Part 12 §4, the vocabulary of what a build supplies | extend in place with one closing paragraph | same section | an adapter opens its source at `root` and depends on no working directory | §3.2 |
+| Part 12 §4, the `root` row of the vocabulary: the source's location as a URI | replace in place | same section | `root` is an absolute local path or a URI | §3.2 |
+| Part 12 §4, the vocabulary of what a build supplies | extend in place with one closing paragraph | same section | a build resolves a recipe-relative `root` against the recipe's directory; an adapter opens its source at `root` and depends on no working directory | §3.2 |
 
 ## 2. Evidence
 
@@ -70,9 +79,16 @@ contributing guide states the same: the command "does not run in `root`, so a sc
 absolute path". The docstring of the recipe's delivery member in
 `escapewheel-writer/src/escapewheel_writer/recipe.py` repeats Part 09's clause, and is stale.
 
+The writer resolves a local `root` against the recipe's directory before supplying it, as a plain
+path rather than a `file:` URI, and leaves a store URI as the recipe wrote it. It resolves against
+the recipe's path as given, though, so a recipe named relative to the build's directory yields a
+relative `root`: `escapewheel import r/recipe.toml` over a recipe whose `root` is `data` supplies
+`r/data`. An adapter opening that path succeeds only because it inherits the build's working
+directory, which is the dependence §3.2 forbids.
+
 Since the writer has never set a working directory, every adapter it has run, including
-`escapewheel-aind`'s and the writer's own sources reached by `escapewheel deliver`, already opens its
-source at `root`.
+`escapewheel-aind`'s and the writer's own sources reached by `escapewheel deliver`, opens its source
+at `root`.
 
 ### 2.3 Alternatives
 
@@ -81,7 +97,9 @@ would make the working directory depend on the root's scheme, so an adapter test
 fail on its first store root. Having a build run every command in the recipe's directory would
 promise a directory an adapter has no reason to use, since `root` and every location a build
 supplies are already terms. Removing the clause without a replacement would leave Part 09's
-reader nothing to correct the belief the clause created.
+reader nothing to correct the belief the clause created. Requiring a local `root` as a `file:` URI
+would match the current wording, but would make every adapter parse a URI to open a directory, and
+the reference writer supplies a path.
 
 ## 3. Decision
 
@@ -96,31 +114,38 @@ command runs in.
 
 ### 3.2 An adapter opens its source at `root`
 
-Part 12 §4 closes with this rule. The working directory in which a build runs an adapter's command
-is unspecified. An adapter MUST open its source at the `root` a build supplies, and MUST NOT depend
-on the directory it runs in, since a `root` that is a store URI names no directory to run in. No
-checker verifies this.
+Part 12 §4's `root` row says that a build passes the source's location as an absolute local path or
+a URI, which the adapter opens for itself.
+
+Part 12 §4 closes with these rules. Where a recipe states a local `root` relative to itself, a build
+MUST resolve it against the directory holding the recipe and supply the absolute path. The working directory
+in which a build runs an adapter's command is unspecified. An adapter MUST open its source at the
+`root` a build supplies, and MUST NOT depend on the directory it runs in, since a `root` that is a
+store URI names no directory to run in. No checker verifies either rule: a packet records each
+`root` as its recipe states it (Part 05 §7) and not as it was supplied.
 
 ## 4. Questions
 
-None. The rule an adapter relies on follows from Part 12 §4's `root` term, and no answer to a
-question would change it.
+None. The rules follow from Part 12 §4's `root` term and the recipe schema's relative `root`, and
+§2.3 records the alternatives.
 
 ## 5. Consequence
 
 No packet changes. A build that runs commands in `root` today remains conforming, since the
 directory is unspecified; an adapter that depends on its working directory becomes
-non-conforming, and none in this repository does (§2.2).
+non-conforming, and none in this repository does (§2.2). The reference writer becomes
+non-conforming where it is given a relative recipe path, and resolves the recipe's path before its
+directory to conform.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | unchanged: Part 01 states nothing about a command | none |
 | logical prose and registry | unchanged: no declaration names a command | none |
 | physical profiles | unchanged: a working directory is not a storage fact | none |
-| packet manifest and JSON Schemas | unchanged: the recipe schema's `command` describes an argument list and promises no directory | none |
+| packet manifest and JSON Schemas | unchanged: the recipe schema's `command` describes an argument list and promises no directory, and its `root` already allows a local directory relative to the recipe | none |
 | validation and import | Part 09 §5.7 and Part 12 §4 change as §3 states; Part 05 §3.7 is unchanged | the two sections' text |
 | extensions | unchanged: an extension registry declares no command | none |
-| reader, writer, validator, adapters | the writer's behavior is unchanged; the recipe delivery member's docstring stops saying the command runs in `root` | the docstring |
+| reader, writer, validator, adapters | the writer resolves a recipe's path before resolving a `root` against its directory, so the `root` it supplies is absolute; the recipe delivery member's docstring stops saying the command runs in `root` | a writer test supplying a recipe by a relative path and asserting an absolute `root` |
 | conformance fixtures and tests | unchanged: a validator cannot observe an adapter's working directory, and §3.2 says no checker verifies it | none |
 | revision process and tooling | ledger entries for §3.1 and §3.2, both `applied` | `revisions/applied.toml` |
 | generated publications and developer documentation | the combined specification is regenerated; the writer's contributing guide already states the rule | the regenerated rendering |
@@ -133,7 +158,7 @@ through the argument list its recipe author writes, which this change leaves as 
 
 ## 6. Conformance and implementation evidence
 
-A packet cannot show where its adapters ran, so no fixture distinguishes this rule from the current
-one. The evidence is an implementation property: the writer's three launch sites pass no working
-directory (§2.2), so every build that names a source outside the directory the build runs in
-exercises an adapter that depends on none.
+A packet cannot show where its adapters ran or what `root` they were supplied, so no fixture
+distinguishes these rules from the current ones. The evidence is an implementation property: the
+writer's three launch sites pass no working directory (§2.2), and after incorporation a writer test
+holds that a recipe named by a relative path is supplied an absolute `root`.
