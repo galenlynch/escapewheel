@@ -4642,3 +4642,7 @@ where = [{ part = "09", anchor = "ew-extension-delivery" }]
 [clause."R170 §3.2"]
 disposition = "applied"
 where = [{ part = "12", anchor = "ew-build-supplied-values" }]
+
+[clause."R171 §3.1"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-source-command" }]

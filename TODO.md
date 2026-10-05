@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R170 accepted. R42 and R73 withdrawn. 2 change documents, 1 Open and 1 Ready. None of them is binding, and none takes a number until it is accepted.
+R1–R41, R43–R72 and R74–R171 accepted. R42 and R73 withdrawn. 1 change document, 1 Open and 0 Ready. None of them is binding, and none takes a number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 92 Tier 2 rules (2 advisory)

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "revision": "R171",
+  "based_on": "44f6e459d86d4bad6a99b9cd7f083e8a8a785c78",
+  "clauses": {
+    "R171 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-source-command"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "A packet does not record which commands its build ran."
+      },
+      "implementations": {
+        "unchanged": "The writer runs only a source's delivery command, and supplies the source to it under every protocol."
+      },
+      "documentation": {
+        "unchanged": "No package guide describes a command that is supplied nothing."
+      }
+    }
+  }
+}
