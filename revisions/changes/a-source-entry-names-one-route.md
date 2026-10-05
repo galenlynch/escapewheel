@@ -89,9 +89,8 @@ something the recipe did not say.
 ### 3.2 An entry's `delivery` table overrides `[packet].in_process`
 
 `[packet].in_process` applies to each source entry that sets no `in_process` and carries no
-`delivery` table; an entry's `delivery` table is that entry saying otherwise. A build MUST reach an
-entry that carries a `delivery` table and sets no `in_process` through its command, whatever
-`[packet].in_process` declares, and MUST NOT refuse the recipe for that declaration.
+`delivery` table; an entry's `delivery` table is that entry saying otherwise. A build MUST NOT
+refuse a recipe for a `[packet].in_process` beside an entry carrying a `delivery` table.
 
 ## 4. Questions
 
