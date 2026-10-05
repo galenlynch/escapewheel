@@ -59,64 +59,36 @@ code lands in a module the refactor moves.
 
 # Live
 
-## 1. No template scaffolds an extension or an adapter project
+## 1. The extension and adapter template is unpublished
 
-**Queued; a collaborator may start an extension soon.** Writing an extension is now well enough
-defined to scaffold, and nothing scaffolds it: the four here were written by hand, and
-`extensions/README.md` covers *what to model* — what varies belongs on the row, a source's columns
-are evidence rather than a schema, deriving a document from a pydantic model — while saying nothing
-about how to build and deliver one. Nothing scaffolds an adapter either, though
-`escapewheel-writer/CONTRIBUTING.md` states the contract for one in another distribution.
+**A collaborator may start an extension soon.** `~/Documents/Code/escapewheel-copier-template`,
+forked from `aind-python-copier-template` with `upstream` kept for `copier update`, generates an
+extension, an adapter, or both. A generated project carries:
 
-The scope is one copier template, an extension, an adapter, or both as `escapewheel-aind` pairs
-them, each generating its project's `AGENTS.md` with the rules below, and a `CLAUDE.md` importing it.
-Beside the template, the work needs developer documentation on writing an extension, writing an
-adapter, and using `escapewheel-dev`. One blocker sits outside the template: **nothing is
-released**, so a generated project can depend on the writer and validator only by git reference
-until v0.2 is published, and its identifiers are development values until P10.3. An extension
-outside this checkout is built and checked by `escapewheel extension build` and `escapewheel
-extension check <directory>`, which run the checks `extensions/registries.py` does, and
-`escapewheel-dev` reads one named by `--extension` or `ESCAPEWHEEL_DEV_EXTENSIONS`.
+- the extension's TOML source with a per-session table and a trials table specialising
+  `core.intervals`, its built document, and a test holding it to `check_directory`;
+- a `files-v0.1` adapter delivering those tables with the rig's `core.clocks` row and observation
+  window, times converted to ticks from the reference clock's rational rate, beside its
+  declaration document;
+- a `<kind>-recipe` command writing one session's recipe from its `metadata.json`;
+- an end-to-end test building and reading a packet; and
+- an `AGENTS.md` stating the rules an author would otherwise break, each by its owning section,
+  and a `CLAUDE.md` importing it.
 
-**The template.** Base it on `~/Documents/Code/aind-python-copier-template`, which already carries
-the shape: `_templates_suffix: .jinja`, `_subdirectory: template`, copier ≥ 9.0.0, and conditional
-`_exclude` blocks for docs, notebooks, a CLI and a `CLAUDE.md`.
-`~/Documents/Code/aind-capsule-copier-template` is the other one to read before choosing which to
-fork. What it should generate:
+`extensions/AUTHORING.md` is the guide the generated `CONTRIBUTING.md` links to, and
+`escapewheel registry --out core.json` writes the core registry a recipe binds.
 
-- `<namespace>/`, a TOML source declaring one table with every attribute a column owes, built
-  to `<namespace>.json`, and a test running `escapewheel extension check` over the directory;
-- an `extract.py` delivering by `files-v0.1`: it reads the build's JSON object of terms from
-  standard input and writes `<resource_id>.parquet` into the `delivery_root` it names, beside an
-  adapter declaration document (Part 12 §7) for the recipe's `delivery` table;
-- an optional self-validation step against the extension's own document (R109 §3.5) and an
-  optional run report (R109 §3.6);
-- a `[source]` block, with its `delivery` table, and an `[encoding]` block to paste into a recipe.
+What is left:
 
-**What the instructions must state**, because each is a rule an author will otherwise break:
-
-- The document is a registry document in Part 02's format, namespaced (R17 §2, Part 09 §5.2), and the
-  packet declares it in the manifest (Part 09 §5.3).
-- Every column declares a type, a presence and a role (R2 §5, R48 §2.1); a string column declares
-  its vocabulary (R101 §3.1); an identifier declares `carried` or `assigned` (R53 §2.3); a
-  session-scoped table carries `session_id` and declares the reference (R88 §2.1).
-- Rows arrive with identifiers as the **names** their source used, never numbers: the writer mints
-  those packet-wide (R53 §2.5).
-- The document **MUST NOT** be derived from the rows it delivers (R109 §3.2). Declare the **union**
-  of what the pipeline may emit, as `nullable` — `aind_unit_qc.waveform_metrics` declares 14
-  columns and its adapter delivers those its analyzer computed, so an analyzer run without
-  `velocity_fits` delivers 12, and the two it lacks say that run did not compute them rather than
-  that the extension lacks them.
-- The command **MUST** be a function of its inputs (R109 §3.7). Where it cannot be, deliver a file
-  produced beforehand instead.
-- An encoding exception goes in the recipe's `[encoding]`, never in the schema, because it is a
-  fact about one packet's values (R110 §3.4).
-
-**Best practices worth stating beside the rules.** Isolate dependencies however you like — the
-command is an argument list, so `uv run`, a pinned interpreter and a container are all just
-commands, and that freedom is what R109 §3.1 exists to protect. Print for a person on stdout and
-put anything a build should parse in the report file. Do not restate what the build already
-derives: rows per table come from the Parquet footer at discovery (Part 05 §4.1).
+- **Publishing.** The template has no GitHub repository, and `galenlynch/escapewheel` is private,
+  so a generated project's default git dependency installs only for someone with access. Nothing
+  is released, so the escapewheel packages stay a dev group with `[tool.uv.sources]` until v0.2 is
+  published, and identifiers are development values until P10.3.
+- **The working directory.** Part 09 §5.7 says a command runs "in the source's own root", which a
+  store URI cannot be, and the writer runs it in the build's. The template tells an adapter not to
+  rely on either.
+- **Not scaffolded:** self-validation against the extension's own document (Part 12 §9) and a run
+  report (Part 12 §9), events and their streams, and clock anchors for a rig with several clocks.
 
 ## 2. A delivered sync source cannot carry the terminal-anchor result
 
