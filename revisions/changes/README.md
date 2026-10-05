@@ -23,4 +23,4 @@ Dependencies run downward, so a document may depend on the ones above it and on 
 
 | order | document | status | placement |
 |---:|---|---|---|
-| 1 | `a-source-entry-names-one-route.md` | Open | Part 05 §3.9 |
+| 1 | `a-source-entry-names-one-route.md` | Ready | Part 05 §3, a new subsection at its end |
