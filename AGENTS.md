@@ -10,8 +10,11 @@ These instructions apply throughout the monorepo. A nested `AGENTS.md` may add n
 - For registry, generation, or tree-tool work, read `CONTRIBUTING.md`.
 - For package work, read that package's `README.md` and `CONTRIBUTING.md`.
 - For specification change work, read `revisions/CONTRIBUTING.md` in full.
-- For questions about the current registries, rules, spec sections or packets, use
-  `escapewheel-dev` (see its `README.md`) before writing a throwaway script.
+- Answer a question about the current specification, registries, schemas or packets with
+  `escapewheel-dev` rather than `grep`, `sed` or an inline script over `spec/`. From the root,
+  `uv run --project escapewheel-dev escapewheel-dev` then: `section 9 5.7` reads a section,
+  `requirements 12 | grep <word>` finds a rule, `schema recipe` prints a schema, `table <resource>`
+  shows a declaration; `--help` lists the rest, and its `README.md` the Python API.
 
 ## Agent-specific safeguards
 
