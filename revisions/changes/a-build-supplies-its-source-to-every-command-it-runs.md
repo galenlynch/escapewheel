@@ -1,10 +1,10 @@
-# A build supplies every command a recipe names
+# A build supplies its source to every command it runs
 
 | | |
 |---|---|
 | **Status** | **Ready** |
 | **Opened** | 2026-10-05 |
-| **Based on** | `01854e1fc007e237a0aabff715bb9846149263be` |
+| **Based on** | `44f6e459d86d4bad6a99b9cd7f083e8a8a785c78` |
 | **Change form** | structural |
 | **Amends** | Part 05 §3.7 |
 | **Depends on** | R116 §3.2 (the sentence this removes); R170 §3.1 (removes the converting command that sentence cites) |
@@ -24,16 +24,16 @@ source before it is read is not one of these and is supplied nothing."
 
 A recipe cannot name the second kind. The recipe schema Part 05 §3.1 incorporates carries one
 command, `source.delivery.command`, described as "the argument list that runs the adapter", and a
-build reaches the source through every command it carries. So the paragraph's condition is always
-met, and its last sentence describes a command that no recipe can express. A reader looking for
-the member that names a converting command finds none, and an implementer may write a path for
-one that nothing reaches.
+build reaches the source through every command it runs. So the paragraph's condition is always
+met, and its last sentence describes a command that no recipe can express.
 
 The sentence cited Part 09 §5.7 for its converting command, and R170 §3.1 removed that framing
 from Part 09, so the sentence names a kind of command that no other section describes either.
 
-This change removes the condition and the sentence, so the paragraph binds every command a recipe
-names. It is structural because it rewrites sentences inside Part 05 §3.7; appending a section
+This change removes the condition and the sentence, so the paragraph binds every command a build
+runs for a source. It binds the commands a build runs rather than those a recipe names, because
+Part 05 §3.9 lets a recipe run in the writer's process a source whose entry may also name a
+command, and a build runs no command for such a source. It is structural because it rewrites sentences inside Part 05 §3.7; appending a section
 would leave the paragraph describing a second kind of command beside a rule that there is one.
 
 ### 1.1 Structural crosswalk
@@ -43,7 +43,7 @@ needed.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
-| Part 05 §3.7, third paragraph: where the command is one a build reaches a source through, the build supplies it; a command converting a raw source is supplied nothing | replace in place | same section | every command a recipe names is supplied its source; no command is supplied nothing | §3.1 |
+| Part 05 §3.7, third paragraph: where the command is one a build reaches a source through, the build supplies it; a command converting a raw source is supplied nothing | replace in place | same section | every command a build runs for a source is supplied that source; no command is supplied nothing | §3.1 |
 
 ## 2. Evidence
 
@@ -52,7 +52,7 @@ Section 2 is informative. Each observation was made at the recorded baseline.
 ### 2.1 The sentence came from a converting command no recipe carries
 
 R109 §3.2 introduced a recipe command for a raw source that needs converting, run before a build
-reads it. R115 §3.4 made the recipe's command the one a build reaches a source through. R116 §3.2
+reads it. R115 §3.3 made the recipe's command the one a build reaches a source through. R116 §3.2
 then bound the standard-input obligation to that command "and no other", excluding the converting
 command by citing Part 09 §5.7.
 
@@ -72,19 +72,18 @@ from `source.delivery.command`, at the three call sites in
 ### 2.3 Alternatives
 
 Adding a recipe member for a converting command would give the sentence something to describe,
-but no adapter in this repository needs one: an adapter converts its source inside its own command,
-and a conversion that cannot be a function of its inputs already delivers a file produced
-beforehand (Part 09 §5.7). Keeping the sentence would leave Part 05 describing a command no recipe
-can name.
+but no adapter in this repository needs one, and a conversion has two places to run without it:
+inside the adapter's own command, or outside the build, with the adapter reading what it wrote.
+Keeping the sentence would leave Part 05 describing a command no recipe can name.
 
 ## 3. Decision
 
 Section 3 is normative.
 
-### 3.1 Part 05 §3.7 supplies every command it runs
+### 3.1 Part 05 §3.7 supplies a source to every command a build runs for it
 
 The third paragraph of Part 05 §3.7 says that a build supplies a source on the standard input of
-the command its recipe names, as Part 12 §4 requires, without waiting for the command to exit, and
+every command it runs for that source, as Part 12 §4 requires, without waiting for the command to exit, and
 MUST read what the command produces while it writes. It describes no command that is supplied
 nothing. The paragraph keeps its reason: a pipe holds tens of kilobytes and a supplied object may
 be far larger, so a build that wrote one whole before reading rows would wait on an adapter that
@@ -97,8 +96,9 @@ member is the alternative §2.3 rejects.
 
 ## 5. Consequence
 
-No packet changes, and no build or adapter changes behavior: every command a recipe can name is
-already supplied its source (§2.2).
+No packet changes, and no build or adapter changes behavior: every command a build runs is already
+supplied its source (§2.2). R116 §3.2's ledger entry stays `applied`, since the rule that a build
+writes without waiting for the command remains in Part 05 §3.7 and only the exclusion is removed.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|

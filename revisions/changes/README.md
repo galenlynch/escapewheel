@@ -23,4 +23,4 @@ Dependencies run downward, so a document may depend on the ones above it and on 
 
 | order | document | status | placement |
 |---:|---|---|---|
-| 1 | `a-build-supplies-every-command-a-recipe-names.md` | Ready | Part 05 §3.7 |
+| 1 | `a-build-supplies-its-source-to-every-command-it-runs.md` | Ready | Part 05 §3.7 |
