@@ -159,10 +159,35 @@ def test_a_file_uri_resolves_to_its_path(tmp_path):
     assert handle.store == str(tmp_path / "a.zarr")
 
 
-def test_a_remote_uri_is_handed_over_verbatim():
-    """Resolving it to a Path first is the thing that would make it unopenable."""
-    uri = "s3://bucket/session.nwb/processing/ecephys/LFP/ElectricalSeries1-LFP/data"
-    assert _array_resource(uri).store == uri
+def _mock_copy(source, uri):
+    """Copy a local directory to `uri` on PyArrow's in-memory filesystem, the remote route without a network."""
+    from escapewheel_reader.location import Location
+
+    key, filesystem = Location.of(uri).store()
+    for path in source.rglob("*"):
+        if path.is_file():
+            target = f"{key}/{path.relative_to(source).as_posix()}"
+            filesystem.create_dir(target.rpartition("/")[0], recursive=True)
+            with filesystem.open_output_stream(target) as out:
+                out.write(path.read_bytes())
+
+
+def test_a_remote_array_reads_through_the_filesystem_its_tables_use(tmp_path):
+    """Zarr handed a URI resolves its own fsspec backend, so a table could read where its array could not."""
+    zarr = pytest.importorskip("zarr")
+    import numpy as np
+
+    from escapewheel_reader.arrow_store import ArrowStore
+
+    local = tmp_path / "lfp.zarr"
+    zarr.create_array(store=str(local), shape=(4, 3), chunks=(2, 3), dtype="int16")[:] = np.arange(12).reshape(4, 3)
+    uri = f"mock://{tmp_path.name}/lfp.zarr"
+    _mock_copy(local, uri)
+
+    handle = _array_resource(uri)
+    assert isinstance(handle.store, ArrowStore)
+    assert handle.shape == (4, 3)
+    assert handle.open()[3, 2] == 11
 
 
 def test_a_remote_uri_has_no_local_path():

@@ -186,6 +186,8 @@ the module that defines it.
 .. autosummary::
    :toctree: generated
 
+   arrow_store.ArrowStore
+   arrow_store.OPEN_FILES
    protocols.PacketLike
    protocols.Memo
    protocols.PacketSetLike
@@ -252,6 +254,7 @@ A module's page carries its docstring; its public names are documented above.
    runs
    manifest
    resources
+   arrow_store
    location
    errors
    sql

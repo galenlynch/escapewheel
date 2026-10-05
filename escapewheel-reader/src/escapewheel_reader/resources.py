@@ -113,17 +113,15 @@ def _resolve(resource: Resource, root: Location) -> Path:
     return resolved
 
 
-def _store(resource: Resource, root: Location) -> str:
-    """Return what to hand a Zarr store: the URI itself when remote, else the resolved path.
-
-    An external array is expected to be the large one, and in production that means
-    an object store rather than a filesystem. Zarr opens such a URI directly given a backend
-    for it, so resolving to a `Path` first would be the thing that made it unopenable.
-    """
+def _store(resource: Resource, root: Location) -> Any:
+    """Return what to hand Zarr: the resolved path when local, else a store on the tables' filesystem."""
     where = _locate(resource, root)
-    if not where.is_local:
-        return where.uri
-    return str(_resolve(resource, root))
+    if where.is_local:
+        return str(_resolve(resource, root))
+    from .arrow_store import ArrowStore
+
+    path, filesystem = where.store()
+    return ArrowStore(filesystem, path)
 
 
 def _unknown_codec_errors() -> tuple[type[Exception], ...]:
@@ -378,17 +376,17 @@ class ArrayResource:
         return _resolve(self._resource, self._root)
 
     @property
-    def store(self) -> str:
-        """What to hand a Zarr store, which for a remote array is its URI rather than a path.
+    def store(self) -> Any:
+        """What to hand Zarr: the resolved path for a local array, an :class:`ArrowStore` for a remote one.
 
-        `path` is the local answer and raises for a scheme it cannot reach. This is the one to
-        pass on: an external array is expected to be the large one, and in production that is
-        an object store (Part 04 §5.1).
+        A remote array is reached through the PyArrow filesystem its packet's tables are, so the
+        same credentials, region and anonymity reach both. Building the remote store needs the
+        ``arrays`` extra.
 
         Returns
         -------
-        str
-            A URI for a remote store, or the resolved local path.
+        str or ArrowStore
+            The local path, or the store over the array's prefix.
         """
         return _store(self._resource, self._root)
 
@@ -524,9 +522,8 @@ class ArrayResource:
         one unit of a sharded array costs 0.7 ms to read and 1.4 ms to reopen the store for,
         so a loop over units spends twice as long opening as reading.
 
-        Zarr is an optional dependency; install it with the ``arrays`` extra. An array on an
-        object store needs a backend for its scheme as well -- `s3fs` for `s3://` -- which
-        Zarr resolves through fsspec and this package does not depend on either way.
+        Zarr is an optional dependency; install it with the ``arrays`` extra. An array on an object
+        store is read through the PyArrow filesystem its packet's tables are, needing nothing more.
 
         Returns
         -------
@@ -554,12 +551,6 @@ class ArrayResource:
                 floor = {None: "unassessed", True: "outside it", False: "within it"}[outside]
                 raise UnsupportedCodecError(
                     self.resource_id, f"{exc} (reader floor: {floor})", outside_floor=outside
-                ) from exc
-            except ImportError as exc:  # pragma: no cover - depends on which backends are installed
-                scheme = self.location.scheme or "file"
-                raise ImportError(
-                    f"{self.resource_id}: opening a {scheme}: store needs a backend for that scheme "
-                    f"(s3fs for s3://, gcsfs for gs://); zarr resolves it through fsspec"
                 ) from exc
         return self._array
 

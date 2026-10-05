@@ -203,7 +203,7 @@ readable with no SQL engine. Each extra adds a capability:
 | extra | provides |
 |---|---|
 | `sql` | SQL over a packet or packet set (`Packet.sql`, `Packet.duckdb`, `PacketSet.duckdb`), and spike-to-event alignment |
-| `arrays` | an array's values; its shape, dtype, chunking and codecs need no extra |
+| `arrays` | an array's values, locally or from an object store, reached as its packet's tables are; its shape, dtype, chunking and codecs need no extra |
 | `polars` | a table as a lazy Polars frame (`TableResource.scan_polars`) |
 
 ## Resources and their handles
