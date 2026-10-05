@@ -4646,3 +4646,11 @@ where = [{ part = "12", anchor = "ew-build-supplied-values" }]
 [clause."R171 §3.1"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-source-command" }]
+
+[clause."R172 §3.1"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-source-route" }]
+
+[clause."R172 §3.2"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-source-route" }]

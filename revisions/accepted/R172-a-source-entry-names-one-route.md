@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Ready** |
+| **Status** | **Accepted** 2026-10-05 |
 | **Opened** | 2026-10-05 |
 | **Based on** | `e881d86ef231c0081087c8cab8ebae5a6f82153b` |
 | **Change form** | ordinary |

@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "revision": "R172",
+  "based_on": "e881d86ef231c0081087c8cab8ebae5a6f82153b",
+  "clauses": {
+    "R172 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-source-route"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe_check.py::test_a_source_is_reached_one_way_or_the_other"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe_check.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "The AIND package's guide already names the two routes as alternatives, and no other guide describes them."
+      }
+    },
+    "R172 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-source-route"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe_check.py::test_a_delivery_opts_its_entry_out_of_the_packets_in_process"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "No package guide describes `[packet].in_process`."
+      }
+    }
+  }
+}

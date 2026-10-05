@@ -596,9 +596,9 @@ class Recipe:
                         options={k: v for k, v in s.items() if k not in _SOURCE_KEYS},
                         narrowed="owns" in s,
                         # `[packet] in_process` declares it for every source, since whether a set
-                        # of adapters installs together is a fact about the set; an entry may
-                        # narrow that to itself.
-                        in_process=bool(s.get("in_process", packet.get("in_process", False))),
+                        # of adapters installs together is a fact about the set; an entry narrows
+                        # that to itself, and a `delivery` table opts it out (Part 05 §3.10).
+                        in_process=bool(s.get("in_process", packet.get("in_process", False) and "delivery" not in s)),
                     )
                     for s in document.get("source", [])
                 ),

@@ -206,6 +206,7 @@
 "3.7" = "When a source runs a command"
 "3.8" = "A recipe declares an encoding"
 "3.9" = "Whether a source runs in the writer's process"
+"3.10" = "A source entry names one route"
 "4" = "Discover, deliver, and normalize"
 "4.1" = "Discover"
 "4.2" = "Deliver"
@@ -1448,6 +1449,12 @@ aliases = []
 part = "04"
 section = "5.5"
 title = "Source resolution"
+aliases = []
+
+[anchor.ew-source-route]
+part = "05"
+section = "3.10"
+title = "A source entry names one route"
 aliases = []
 
 [anchor.ew-specification-actors]

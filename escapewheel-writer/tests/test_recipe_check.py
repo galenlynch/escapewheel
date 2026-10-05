@@ -520,12 +520,27 @@ def test_a_delivery_with_no_command_is_refused(tmp_path, registry):
 
 
 def test_a_source_is_reached_one_way_or_the_other(tmp_path, registry):
-    """Part 05 §3.9: in process is the recipe's choice, and a delivery is the other choice."""
+    """Part 05 §3.10: an entry naming a delivery and in process states two routes, so it is refused."""
     body = DELIVERED.format(declaration=declaration_for(tmp_path)).replace(
         "sample_rate_hz = 1000", "sample_rate_hz = 1000\nin_process = true"
     )
     recipe = Recipe.load(write_recipe(tmp_path, body))
     assert problems_coded(recipe.check(registry), RecipeFault.TWO_ROUTES)
+
+
+def test_a_delivery_opts_its_entry_out_of_the_packets_in_process(tmp_path, registry):
+    """Part 05 §3.10: a `delivery` table is the entry saying otherwise to `[packet] in_process`."""
+    from escapewheel_writer.recipe import reached_by
+
+    path = write_recipe(tmp_path, DELIVERED.format(declaration=declaration_for(tmp_path)))
+    path.write_text(
+        path.read_text().replace('registry = "reg.json"\n', 'registry = "reg.json"\nin_process = true\n', 1)
+    )
+    recipe = Recipe.load(path)
+    assert not problems_coded(recipe.check(registry), RecipeFault.TWO_ROUTES)
+    (spec,) = recipe.sources
+    assert not spec.in_process
+    assert reached_by(spec) is not None
 
 
 def test_a_built_in_adapter_may_be_delivered_without_a_document(tmp_path, registry):

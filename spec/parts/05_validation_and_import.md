@@ -421,6 +421,13 @@ The recipe declares it because the recipe author chose the environment. One proc
 
 What the opt-in buys is a saved transfer and what it costs is a solvable environment. A build that cannot import an adapter the recipe opted in MUST refuse, naming the source and the import that failed, before any source is opened.
 
+<a id="ew-source-route" data-spec-anchor="canonical"></a>
+### 3.10 A source entry names one route
+
+A build MUST refuse a recipe in which a source entry carries a `delivery` table and sets `in_process` to true, naming the source, before any source is opened. The entry states two routes to one source and only its author knows which was meant, so a build choosing one would build something the recipe did not say.
+
+`[packet].in_process` applies to each source entry that sets no `in_process` and carries no `delivery` table; an entry's `delivery` table is that entry saying otherwise. A build MUST NOT refuse a recipe for a `[packet].in_process` beside an entry carrying a `delivery` table.
+
 <a id="ew-import-sources" data-spec-anchor="canonical"></a>
 ## 4. Discover, deliver, and normalize
 

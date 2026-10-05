@@ -477,7 +477,7 @@ def _declaration_problems(recipe: Recipe, tables: Mapping[str, Any], singletons:
                     _Found(
                         RecipeFault.TWO_ROUTES,
                         f"{spec.kind} declares both a delivery and in_process; a source is reached one way or "
-                        "the other (Part 05 §3.9)",
+                        "the other (Part 05 §3.10)",
                     )
                 )
             if not delivery.command:
