@@ -51,6 +51,15 @@ def registry_meta_schema() -> dict[str, Any]:
     return parsed
 
 
+def core_registry_bytes() -> bytes:
+    """The core registry this distribution was released with, as its exact bytes.
+
+    What an extension is checked under where its author names no other core; a build still names
+    the registry it writes against (Part 04 §8).
+    """
+    return importlib_resources.files("escapewheel_validator").joinpath("schemas/logical_schemas.json").read_bytes()
+
+
 #: Registry column type -> the DuckDB type of the empty table standing in for an absent one.
 DDL = {
     "string": "VARCHAR",
@@ -65,4 +74,4 @@ DDL = {
 }
 
 
-__all__ = ["registry_meta_schema"]
+__all__ = ["core_registry_bytes", "registry_meta_schema"]

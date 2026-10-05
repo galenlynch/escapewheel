@@ -2,6 +2,7 @@
 
 import copy
 import json
+import shutil
 from pathlib import Path
 
 import pyarrow as pa
@@ -889,6 +890,71 @@ def test_the_check_command_refuses_a_document_with_a_dangling_reference(tmp_path
     path.write_text(json.dumps(document))
     assert main(["extension", "check", str(path), "--registry", str(_REGISTRY)]) == 1
     assert "registry.reference.resolves" in capsys.readouterr().out
+
+
+def test_the_check_command_defaults_to_the_core_this_release_carries(capsys):
+    """An author outside this repository has no `logical_schemas.json` to name."""
+    from escapewheel_reader.scripts.cli import main
+
+    assert main(["extension", "check", str(_EXTENSIONS / "vr_foraging.json")]) == 0
+    assert "sound" in capsys.readouterr().out
+
+
+def _authored(tmp_path):
+    """Copy this repository's extension directory, as an author's would be laid out."""
+    directory = tmp_path / "extensions"
+    shutil.copytree(_EXTENSIONS, directory, ignore=shutil.ignore_patterns("*.py", "*.md"))
+    return directory
+
+
+def test_the_check_command_checks_a_directory_of_sources(tmp_path, capsys):
+    from escapewheel_reader.scripts.cli import main
+
+    assert main(["extension", "check", str(_authored(tmp_path))]) == 0
+    out = capsys.readouterr().out
+    assert "vr_foraging.json: sound" in out
+    assert "dynamic_foraging.json: sound" in out
+
+
+def test_the_check_command_refuses_a_document_its_source_does_not_build(tmp_path, capsys):
+    from escapewheel_reader.scripts.cli import main
+
+    directory = _authored(tmp_path)
+    sites = directory / "vr_foraging" / "vr_foraging.sites.toml"
+    sites.write_text(sites.read_text().replace('description = "', 'description = "Edited. ', 1))
+    assert main(["extension", "check", str(directory / "vr_foraging.json")]) == 1
+    assert "it is not what vr_foraging/ assembles to" in capsys.readouterr().out
+
+
+def test_the_check_command_refuses_an_undeclared_naming_exception(tmp_path, capsys):
+    """A `*_name` column that names no identifier of its table is declared, never inferred."""
+    from escapewheel_reader.scripts.cli import main
+
+    directory = _authored(tmp_path)
+    conventions = directory / "conventions.toml"
+    conventions.write_text("\n".join(line for line in conventions.read_text().splitlines() if "stage_name" not in line))
+    assert main(["extension", "check", str(directory)]) == 1
+    assert "vr_foraging.sessions.curriculum_stage_name" in capsys.readouterr().out
+
+
+def test_the_build_command_writes_what_this_repository_commits(tmp_path, capsys):
+    from escapewheel_reader.scripts.cli import main
+
+    directory = _authored(tmp_path)
+    (directory / "vr_foraging.json").unlink()
+    assert main(["extension", "build", str(directory / "vr_foraging")]) == 0
+    assert (directory / "vr_foraging.json").read_bytes() == (_EXTENSIONS / "vr_foraging.json").read_bytes()
+    assert "wrote" in capsys.readouterr().out
+
+
+def test_the_build_command_reports_a_source_that_does_not_assemble(tmp_path, capsys):
+    from escapewheel_reader.scripts.cli import main
+
+    directory = _authored(tmp_path)
+    sites = directory / "vr_foraging" / "vr_foraging.sites.toml"
+    sites.write_text(sites.read_text() + '\n[[rules]]\nuse = "span"\n')
+    assert main(["extension", "build", str(directory)]) == 1
+    assert "unknown rule template 'span'" in capsys.readouterr().err
 
 
 def test_the_check_command_reads_the_registry_a_packet_binds(tmp_path, capsys, registry, minimal):

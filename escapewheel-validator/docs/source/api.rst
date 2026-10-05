@@ -100,6 +100,7 @@ that defines it.
    generate.Check
    generate.adjacency_settles_uniqueness
    lowering.lower
+   registry_types.core_registry_bytes
    amendment.IDENTITY
    amendment.PREFERENCES
    amendment.DERIVED
@@ -120,16 +121,20 @@ that defines it.
    stores.Digested
    scripts.cli.register
 
-The two checkers copied from the specification's tree are in the support tier whole, each with the
+The four checkers copied from the specification's tree are in the support tier whole, each with the
 names its source exports. ``registry_document`` exports the result model it takes from
 ``registry_result``; that module, ``registry_invariants`` and ``registry_phases`` are what it is
-built from, and are copied with it for its own use.
+built from, and are copied with it for its own use. ``extension_check`` checks an extension where
+it sits, with ``registry_source`` assembling a document from its TOML source and
+``registry_conventions`` holding the naming conventions.
 
 .. autosummary::
    :toctree: generated
 
    registry_document
    rule_language
+   registry_source
+   extension_check
 
 Modules
 -------

@@ -21,6 +21,7 @@ from pathlib import Path
 
 from escapewheel_reader.errors import EscapewheelError
 from escapewheel_validator import (
+    CheckedRegistryContext,
     EvaluationStatus,
     Level,
     RegistryRejected,
@@ -28,6 +29,9 @@ from escapewheel_validator import (
     RegistryState,
     check_registry_context_bytes,
 )
+from escapewheel_validator.extension_check import check_directory, check_extension
+from escapewheel_validator.registry_source import HEADER, RegistrySourceError, assemble, dumps, extension_sources
+from escapewheel_validator.registry_types import core_registry_bytes
 
 from .. import compare
 from ..amending import Held
@@ -442,16 +446,8 @@ def _extension(args: argparse.Namespace) -> int:
     return 0
 
 
-def _extension_check(args: argparse.Namespace) -> int:
-    """Check an extension's registry document against the invariants any registry is held to.
-
-    `draft` writes a document and this says whether it is sound, so an author learns before a
-    build refuses it. Core is checked by exactly this function, which is what keeps the two from
-    drifting.
-    """
-    if not args.document.is_file():
-        print(f"error: {args.document} does not exist", file=sys.stderr)
-        return 2
+def _core_context(args: argparse.Namespace) -> CheckedRegistryContext | None:
+    """Return the core an extension is checked under: a packet's, a file's, or this release's own."""
     if args.packet is not None:
         from escapewheel_reader import RegistryUnavailable, open_packet
 
@@ -459,35 +455,91 @@ def _extension_check(args: argparse.Namespace) -> int:
         core = packet.manifest.core
         if core is None:
             print(f"error: {args.packet} binds no core registry to check against", file=sys.stderr)
-            return 2
+            return None
         try:
-            core_context = check_registry_context_bytes(packet.registry_bytes(core.registry_id))
+            return check_registry_context_bytes(packet.registry_bytes(core.registry_id))
         except RegistryUnavailable as exc:
             print(f"error: {exc}", file=sys.stderr)
-            return 2
-    else:
+            return None
+    if args.registry is not None:
         if not args.registry.is_file():
             print(f"error: {args.registry} does not exist", file=sys.stderr)
-            return 2
-        core_context = check_registry_context_bytes(args.registry.read_bytes())
+            return None
+        return check_registry_context_bytes(args.registry.read_bytes())
+    return check_registry_context_bytes(core_registry_bytes())
 
-    context = check_registry_context_bytes(args.document.read_bytes(), core=core_context)
-    _write_result(args.result, context.result)
-    for phase in context.result.phases:
-        for outcome in phase.outcomes:
-            print(f"{outcome.state.upper():11s} {phase.phase}: {outcome.id} at {outcome.instance or '<root>'}")
-    document = context.document
-    # The document may be invalid, and a table resource stating no `table` still counts here, which
-    # `declared_tables` leaves out.
-    tables = (
-        sum(1 for declaration in document.get("resources", {}).values() if declaration.get("kind") == "table")
-        if isinstance(document, dict)
-        else 0
-    )
-    if context.result.state != RegistryState.VALID:
-        print(f"\n{args.document}: {context.result.state} over {tables} table(s)", file=sys.stderr)
+
+def _extension_check(args: argparse.Namespace) -> int:
+    """Check an extension where it sits: its registry result, its source and its conventions.
+
+    `draft` and `build` write a document and this says whether it is sound, so an author learns
+    before a build refuses it. The checks are the ones this repository holds its own extensions to,
+    copied from the specification's tree, which is what keeps the two from drifting.
+    """
+    if not args.document.exists():
+        print(f"error: {args.document} does not exist", file=sys.stderr)
+        return 2
+    if args.document.is_dir() and args.result is not None:
+        print("error: --result writes one document's result; name the document", file=sys.stderr)
+        return 2
+    core_context = _core_context(args)
+    if core_context is None:
+        return 2
+    if args.document.is_dir():
+        checks, stray = check_directory(args.document, core_context)
+    else:
+        checks, stray = [check_extension(args.document, core_context)], []
+    for line in stray:
+        print(f"FAIL        {line}")
+    for checked in checks:
+        result = checked.context.result
+        _write_result(args.result, result)
+        if len(checks) > 1:
+            print(f"{checked.path.name}:")
+        for phase in result.phases:
+            for outcome in phase.outcomes:
+                print(f"{outcome.state.upper():11s} {phase.phase}: {outcome.id} at {outcome.instance or '<root>'}")
+        for failure in checked.failures:
+            print(f"FAIL        {failure}")
+        verdict = (
+            "sound"
+            if checked.sound
+            else f"registry result {result.state}"
+            if result.state != RegistryState.VALID
+            else f"{len(checked.failures)} failure(s) beside a valid registry result"
+        )
+        print(
+            f"{checked.path}: {verdict}, over {checked.tables} table(s)",
+            file=sys.stdout if checked.sound else sys.stderr,
+        )
+    if not checks and not stray:
+        print(f"error: {args.document} holds no extension source directory", file=sys.stderr)
+        return 2
+    return 0 if not stray and all(checked.sound for checked in checks) else 1
+
+
+def _extension_build(args: argparse.Namespace) -> int:
+    """Write each extension document from its TOML source, beside the source directory."""
+    targets: dict[Path, Path] = {}
+    for path in args.sources:
+        if (path / HEADER).is_file():
+            targets[path] = path.parent / f"{path.name}.json"
+        elif path.is_dir():
+            targets |= extension_sources(path)
+        else:
+            print(f"error: {path} is neither a source directory nor a directory holding one", file=sys.stderr)
+            return 2
+    if not targets:
+        print("error: no source directory found; one holds a registry.toml", file=sys.stderr)
+        return 2
+    try:
+        written = {out: dumps(assemble(source)) for source, out in targets.items()}
+    except RegistrySourceError as exc:
+        print(f"error: {exc}", file=sys.stderr)
         return 1
-    print(f"\n{args.document}: sound — complete result over {tables} table(s)")
+    for out, text in written.items():
+        out.write_text(text)
+        print(f"wrote {out}")
     return 0
 
 
@@ -560,11 +612,10 @@ def _init_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser
 
 
 def _extension_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    """Add ``extension``, whose verbs draft an extension registry and check one."""
-    extension = subcommands.add_parser("extension", help="draft an extension registry, or check one")
-    # Two verbs rather than two commands: drafting and checking are the two halves of authoring one
-    # document, and a verb is where a third would go.
-    authoring = extension.add_subparsers(dest="verb", required=True, metavar="{draft,check}")
+    """Add ``extension``, whose verbs draft an extension registry, build one from its source, and check one."""
+    extension = subcommands.add_parser("extension", help="draft, build or check an extension registry")
+    # Verbs rather than commands: each is one step of authoring one document.
+    authoring = extension.add_subparsers(dest="verb", required=True, metavar="{draft,build,check}")
 
     drafting = authoring.add_parser("draft", help="draft a registry document from tables that already exist")
     drafting.add_argument("extension_id", help="namespace every table is prefixed by (Part 09 §5.2)")
@@ -578,10 +629,25 @@ def _extension_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentP
     drafting.add_argument("--out", type=Path, default=None, help="where to write (default: <id>.json)")
     drafting.set_defaults(func=_extension)
 
-    checking = authoring.add_parser("check", help="check a registry document against Part 02 §9.4's invariants")
-    checking.add_argument("document", type=Path, help="the extension's registry document")
-    source = checking.add_mutually_exclusive_group(required=True)
-    source.add_argument("--registry", type=Path, help="the core registry it extends, as logical_schemas.json")
+    building = authoring.add_parser("build", help="write each registry document from its TOML source")
+    building.add_argument(
+        "sources",
+        nargs="+",
+        type=Path,
+        help="a source directory holding registry.toml, written to <dir>.json beside it, or a directory of them",
+    )
+    building.set_defaults(func=_extension_build)
+
+    checking = authoring.add_parser(
+        "check", help="check a registry document, its source and its naming conventions where it sits"
+    )
+    checking.add_argument(
+        "document", type=Path, help="the extension's registry document, or a directory of extension sources"
+    )
+    source = checking.add_mutually_exclusive_group()
+    source.add_argument(
+        "--registry", type=Path, help="the core registry it extends (default: the one this release carries)"
+    )
     source.add_argument("--packet", type=Path, help="a packet root, whose embedded registry is read instead")
     checking.add_argument(
         "--all", action="store_true", help="list every invariant checked, not only the ones that failed"

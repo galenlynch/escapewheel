@@ -80,6 +80,9 @@ docs = [
 "src/escapewheel_validator/registry_invariants.py" = "tools/checkers/registry_invariants.py"
 "src/escapewheel_validator/registry_phases.py" = "tools/checkers/registry_phases.py"
 "src/escapewheel_validator/rule_language.py" = "tools/checkers/rule_language.py"
+"src/escapewheel_validator/registry_source.py" = "tools/checkers/registry_source.py"
+"src/escapewheel_validator/registry_conventions.py" = "tools/checkers/registry_conventions.py"
+"src/escapewheel_validator/extension_check.py" = "tools/checkers/extension_check.py"
 "src/escapewheel_validator/schemas/registry.schema.json" = "artifacts/registry.schema.json"
 "src/escapewheel_validator/schemas/registry_result.schema.json" = "artifacts/registry_result.schema.json"
 "src/escapewheel_validator/schemas/registry_contract.schema.json" = "artifacts/registry_contract.schema.json"
@@ -87,6 +90,9 @@ docs = [
 "src/escapewheel_validator/schemas/rule_language.schema.json" = "artifacts/rule_language.schema.json"
 "src/escapewheel_validator/schemas/escapewheel-rule-sql-v0.2.json" = "artifacts/rule_languages/escapewheel-rule-sql-v0.2.json"
 "src/escapewheel_validator/schemas/manifest.schema.json" = "artifacts/manifest.schema.json"
+# The core registry this release was built against, which an extension is checked under where its
+# author names no other.
+"src/escapewheel_validator/schemas/logical_schemas.json" = "artifacts/logical_schemas.json"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/escapewheel_validator"]

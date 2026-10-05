@@ -255,6 +255,12 @@ everything it cannot know. It writes **no role**, so the draft does not validate
 supplies them: a role has no default (Part 02 §8.1) because a forgotten classification looks
 deliberate, and a generated file is where a forgotten one hides best.
 
+`escapewheel extension build` and `escapewheel extension check` are thin over the validator's copy
+of `spec/tools/checkers/extension_check.py` and `registry_source.py`, which `extensions/registries.py`
+runs for this repository's own extensions, so an author outside it is held to the same checks.
+`check` takes core from `--registry` or `--packet`, else from the copy of `logical_schemas.json`
+the validator ships.
+
 ## Writing is not committing
 
 Copying bytes is staging (Part 05). Staged resources MUST NOT appear as committed canonical

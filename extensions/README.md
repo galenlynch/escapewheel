@@ -16,7 +16,8 @@ and `vr_foraging` lie here; `aind_unit_qc` and `aind_opto` lie in `../escapewhee
 beside the adapters that fill them. Each document is generated: `<id>.json` is assembled from the
 TOML files in `<id>/`, one per table, in the same form as the core registry's source (see
 `../spec/source/README.md`). Edit the TOML and run
-`uv run --project ../spec/tools python registries.py build . ../escapewheel-aind/extensions`.
+`uv run --project ../spec/tools python registries.py build . ../escapewheel-aind/extensions`;
+outside this repository, `escapewheel extension build <directory>` writes the same bytes.
 
 ## Why these, and why they are not core
 
@@ -166,8 +167,11 @@ and carries `unit = "1"`.
 
 `registries.py check` applies the specification tree's registry-document checker to each
 document where it sits, requiring the same complete Part 02 §9.4 result it requires of the core
-registry, with core supplied as the extension context. It also applies the core registry's
-authoring conventions, with each directory's `conventions.toml` declaring its exceptions. The
+registry, with core supplied as the extension context. It also requires each document to be what
+its source assembles to, and applies the core registry's authoring conventions, with each
+directory's `conventions.toml` declaring its exceptions. `escapewheel extension check
+<directory>` runs the same checks outside this repository, from
+`spec/tools/checkers/extension_check.py` as the validator copies it. The
 three inherited sorter names that intentionally depart from the integer naming convention
 (`rp_violations`, `num_negative_peaks`, and `num_positive_peaks`) are explicit checked exceptions
 rather than silent omissions.
