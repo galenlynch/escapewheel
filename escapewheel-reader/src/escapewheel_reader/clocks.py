@@ -470,8 +470,18 @@ def mapped(batch: pa.RecordBatch, target: Any, graph: ClockGraph, bound: float) 
     """Map one batch's ticks onto `target` up each clock's parent chain, returning the ticks and what to keep."""
     ticks = np.asarray(batch.column("t_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
     clocks = _clock_ids(batch.column("clock_id"))
-    parent = np.empty(ticks.size, dtype=np.int64)
-    keep = np.zeros(ticks.size, dtype=bool)
+    pieces = [
+        (lo, ticks[lo : lo + _CHUNK_ROWS], clocks[lo : lo + _CHUNK_ROWS]) for lo in range(0, ticks.size, _CHUNK_ROWS)
+    ]
+    return _mapped(pieces, ticks.size, target, graph, bound)
+
+
+def _mapped(
+    pieces: Sequence[tuple[int, NDArray[Any], NDArray[Any]]], rows: int, target: Any, graph: ClockGraph, bound: float
+) -> tuple[NDArray[np.int64], NDArray[np.bool_]]:
+    """Map pieces of `rows` ticks, each its row offset, ticks and clock IDs, in parallel into one result."""
+    parent = np.empty(rows, dtype=np.int64)
+    keep = np.zeros(rows, dtype=bool)
     # Every clock's path, prepared before the workers start: a dozen at most, each cheap. A clock
     # that cannot reach the target keeps its refusal, raised only if a row is on it.
     paths: dict[int, _Path | Exception] = {}
@@ -481,35 +491,57 @@ def mapped(batch: pa.RecordBatch, target: Any, graph: ClockGraph, bound: float) 
         except (NotAligned, ValueError) as refused:  # Unanchored is a ValueError
             paths[name] = refused
 
-    def run(lo: int, hi: int) -> None:
-        chunk = clocks[lo:hi]
+    def run(piece: tuple[int, NDArray[Any], NDArray[Any]]) -> None:
+        lo, ticks, chunk = piece
+        if not ticks.size:
+            return
         # Rows cluster by unit and a unit has one clock, so a chunk is ordinarily on one clock
         # and maps as a slice, gathering nothing.
         first = chunk[0]
-        groups: list[tuple[int, Any]] = [(int(first), slice(lo, hi))] if (chunk == first).all() else []
+        groups: list[tuple[int, Any]] = [(int(first), slice(None))] if (chunk == first).all() else []
         if not groups:
             for name in np.unique(chunk).tolist():
-                groups.append((name, lo + np.flatnonzero(chunk == name)))
-        for name, rows in groups:
+                groups.append((name, np.flatnonzero(chunk == name)))
+        for name, local in groups:
             if name == _NULL_CLOCK:  # a null clock places nothing
                 continue
             prepared = paths[name] if name in paths else graph.path(name, int(target), bound)
             if isinstance(prepared, Exception):
                 raise prepared
+            rows_out = slice(lo, lo + ticks.size) if isinstance(local, slice) else lo + local
             if not prepared.edges:
-                parent[rows], keep[rows] = ticks[rows], True
+                parent[rows_out], keep[rows_out] = ticks[local], True
             else:
-                parent[rows], keep[rows] = prepared(ticks[rows])
+                parent[rows_out], keep[rows_out] = prepared(ticks[local])
 
-    bounds = list(range(0, ticks.size, _CHUNK_ROWS))
-    if len(bounds) <= 1:
-        if ticks.size:
-            run(0, ticks.size)
+    if len(pieces) <= 1:
+        for piece in pieces:
+            run(piece)
         return parent, keep
-    with ThreadPoolExecutor(min(len(bounds), os.cpu_count() or 1)) as pool:
+    with ThreadPoolExecutor(min(len(pieces), os.cpu_count() or 1)) as pool:
         # list() so that a worker's exception reaches the caller.
-        list(pool.map(lambda lo: run(lo, min(lo + _CHUNK_ROWS, ticks.size)), bounds))
+        list(pool.map(run, pieces))
     return parent, keep
+
+
+def _pieces(ticks: Any, clock: Any) -> list[tuple[int, NDArray[Any], NDArray[Any]]]:
+    """Split null-free ticks and clocks into work for :func:`_mapped`, reading each tick chunk in place.
+
+    Copying hundreds of millions of ticks into one array costs a third of mapping them, so each
+    chunk is a piece of its own unless the chunks are too small to be worth a task.
+    """
+    clocks = _clock_ids(_flat(clock))
+    chunks = ticks.chunks if isinstance(ticks, pa.ChunkedArray) else [ticks]
+    if len(chunks) > 1 and len(clocks) / len(chunks) < _CHUNK_ROWS // 16:
+        chunks = [_flat(ticks)]
+    pieces, offset = [], 0
+    for chunk in chunks:
+        flat = np.asarray(chunk.to_numpy(zero_copy_only=False), dtype=np.int64)
+        for lo in range(0, flat.size, _CHUNK_ROWS):
+            hi = min(lo + _CHUNK_ROWS, flat.size)
+            pieces.append((offset + lo, flat[lo:hi], clocks[offset + lo : offset + hi]))
+        offset += flat.size
+    return pieces
 
 
 #: Rows a worker maps at once: large enough that a chunk's fixed cost is noise, small enough that
@@ -849,10 +881,7 @@ def _clock_of(
     else:
         # Narrowed to the keys present: a parent such as `core.units` is small, but reading it
         # whole per call is what an accessor called per unit cannot afford.
-        narrow: dict[str, Any] = {
-            name: [v for v in pc.unique(column).to_pylist() if v is not None]
-            for name, column in zip(target_keys, local, strict=True)
-        }
+        narrow: dict[str, Any] = {name: values(column) for name, column in zip(target_keys, local, strict=True)}
         found = packet.table(target_resource, columns=columns, **narrow)
     try:
         return lookup(local, found, target_keys, target)
@@ -873,11 +902,11 @@ def _placed(
     Returns the mapped column and which rows to keep: a null tick has nothing to place and is
     kept, and a tick on a null clock cannot be placed.
     """
-    ticks, clock = _flat(ticks), _flat(clock)
     if not ticks.null_count and not clock.null_count:
         # Nothing null, so nothing to gather around.
-        parent, placed = mapped(pa.record_batch({"t_tick": ticks, "clock_id": clock}), target, graph, bound)
+        parent, placed = _mapped(_pieces(ticks, clock), len(ticks), target, graph, bound)
         return _ticks(parent, placed, ticks.type), placed
+    ticks, clock = _flat(ticks), _flat(clock)
     known = pc.and_(pc.is_valid(ticks), pc.is_valid(clock)).to_numpy(zero_copy_only=False)
     parent = np.zeros(len(ticks), dtype=np.int64)
     placed = np.zeros(len(ticks), dtype=bool)
@@ -933,7 +962,8 @@ def _on_target(
         if clock_column.null_count:
             on_target = pc.if_else(pc.is_valid(clock_column), pa.scalar(target, kind), pa.scalar(None, kind))
         else:
-            on_target = pa.repeat(pa.scalar(target, kind), table.num_rows)
+            # A numpy fill is three times quicker than pa.repeat over hundreds of millions of rows.
+            on_target = pa.array(np.full(table.num_rows, target, dtype=pa.array([], type=kind).to_numpy().dtype))
         # The column keeps its declared type; a dictionary of one value buys nothing on an integer.
         declared_type = table.schema.field(column).type
         table = table.set_column(table.column_names.index(column), column, on_target.cast(declared_type))

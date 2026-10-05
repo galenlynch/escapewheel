@@ -4,7 +4,8 @@ import pyarrow as pa
 import pyarrow.dataset as pads
 import pytest
 
-from escapewheel_reader.dictionaries import key_filter, lookup, within
+from escapewheel_reader import dictionaries
+from escapewheel_reader.dictionaries import key_filter, lookup, runs, values, within
 
 I32 = pa.int32()
 ROWS = pa.table(
@@ -59,3 +60,12 @@ def test_lookup_by_runs_matches_lookup_by_row(values):
     keys = pa.chunked_array([pa.array([1] * 5 + [2] * 3, I32), pa.array([2, 9, 9, 3], I32)])
     expected = pa.chunked_array([values.take(pa.array([1] * 5 + [2] * 4 + [None] * 2 + [0]))]).combine_chunks()
     assert lookup([keys], parent, ["unit_id"], "value").to_pylist() == expected.to_pylist()
+
+
+def test_runs_join_a_run_split_across_chunks_and_slices(monkeypatch):
+    monkeypatch.setattr(dictionaries, "_RUN_SLICE", 2)
+    column = pa.chunked_array([pa.array([4, 4, 4, 1, 1], I32), pa.array([1, 4], I32), pa.array([], I32)])
+    starts, heads = runs(column)
+    assert (starts.tolist(), heads.tolist()) == ([0, 3, 6], [4, 1, 4])
+    assert values(column) == [4, 1]
+    assert runs(pa.array([1, None], I32)) is None

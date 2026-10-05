@@ -4,7 +4,7 @@ import numpy as np
 import pyarrow as pa
 import pytest
 
-from escapewheel_reader import ResourceNotFoundError
+from escapewheel_reader import ResourceNotFoundError, clocks
 from escapewheel_reader.clocks import (
     BOUND,
     ClockGraph,
@@ -273,6 +273,19 @@ def test_a_tick_beyond_any_edge_bound_is_not_placed():
     """Clock 3's tick 20,000 is clock 2's 40,000, far past its last anchor at 7,000."""
     _, keep = _on(3, [5, 20_000])
     assert keep.tolist() == [True, False]
+
+
+def test_ticks_in_chunks_map_as_one_array_does(monkeypatch):
+    """Chunks are mapped in place, split where longer than a worker's share, across clocks."""
+    monkeypatch.setattr(clocks, "_CHUNK_ROWS", 4)
+    lengths = [5, 7, 0, 4]
+    ticks = pa.chunked_array([pa.array(np.arange(n, dtype=np.int64) * 600 + 3, pa.int64()) for n in lengths])
+    clock = pa.array(np.resize(np.array([2, 2, 3, 5, 5, 5], np.int32), sum(lengths)))
+    whole = mapped(pa.record_batch({"t_tick": ticks.combine_chunks(), "clock_id": clock}), 1, CHAIN, BOUND)
+    pieces = clocks._pieces(ticks, clock)
+    assert [len(piece[1]) for piece in pieces] == [4, 1, 4, 3, 4]
+    parent, keep = clocks._mapped(pieces, sum(lengths), 1, CHAIN, BOUND)
+    assert (parent.tolist(), keep.tolist()) == (whole[0].tolist(), whole[1].tolist())
 
 
 def test_a_sibling_clock_is_refused_with_the_way_to_stored_ticks():

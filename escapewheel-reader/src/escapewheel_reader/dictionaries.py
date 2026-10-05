@@ -1,6 +1,7 @@
 """Columns that may be dictionary-encoded, handled without branching.
 
 - :func:`values` -- a column's distinct values, from its dictionary where it has one.
+- :func:`runs` -- where each run of equal integer values starts, and its value.
 - :func:`where` -- offsets where a column equals a value, comparing codes where it is a dictionary.
 - :func:`constant` -- one repeated value as codes into a one-entry dictionary.
 - :func:`decoded` -- a table with its dictionary columns decoded.
@@ -16,7 +17,9 @@ different widths, and the helpers below decode and cast so a caller need not.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from functools import reduce
 from typing import Any, Literal
 
@@ -38,8 +41,50 @@ def values(column: Any) -> list[Any]:
     scan. It may name a value no row in this batch uses, which is why the caller skips an empty
     selection rather than trusting the list to be tight.
     """
-    listed = column.dictionary if pa.types.is_dictionary(column.type) else pc.unique(column)
+    if pa.types.is_dictionary(column.type):
+        listed = column.dictionary
+    else:
+        found = runs(column)
+        clustered = found is not None and len(found[0]) <= CLUSTERED * len(column)
+        listed = pc.unique(pa.array(found[1]) if found is not None and clustered else column)
     return [v for v in listed.to_pylist() if v is not None]
+
+
+def runs(column: Any) -> tuple[NDArray[np.int64], NDArray[Any]] | None:
+    """Return where each run of equal values starts and its value, or None unless integer and null-free.
+
+    Each chunk is read in place and compared in slices across threads, so a column of hundreds of
+    millions of rows clustered by key costs one comparison per row and no copy.
+    """
+    if not pa.types.is_integer(column.type) or column.null_count:
+        return None
+    pieces: list[tuple[int, NDArray[Any]]] = []
+    offset = 0
+    for chunk in column.chunks if isinstance(column, pa.ChunkedArray) else [column]:
+        flat = chunk.to_numpy()
+        pieces.extend((offset + lo, flat[lo : lo + _RUN_SLICE]) for lo in range(0, flat.size, _RUN_SLICE))
+        offset += flat.size
+
+    def found(piece: tuple[int, NDArray[Any]]) -> tuple[NDArray[np.int64], NDArray[Any]]:
+        lo, flat = piece
+        first = np.concatenate(([0], np.flatnonzero(flat[1:] != flat[:-1]) + 1))
+        return first + lo, flat[first]
+
+    if offset > _RUN_SLICE:
+        with ThreadPoolExecutor(min(len(pieces), os.cpu_count() or 1)) as pool:
+            parts = list(pool.map(found, pieces))
+    else:
+        parts = [found(piece) for piece in pieces]
+    empty = (np.empty(0, dtype=np.int64), pa.array([], type=column.type).to_numpy())
+    start = np.concatenate([empty[0], *(part[0] for part in parts)])
+    head = np.concatenate([empty[1], *(part[1] for part in parts)])
+    # A run may continue across a chunk or slice boundary.
+    new = np.concatenate(([True], head[1:] != head[:-1]))[: head.size]
+    return start[new], head[new]
+
+
+#: Rows :func:`runs` compares in one task.
+_RUN_SLICE = 1 << 22
 
 
 def where(column: Any, value: Any) -> NDArray[np.int64]:
@@ -123,17 +168,12 @@ def _lookup_runs(keys: Any, parent_keys: Any, parent_values: Any) -> Any:
     A child table stored by its parent's key, as spikes are by unit, holds a few thousand runs in
     hundreds of millions of rows, and hashing every row costs four times this.
     """
-    if not pa.types.is_integer(keys.type) or keys.null_count or len(keys) < 2:
+    found_runs = runs(keys)
+    if found_runs is None or len(keys) < 2 or len(found_runs[0]) > CLUSTERED * len(keys):
         return None
-    flat = keys.to_numpy()
-    starts = np.flatnonzero(flat[1:] != flat[:-1]) + 1
-    if len(starts) > CLUSTERED * len(flat):
-        return None
-    firsts = np.concatenate(([0], starts))
-    found = parent_values.take(
-        pc.index_in(pa.array(flat[firsts]), value_set=pa.chunked_array(parent_keys).combine_chunks())
-    )
-    lengths = np.diff(np.append(firsts, len(flat)))
+    firsts, heads = found_runs
+    found = parent_values.take(pc.index_in(pa.array(heads), value_set=pa.chunked_array(parent_keys).combine_chunks()))
+    lengths = np.diff(np.append(firsts, len(keys)))
     if found.null_count or not (pa.types.is_integer(found.type) or pa.types.is_floating(found.type)):
         return found.take(pa.array(np.repeat(np.arange(len(firsts)), lengths)))
     return pa.array(np.repeat(found.to_numpy(), lengths), type=found.type)
