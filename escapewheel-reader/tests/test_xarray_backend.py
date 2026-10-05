@@ -6,10 +6,18 @@ import numpy as np
 import pytest
 import xarray as xr
 import zarr
-from packet_fixture import CLOCK_PROBE, SESSION
+from packet_fixture import CLOCK_BEHAVIOUR, CLOCK_PROBE, SESSION
 
+from escapewheel_reader.clocks import ClockGraph
 from escapewheel_reader.resources import ArrayResource
-from escapewheel_reader.xarray_backend import EscapewheelBackend, TickIndex, Ticks
+from escapewheel_reader.xarray_backend import (
+    EscapewheelBackend,
+    OnReference,
+    Reference,
+    ReferenceIndex,
+    TickIndex,
+    Ticks,
+)
 
 from .conftest import LFP, WAVE
 
@@ -176,6 +184,14 @@ def test_a_slice_keeps_the_tick_index(lfp):
     assert sliced.sel(tick=slice(3000, None)).tick.values.tolist() == [3812.5]
 
 
+def test_a_fractional_tick_selects_as_its_coordinate_shows_it():
+    """7/3 has no binary fraction, so a value copied from the coordinate is not the rational tick."""
+    ticks = Ticks("tick", "time", 10, Fraction(1), Fraction(7, 3))
+    index, shown = TickIndex(ticks), ticks.forward({"time": np.arange(10)})["tick"]
+    assert index.sel({"tick": shown[5]}).dim_indexers["time"] == 5
+    assert index.sel({"tick": slice(shown[2], shown[4])}).dim_indexers["time"] == slice(2, 5)
+
+
 def test_a_whole_step_far_from_its_origin_stays_exact():
     """Ticks are int64 where they can be, and a window bound is compared exactly at any distance."""
     origin, size = 2**53 + 1, 1_000_000_000
@@ -185,6 +201,84 @@ def test_a_whole_step_far_from_its_origin_stays_exact():
     assert ticks.forward({"time": np.array([0, size - 1])})["tick"].tolist() == [origin, origin + 3 * (size - 1)]
     window = index.sel({"tick": slice(origin + 3, origin + 8)}).dim_indexers["time"]
     assert (window.start, window.stop) == (1, 3)
+
+
+# -- the reference clock ---------------------------------------------------------------------
+
+#: The LFP's probe ticks on the harp clock: probe tick 0 is harp tick 1,000,000, and harp runs at
+#: 31,250 Hz to the probe's 30,000, each mapped tick rounded to the nearest.
+ON_HARP = [1_001_042, 1_002_018, 1_002_995, 1_003_971]
+
+
+def _lfp_on(array_packet, base, edit=None):
+    return _open(array_packet(edit, base=base), "core.lfp")
+
+
+def _lfp_axis(rows):
+    (time,) = [r for r in rows["core.array_dimensions"] if r["array_asset_id"] == LFP and r["axis_index"] == 0]
+    return time
+
+
+def test_a_tick_axis_carries_its_reference_ticks_and_seconds(array_packet, two_clock_packet):
+    """Half-tick positions map by the anchors' piecewise-linear rule, as whole ticks do."""
+    dataset = _lfp_on(array_packet, two_clock_packet)
+    assert dataset.reference_tick.values.tolist() == ON_HARP
+    assert dataset.reference_tick.attrs["clock_id"] == CLOCK_BEHAVIOUR
+    assert dataset.second.values.tolist() == [(t - 1_000_000) / 31_250 for t in ON_HARP]
+    assert dataset.second.attrs["units"] == "s"
+    assert isinstance(dataset.xindexes["second"], ReferenceIndex)
+
+
+def test_a_window_on_the_reference_clock_is_closed_and_exact(array_packet, two_clock_packet):
+    dataset = _lfp_on(array_packet, two_clock_packet)
+    assert dataset.sel(reference_tick=slice(ON_HARP[0], ON_HARP[2])).tick.values.tolist() == [1000, 1937.5, 2875]
+    assert dataset.sel(reference_tick=slice(ON_HARP[0] + 1, ON_HARP[2] - 1)).tick.values.tolist() == [1937.5]
+    assert dataset.sel(second=slice(0.03, 0.1)).reference_tick.values.tolist() == ON_HARP[:3]
+    assert dataset.sel(reference_tick=ON_HARP[1]).tick.item() == 1937.5
+    with pytest.raises(KeyError):
+        dataset.sel(reference_tick=ON_HARP[1] + 1)
+
+
+def test_a_position_the_anchors_do_not_reach_has_no_reference_tick(array_packet, two_clock_packet):
+    """Anchors end at probe tick 210,000 and place one median interval, 30,000 ticks, past it."""
+    dataset = _lfp_on(array_packet, two_clock_packet, lambda rows: _lfp_axis(rows).update(origin_tick=238_000))
+    assert np.isnan(dataset.reference_tick.values).tolist() == [False, False, False, True]
+    assert dataset.sel(reference_tick=slice(None, None)).sizes["time"] == 3
+
+
+def test_a_slice_keeps_the_reference_index(array_packet, two_clock_packet):
+    sliced = _lfp_on(array_packet, two_clock_packet).isel(time=slice(1, None, 2))
+    assert isinstance(sliced.xindexes["reference_tick"], ReferenceIndex)
+    assert sliced.reference_tick.values.tolist() == ON_HARP[1::2]
+    assert sliced.sel(reference_tick=slice(ON_HARP[2], None)).tick.values.tolist() == [3812.5]
+
+
+def test_an_axis_on_the_reference_clock_carries_only_seconds(array_packet, two_clock_packet):
+    dataset = _lfp_on(array_packet, two_clock_packet, lambda rows: _lfp_axis(rows).update(clock_id=CLOCK_BEHAVIOUR))
+    assert "reference_tick" not in dataset.coords
+    assert dataset.second.values.tolist() == [(t - 1_000_000) / 31_250 for t in (1000, 1937.5, 2875, 3812.5)]
+    assert dataset.sel(second=slice(None, (2875 - 1_000_000) / 31_250)).sizes["time"] == 3
+    assert dataset.sel(second=dataset.second.values[1]).tick.item() == 1937.5
+
+
+def test_a_packet_declaring_no_reference_carries_no_reference_coordinates(lfp):
+    assert {"reference_tick", "second"}.isdisjoint(_open(lfp[0], "core.lfp").coords)
+
+
+@pytest.mark.parametrize("step", [Fraction(5), Fraction(5, 2), Fraction(7, 3)], ids=str)
+def test_every_window_selects_what_the_forward_mapping_places_in_it(step):
+    """Across a hole in the anchors, each window's positions are exactly those mapping into it."""
+    anchor_t = np.array([0, 10, 20, 1000, 1010, 1020], dtype=np.int64)
+    graph = ClockGraph({1: 0}, {1: (anchor_t, anchor_t * 3 + 7)}, {})
+    ticks = Ticks("tick", "time", 500, Fraction(-41), step)
+    transform = OnReference(ticks, Reference(graph, 1, 0, 1.0), "reference_tick", None)
+    reference = transform.forward({"time": np.arange(500)})["reference_tick"]
+    for start, stop in [(None, None), (-100, 60), (8, 97), (2990, 3100), (3040, 3075), (40, 2900), (101, 2950)]:
+        found = transform.positions(start, stop)
+        found = np.arange(500)[found] if isinstance(found, slice) else found
+        with np.errstate(invalid="ignore"):
+            inside = (reference >= (start or -np.inf)) & (reference <= (stop if stop is not None else np.inf))
+        assert found.tolist() == np.flatnonzero(inside).tolist(), (start, stop)
 
 
 def test_scaling_declared_on_the_array_is_applied(lfp):

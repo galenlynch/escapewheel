@@ -470,13 +470,14 @@ def _array_packet(tmp_path, packet_root, edit, arrays):
 
 @pytest.fixture
 def array_packet(tmp_path, packet_root):
-    """Build the packet holding the described arrays: ``array_packet(edit=None, arrays=None)``.
+    """Build the packet holding the described arrays: ``array_packet(edit=None, arrays=None, base=None)``.
 
     `edit` changes the table rows before they are written, and `arrays` maps further resource IDs
-    to their (catalog namespace, shape).
+    to their (catalog namespace, shape). `base` is the packet root to add them to, the shared
+    packet unless named.
     """
 
-    def build(edit=None, arrays=None):
-        return _array_packet(tmp_path, packet_root, edit, arrays)
+    def build(edit=None, arrays=None, base=None):
+        return _array_packet(tmp_path, packet_root if base is None else base, edit, arrays)
 
     return build

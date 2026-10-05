@@ -189,6 +189,9 @@ The ``xarray`` extra registers ``engine="escapewheel"`` with :func:`xarray.open_
    xarray_backend.EscapewheelBackend
    xarray_backend.TickIndex
    xarray_backend.Ticks
+   xarray_backend.ReferenceIndex
+   xarray_backend.OnReference
+   xarray_backend.Reference
 
 Support tier
 ------------

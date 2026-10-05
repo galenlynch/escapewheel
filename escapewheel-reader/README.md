@@ -171,7 +171,9 @@ one.electrode_id.where(one.channel_present, drop=True)  # the contacts this unit
 A labelled axis is indexed by the key its labels hold, `unit_id` here. A dependent axis, such as
 each unit's own channels, gets a 2-D coordinate, and where a unit has fewer channels than the axis
 `channel_present` is false and the values are NaN. A tick axis's `tick` coordinate is computed per
-position, and `sel(tick=slice(a, b))` selects the closed window exactly. `xr.open_datatree(packet,
+position, and so are `reference_tick` and `second`, on the packet's reference clock through its
+anchors. Each selects a closed window exactly, so `lfp.sel(second=slice(100, 101))` reads one
+second of LFP. `xr.open_datatree(packet,
 engine="escapewheel")` opens every catalogued array, one node each.
 
 ## Joining spikes to events in SQL

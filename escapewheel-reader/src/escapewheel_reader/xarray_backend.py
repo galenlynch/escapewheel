@@ -4,6 +4,9 @@
   :func:`xarray.open_datatree`.
 - :class:`TickIndex` -- selects positions on a tick axis by tick, exactly.
 - :class:`Ticks` -- the tick at each position of a tick axis, computed rather than stored.
+- :class:`ReferenceIndex` -- selects them by reference tick or second, exactly.
+- :class:`OnReference` -- each position's reference tick and second, computed through the anchors.
+- :class:`Reference` -- how a tick axis's clock reaches the reference clock and the time origin.
 
 Opening reads the packet's tables and no values; a selection reads only the chunks it touches.
 Needs the ``xarray`` extra.
@@ -14,7 +17,7 @@ from __future__ import annotations
 import functools
 import math
 import os
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from fractions import Fraction
 from numbers import Integral
 from pathlib import Path
@@ -29,6 +32,8 @@ from xarray.core.indexing import IndexSelResult
 from xarray.indexes import CoordinateTransform, CoordinateTransformIndex
 
 from .axes import ArrayDescription, IrregularAxis, LabelledAxis, NumericAxis, TickAxis, describe
+from .clocks import ClockGraph, clock_graph, declared_bound, origin, reference_clock, stored_intervals
+from .errors import NotAligned, NoTimeOrigin
 from .location import Location
 from .manifest import MANIFEST_FILENAME
 from .packet import Packet, open_packet
@@ -73,12 +78,15 @@ class Ticks(CoordinateTransform):
         hi = self.size if stop is None else min(self.size, math.floor((Fraction(stop) - self.origin) / self.step) + 1)
         return slice(lo, max(lo, hi))
 
-    def position(self, tick: Tick) -> int:
-        """Return the position whose tick is exactly `tick`."""
-        offset = (Fraction(tick) - self.origin) / self.step
-        if offset.denominator != 1 or not 0 <= offset < self.size:
-            raise KeyError(f"no position of {self.dim!r} is at tick {tick}")
-        return int(offset)
+    def sliced(self, key: Any) -> Ticks | None:
+        """Return the ticks a forward positional slice keeps, or None for any other selection."""
+        if not isinstance(key, slice):
+            return None
+        start, stop, stride = key.indices(self.size)
+        if stride < 1:
+            return None
+        size = len(range(start, stop, stride))
+        return Ticks(self.name, self.dim, size, self.origin + start * self.step, self.step * stride)
 
     def nearest(self, tick: Tick, tolerance: Tick | None = None) -> int:
         """Return the position whose tick is nearest `tick`, within `tolerance` ticks where given."""
@@ -94,9 +102,8 @@ class TickIndex(CoordinateTransformIndex):
 
     A slice is a closed window of ticks, as a label slice is elsewhere in xarray, and a tick or an
     array of them must each land on a position; ``method="nearest"`` selects the nearest instead,
-    and no other method applies.
-    Bounds are compared as fractions, so a window never gains or loses an edge position to rounding
-    however far the axis runs from its origin.
+    and no other method applies. Whole ticks compare as integers; a fractional tick compares as its
+    float64 coordinate shows it, so a value copied from the coordinate selects its position.
     """
 
     def __init__(self, transform: Ticks) -> None:
@@ -108,27 +115,257 @@ class TickIndex(CoordinateTransformIndex):
         """Select positions by tick, or with ``method="nearest"`` by the nearest within `tolerance` ticks."""
         if method not in (None, "nearest"):
             raise ValueError(f"a tick axis selects exactly or by nearest, not by {method!r}")
-        (key,) = labels.values()
-        if isinstance(key, slice):
-            if key.step is not None:
-                raise ValueError("a tick window takes no step")
-            return IndexSelResult({self.ticks.dim: self.ticks.window(key.start, key.stop)})
-        if isinstance(key, xr.Variable | xr.DataArray):
-            key = key.values
-        find = self.ticks.position if method is None else functools.partial(self.ticks.nearest, tolerance=tolerance)
-        found = np.vectorize(find, otypes=[np.int64])(np.asarray(key, dtype=object))
-        return IndexSelResult({self.ticks.dim: found if found.ndim else int(found)})
+        ((name, key),) = labels.items()
+        ticks = self.ticks
+        if method is not None and not isinstance(key, slice):
+            nearest = functools.partial(ticks.nearest, tolerance=tolerance)
+            found = np.vectorize(nearest, otypes=[np.int64])(np.asarray(getattr(key, "values", key), dtype=object))
+            return IndexSelResult({ticks.dim: found if found.ndim else int(found)})
+
+        def window(start: Tick | None, stop: Tick | None) -> slice | NDArray[np.int64]:
+            if ticks.dtype == np.int64:
+                return ticks.window(start, stop)
+            widened = ticks.window(*_widened(start, stop, 1))
+            return _shown(widened, lambda k: ticks.forward({ticks.dim: k})[ticks.name], start, stop)
+
+        return _select(name, key, ticks.dim, window)
 
     def isel(self, indexers: Mapping[Any, Any]) -> TickIndex | None:
         """Keep the index through a forward positional slice; any other selection leaves the ticks unindexed."""
-        ticks, key = self.ticks, indexers.get(self.ticks.dim)
-        if not isinstance(key, slice):
-            return None
-        start, stop, stride = key.indices(ticks.size)
-        if stride < 1:
-            return None
-        size = len(range(start, stop, stride))
-        return TickIndex(Ticks(ticks.name, ticks.dim, size, ticks.origin + start * ticks.step, ticks.step * stride))
+        sliced = self.ticks.sliced(indexers.get(self.ticks.dim))
+        return None if sliced is None else TickIndex(sliced)
+
+
+class Reference:
+    """How a tick axis's clock reaches the session's reference clock, and where the session's seconds start.
+
+    `origin` and `rate` are None where the packet declares no time origin, so there are no seconds.
+    """
+
+    def __init__(
+        self,
+        graph: ClockGraph,
+        clock_id: int,
+        reference_clock_id: int,
+        bound: float,
+        origin: int | None = None,
+        rate: Fraction | None = None,
+    ) -> None:
+        """Map `clock_id`'s ticks up its parent chain to `reference_clock_id`, placing those within `bound`.
+
+        `rate` is the reference clock's ticks per second.
+
+        Raises
+        ------
+        NotAligned, Unanchored
+            As :meth:`ClockGraph.path` does, where the clock does not reach the reference.
+        """
+        self.graph, self.clock_id, self.reference_clock_id, self.bound = graph, clock_id, reference_clock_id, bound
+        self.origin, self.rate = origin, rate
+        self.path = None if clock_id == reference_clock_id else graph.path(clock_id, reference_clock_id, bound)
+
+    def __eq__(self, other: object) -> bool:
+        """Two references are equal where they map one clock graph the same way."""
+        fields = ("clock_id", "reference_clock_id", "bound", "origin", "rate")
+        return (
+            isinstance(other, Reference)
+            and self.graph is other.graph
+            and all(getattr(self, f) == getattr(other, f) for f in fields)
+        )
+
+    def __hash__(self) -> int:
+        """Hash consistently with equality."""
+        return hash((id(self.graph), self.clock_id, self.reference_clock_id, self.bound))
+
+    def mapped(self, ticks: NDArray[Any]) -> NDArray[np.float64]:
+        """Return each tick on the reference clock, NaN where the mapping does not place it.
+
+        A tick between two of its clock's ticks maps by the same piecewise-linear rule as one on them.
+        """
+        if self.path is None:
+            return np.asarray(ticks, dtype=np.float64)
+        stored = np.asarray(ticks)
+        stored = stored.astype(np.int64 if np.issubdtype(stored.dtype, np.integer) else np.float64)
+        reference, placed = self.path(stored.ravel())
+        return np.where(placed, reference, np.nan).reshape(stored.shape)
+
+    def tick_window(self, seconds: tuple[Tick | None, Tick | None]) -> tuple[Fraction | None, Fraction | None]:
+        """Return the closed window of reference ticks a closed window of seconds is."""
+        if self.origin is None or self.rate is None:
+            raise KeyError("the packet declares no time origin, so its axes have no seconds")
+        return (
+            None if seconds[0] is None else self.origin + Fraction(seconds[0]) * self.rate,
+            None if seconds[1] is None else self.origin + Fraction(seconds[1]) * self.rate,
+        )
+
+
+class OnReference(CoordinateTransform):
+    """A tick axis's positions on the reference clock and in seconds from the session's origin.
+
+    Both float64, NaN where the clock mapping places no tick. Either name may be None, for a
+    coordinate the axis does not carry.
+    """
+
+    def __init__(self, ticks: Ticks, reference: Reference, tick_name: str | None, second_name: str | None) -> None:
+        """Compute `tick_name` and `second_name` for each position of `ticks`."""
+        names = [name for name in (tick_name, second_name) if name is not None]
+        super().__init__(names, {ticks.dim: ticks.size}, dtype=np.dtype(np.float64))
+        self.ticks, self.reference, self.tick_name, self.second_name = ticks, reference, tick_name, second_name
+
+    def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
+        """Return each position's reference tick and second."""
+        stored = self.ticks.forward(dim_positions)[self.ticks.name]
+        reference = self.reference.mapped(stored)
+        found: dict[Hashable, Any] = {}
+        if self.tick_name is not None:
+            found[self.tick_name] = reference
+        if self.second_name is not None:
+            assert self.reference.origin is not None and self.reference.rate is not None
+            found[self.second_name] = (reference - self.reference.origin) / float(self.reference.rate)
+        return found
+
+    def reverse(self, coord_labels: dict[Hashable, Any]) -> dict[str, Any]:
+        """Refuse: a reference tick reaches a position only through :meth:`positions`."""
+        raise NotImplementedError("select a reference tick or second through the index, exactly")
+
+    def equals(self, other: CoordinateTransform, **_: Any) -> bool:
+        """Two are equal where their axes' ticks, the mapping and the names agree."""
+        return (
+            isinstance(other, OnReference)
+            and self.ticks.equals(other.ticks)
+            and self.reference == other.reference
+            and (self.tick_name, self.second_name) == (other.tick_name, other.second_name)
+        )
+
+    def sliced(self, key: Any) -> OnReference | None:
+        """Return the coordinates a forward positional slice keeps, or None for any other selection."""
+        ticks = self.ticks.sliced(key)
+        return None if ticks is None else OnReference(ticks, self.reference, self.tick_name, self.second_name)
+
+    def positions(self, start: Tick | None, stop: Tick | None) -> slice | NDArray[np.int64]:
+        """Return the positions whose reference tick lies in the closed window, exactly.
+
+        A slice where they are contiguous, and an array where the mapping leaves a hole.
+        """
+        ticks, reference = self.ticks, self.reference
+        if reference.path is None:
+            return ticks.window(start, stop)
+        first = -(2**62) if start is None else math.ceil(Fraction(start))
+        last = 2**62 if stop is None else math.floor(Fraction(stop))
+        starts, stops = stored_intervals(
+            reference.graph, reference.clock_id, reference.reference_clock_id, (first, last), reference.bound
+        )
+        runs = []
+        for low, high in zip(starts.tolist(), stops.tolist(), strict=True):
+            # The inverse is exact on stored ticks; a position between two of them is checked against
+            # the mapping itself within one tick of each end, and every position inside maps within.
+            candidates = ticks.window(low - 1, high + 1)
+            head = range(candidates.start, min(candidates.stop, ticks.window(low - 1, low + 1).stop))
+            tail = range(max(head.stop, ticks.window(high - 1, high + 1).start), candidates.stop)
+            edges = np.concatenate([np.arange(head.start, head.stop), np.arange(tail.start, tail.stop)])
+            inside = edges[self._within(edges, first, last)].tolist()
+            if head.stop < tail.start:
+                inside += [head.stop, tail.start - 1]
+            if inside:
+                runs.append((min(inside), max(inside) + 1))
+        if not runs:
+            return slice(0, 0)
+        if len(runs) == 1:
+            return slice(*runs[0])
+        return np.concatenate([np.arange(begin, end) for begin, end in runs]).astype(np.int64)
+
+    def _within(self, positions: NDArray[np.int64], first: int, last: int) -> NDArray[np.bool_]:
+        """Return whether each position's reference tick is placed and within ``[first, last]``."""
+        reference = self.reference.mapped(self.ticks.forward({self.ticks.dim: positions})[self.ticks.name])
+        with np.errstate(invalid="ignore"):
+            return np.asarray((reference >= first) & (reference <= last))
+
+
+class ReferenceIndex(CoordinateTransformIndex):
+    """An index selecting a tick axis's positions by reference tick or by second, exactly.
+
+    A slice is a closed window and a value must be the coordinate of one position. A reference tick
+    is a whole tick and compares as one; a second compares as its float64 coordinate shows it, so a
+    value copied from the coordinate selects its position.
+    """
+
+    def __init__(self, transform: OnReference) -> None:
+        """Index the coordinates `transform` computes."""
+        super().__init__(transform)
+        self.on_reference = transform
+
+    def sel(self, labels: dict[Any, Any], method: str | None = None, tolerance: Any = None) -> IndexSelResult:
+        """Select positions by reference tick or second."""
+        if method is not None:
+            raise ValueError("a reference tick or second selects exactly; select a window instead of the nearest")
+        if len(labels) != 1:
+            raise ValueError("select by a reference tick or by a second, not both at once")
+        ((name, key),) = labels.items()
+        transform = self.on_reference
+        in_seconds = name == transform.second_name
+
+        def window(start: Tick | None, stop: Tick | None) -> slice | NDArray[np.int64]:
+            if not in_seconds:
+                return transform.positions(start, stop)
+            widened = transform.positions(*_widened(*transform.reference.tick_window((start, stop)), 1))
+            dim = transform.ticks.dim
+            return _shown(widened, lambda k: transform.forward({dim: k})[transform.second_name], start, stop)
+
+        return _select(name, key, transform.ticks.dim, window)
+
+    def isel(self, indexers: Mapping[Any, Any]) -> ReferenceIndex | None:
+        """Keep the index through a forward positional slice; any other selection leaves the coordinates unindexed."""
+        sliced = self.on_reference.sliced(indexers.get(self.on_reference.ticks.dim))
+        return None if sliced is None else ReferenceIndex(sliced)
+
+
+def _widened(start: Tick | None, stop: Tick | None, margin: int) -> tuple[Tick | None, Tick | None]:
+    """Return the window widened by `margin` at each bounded end."""
+    return (None if start is None else start - margin, None if stop is None else stop + margin)
+
+
+def _shown(
+    found: slice | NDArray[np.int64], values: Any, start: Tick | None, stop: Tick | None
+) -> slice | NDArray[np.int64]:
+    """Trim positions, in coordinate order, to those whose coordinate as `values` gives it lies in the window.
+
+    `found` must hold every such position; only its ends are tested, since the coordinate ascends.
+    """
+
+    def inside(position: int) -> bool:
+        (value,) = values(np.array([position]))
+        return bool(not np.isnan(value) and (start is None or value >= start) and (stop is None or value <= stop))
+
+    every = range(found.start, found.stop) if isinstance(found, slice) else found
+    lo, hi = 0, len(every)
+    while lo < hi and not inside(int(every[lo])):
+        lo += 1
+    while hi > lo and not inside(int(every[hi - 1])):
+        hi -= 1
+    if isinstance(found, slice):
+        return slice(found.start + lo, found.start + hi)
+    return found[lo:hi]
+
+
+def _select(
+    name: Hashable, key: Any, dim: str, window: Callable[[Tick | None, Tick | None], slice | NDArray[np.int64]]
+) -> IndexSelResult:
+    """Select by a closed window, or by values each the coordinate of exactly one position."""
+    if isinstance(key, slice):
+        if key.step is not None:
+            raise ValueError("a window takes no step")
+        return IndexSelResult({dim: window(key.start, key.stop)})
+
+    def one(value: Tick) -> int:
+        found = window(value, value)
+        positions = range(found.start, found.stop) if isinstance(found, slice) else found
+        if len(positions) != 1:
+            raise KeyError(f"{len(positions)} positions of {dim!r} have {name} {value}, not one")
+        return int(positions[0])
+
+    values = np.asarray(getattr(key, "values", key), dtype=object)
+    found = np.vectorize(one, otypes=[np.int64])(values)
+    return IndexSelResult({dim: found if found.ndim else int(found)})
 
 
 class _Values(BackendArray):
@@ -205,16 +442,36 @@ def _names(description: ArrayDescription) -> dict[int, str]:
     }
 
 
-def _irregular(packet: PacketLike, form: IrregularAxis, mask_and_scale: bool) -> tuple[NDArray[Any], dict[str, Any]]:
-    """Read an irregular axis's values, and their unit; a coordinate array is 1-D and read whole."""
-    values = np.asarray(packet.array_resource(form.resource_id).read())
+def _irregular(packet: PacketLike, form: IrregularAxis, mask_and_scale: bool) -> tuple[Any, dict[str, Any]]:
+    """Return an irregular axis's values unread, and their unit; unindexed, since an index reads them all."""
     scaling = describe(packet, form.resource_id).scaling
+    values = _Values(packet.array_resource(form.resource_id), scaling if mask_and_scale else None, [])
+    lazy = indexing.LazilyIndexedArray(values)
     if scaling is None:
-        return values, {}
+        return lazy, {}
     attrs = {} if scaling.unit is None else {"units": scaling.unit}
     if mask_and_scale:
-        return values * scaling.conversion + scaling.offset, attrs
-    return values, {**attrs, "scale_factor": scaling.conversion, "add_offset": scaling.offset}
+        return lazy, attrs
+    return lazy, {**attrs, "scale_factor": scaling.conversion, "add_offset": scaling.offset}
+
+
+def _reference(packet: PacketLike, clock_id: int) -> Reference | None:
+    """Return how a clock reaches the packet's reference clock and seconds, or None where it reaches neither."""
+    try:
+        target = reference_clock(packet)
+    except NotAligned:
+        return None
+    try:
+        start, num, den = origin(packet)
+        seconds: tuple[int | None, Fraction | None] = (start, Fraction(num, den))
+    except (NoTimeOrigin, NotAligned):
+        seconds = (None, None)
+    if clock_id == target and seconds[0] is None:
+        return None
+    try:
+        return Reference(clock_graph(packet), clock_id, target, declared_bound(packet), *seconds)
+    except ValueError:  # NotAligned and Unanchored: the clock does not reach the reference
+        return None
 
 
 class _Builder:
@@ -226,6 +483,7 @@ class _Builder:
         self.coords: dict[str, xr.Variable] = {}
         self.indexed: list[str] = []
         self.ticks: list[tuple[TickIndex, int]] = []
+        self.references: list[ReferenceIndex] = []
         self.padding: Padding = []
 
     def add(self, name: str, dims: tuple[str, ...], values: Any, attrs: Mapping[str, Any] | None = None) -> None:
@@ -290,29 +548,43 @@ def _dataset(
             raise ValueError(f"{resource_id}: {axis.name!r} is not a labelled axis, so it has no columns")
         if isinstance(form, NumericAxis):
             built.add(name, (axis.name,), form.origin + np.arange(axis.length) * form.step, {"units": form.unit})
+            built.indexed.append(name)
         elif isinstance(form, IrregularAxis):
             built.add(name, (axis.name,), *_irregular(packet, form, mask_and_scale))
         else:
             ticks = Ticks(name, axis.name, axis.length, Fraction(form.origin_tick), form.step)
             built.ticks.append((TickIndex(ticks), form.clock_id))
+            if (reference := _reference(packet, form.clock_id)) is not None:
+                prefix = name.removesuffix("tick")
+                tick_name = None if reference.path is None else f"{prefix}reference_tick"
+                second_name = None if reference.origin is None else f"{prefix}second"
+                built.references.append(ReferenceIndex(OnReference(ticks, reference, tick_name, second_name)))
     attrs = {"resource_id": resource_id, **built.scaling(description, dims, mask_and_scale)}
     resource = packet.array_resource(resource_id)
     values = _Values(resource, description.scaling if mask_and_scale else None, built.padding if mask_and_scale else [])
     data = xr.Variable(dims, indexing.LazilyIndexedArray(values), attrs)
     unit_of_read = resource.shards or resource.chunks
     data.encoding = {"preferred_chunks": dict(zip(dims, unit_of_read, strict=True)), "chunks": unit_of_read}
-    dataset = xr.Dataset({_variable_name(resource_id): data}, coords=built.coords)
+    # No default index: one on an irregular axis would read its coordinate array whole.
+    dataset = xr.Dataset({_variable_name(resource_id): data}, coords=xr.Coordinates(built.coords, indexes={}))
     for index, clock_id in built.ticks:
         dataset = dataset.assign_coords(xr.Coordinates.from_xindex(index))
         dataset[index.ticks.name].attrs["clock_id"] = clock_id
+    for on_reference in built.references:
+        dataset = dataset.assign_coords(xr.Coordinates.from_xindex(on_reference))
+        transform = on_reference.on_reference
+        if transform.tick_name is not None:
+            dataset[transform.tick_name].attrs["clock_id"] = transform.reference.reference_clock_id
+        if transform.second_name is not None:
+            dataset[transform.second_name].attrs["units"] = "s"
     for name in built.indexed:
         dataset = dataset.set_xindex(name)
     return dataset
 
 
 def _variable_name(resource_id: str) -> str:
-    """Name an array's variable after its resource, without the content class."""
-    return resource_id.partition(".")[2]
+    """Name an array's variable after the last part of its resource ID, ``lfp`` for ``core.45883-1.lfp``."""
+    return resource_id.rpartition(".")[2]
 
 
 def _packet(filename_or_obj: Any) -> PacketLike:
@@ -357,8 +629,8 @@ class EscapewheelBackend(BackendEntrypoint):
     """Open a packet's dense arrays as ``engine="escapewheel"``.
 
     ``xr.open_dataset(packet, engine="escapewheel", resource_id="core.waveform_mean")`` gives one
-    variable per array, named without its content class, on dimensions named as the packet names
-    its axes. Each axis carries its coordinates:
+    variable per array, named after the last part of its resource ID, on dimensions named as the
+    packet names its axes. Each axis carries its coordinates:
 
     - a labelled axis carries its labels as a coordinate named for the key they hold, such as
       ``unit_id``, indexed where it is independent and its labels are distinct. A dependent axis's
@@ -367,9 +639,13 @@ class EscapewheelBackend(BackendEntrypoint):
       `columns` adds columns of the labelled rows, as ``{"unit": ["quality_label"]}``.
     - a numeric axis carries its values as an indexed coordinate named for the dimension, its unit
       in ``units``.
-    - an irregular axis carries its coordinate array's values, read whole, named the same way.
+    - an irregular axis carries its coordinate array's values, unread and unindexed, named the same
+      way; ``set_xindex`` reads them to select by value.
     - a tick axis carries a ``tick`` coordinate computed per position, under a :class:`TickIndex`,
-      and its clock in ``clock_id``.
+      and its clock in ``clock_id``. Where its clock reaches the packet's reference clock, it also
+      carries ``reference_tick``, NaN where the anchors place no tick, and where the packet declares
+      a time origin ``second``, both under a :class:`ReferenceIndex`. An axis on the reference
+      clock carries ``second`` alone.
 
     A coordinate name two axes would share takes its dimension as a prefix, as ``channel_tick``.
 
@@ -485,4 +761,4 @@ class EscapewheelBackend(BackendEntrypoint):
         return False
 
 
-__all__ = ["EscapewheelBackend", "TickIndex", "Ticks"]
+__all__ = ["EscapewheelBackend", "OnReference", "Reference", "ReferenceIndex", "TickIndex", "Ticks"]
