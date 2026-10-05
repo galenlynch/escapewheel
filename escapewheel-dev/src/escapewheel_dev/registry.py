@@ -162,17 +162,42 @@ def load(path: Path) -> Registry:
     )
 
 
-def extension_paths() -> list[Path]:
-    """Return every extension document read: this checkout's, then those `EXTENSIONS_VARIABLE` names."""
-    named = [Path(entry).expanduser() for entry in os.environ.get(EXTENSIONS_VARIABLE, "").split(os.pathsep) if entry]
+#: Extensions named by `add_extensions`, read after those `EXTENSIONS_VARIABLE` names.
+_ADDED: list[Path] = []
+
+
+def add_extensions(*paths: Path | str) -> None:
+    """Read these extension documents, or directories of them, beside this checkout's from now on.
+
+    Raises
+    ------
+    FileNotFoundError
+        If a path does not exist; none is added then.
+    """
+    named = [Path(path).expanduser() for path in paths]
     for path in named:
         if not path.exists():
-            raise FileNotFoundError(f"{EXTENSIONS_VARIABLE} names {path}, which does not exist")
-    directories = [*EXTENSION_DIRECTORIES, *(path for path in named if path.is_dir())]
-    return [
-        *(path for directory in directories for path in sorted(directory.glob("*.json"))),
-        *(path for path in named if path.is_file()),
+            raise FileNotFoundError(f"extension {path} does not exist")
+    _ADDED.extend(named)
+    registries.cache_clear()
+
+
+def extension_paths() -> list[Path]:
+    """Return every extension document read: this checkout's, then those named outside it.
+
+    Those named are the `EXTENSIONS_VARIABLE` entries, then the `add_extensions` arguments, so a later
+    one sharing a registry ID replaces an earlier one.
+    """
+    variable = [
+        Path(entry).expanduser() for entry in os.environ.get(EXTENSIONS_VARIABLE, "").split(os.pathsep) if entry
     ]
+    for path in variable:
+        if not path.exists():
+            raise FileNotFoundError(f"{EXTENSIONS_VARIABLE} names {path}, which does not exist")
+    found = [path for directory in EXTENSION_DIRECTORIES for path in sorted(directory.glob("*.json"))]
+    for path in [*variable, *_ADDED]:
+        found += sorted(path.glob("*.json")) if path.is_dir() else [path]
+    return found
 
 
 @cache
@@ -291,6 +316,7 @@ __all__ = [
     "Registry",
     "Rule",
     "Table",
+    "add_extensions",
     "columns",
     "extension_paths",
     "load",

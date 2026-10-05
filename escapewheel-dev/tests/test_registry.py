@@ -1,4 +1,5 @@
 import json
+import sys
 
 import pytest
 
@@ -51,7 +52,9 @@ def test_table_lookup_crosses_registries():
         ew.table("no.such_table")
 
 
-def test_an_extension_outside_the_checkout_is_read_from_the_variable(tmp_path, monkeypatch):
+@pytest.fixture
+def outside(tmp_path, monkeypatch):
+    """A directory outside the checkout holding one extension, `outside`, and no extension added yet."""
     document = json.loads((ew.ROOT / "extensions" / "vr_foraging.json").read_text())
     document["extension_id"] = document["registry_id"] = "outside"
     document["resources"] = {
@@ -61,13 +64,31 @@ def test_an_extension_outside_the_checkout_is_read_from_the_variable(tmp_path, m
     directory = tmp_path / "authored"
     directory.mkdir()
     (directory / "outside.json").write_text(json.dumps(document))
-    monkeypatch.setenv(EXTENSIONS_VARIABLE, str(directory))
+    monkeypatch.setattr(sys.modules["escapewheel_dev.registry"], "_ADDED", [])
     ew.registries.cache_clear()
-    try:
-        assert ew.registry("outside").path == directory / "outside.json"
-        assert ew.table("outside.sites").registry == "outside"
-    finally:
-        ew.registries.cache_clear()
+    yield directory
+    ew.registries.cache_clear()
+
+
+def test_an_extension_outside_the_checkout_is_read_from_the_variable(outside, monkeypatch):
+    monkeypatch.setenv(EXTENSIONS_VARIABLE, str(outside))
+    ew.registries.cache_clear()
+    assert ew.registry("outside").path == outside / "outside.json"
+    assert ew.table("outside.sites").registry == "outside"
+
+
+def test_an_added_extension_is_read(outside):
+    ew.add_extensions(outside / "outside.json")
+    assert ew.registry("outside").path == outside / "outside.json"
+
+
+def test_the_command_reads_an_extension_named_before_the_subcommand(outside, capsys):
+    from escapewheel_dev.cli import main
+
+    assert main(["--extension", str(outside), "tables", "outside"]) == 0
+    assert "outside.sites" in capsys.readouterr().out
+    assert main([f"--extension={outside / 'absent.json'}", "tables", "outside"]) == 2
+    assert "absent.json does not exist" in capsys.readouterr().err
 
 
 def test_a_missing_path_in_the_variable_is_refused(tmp_path, monkeypatch):

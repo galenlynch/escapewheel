@@ -76,7 +76,7 @@ released**, so a generated project can depend on the writer and validator only b
 until v0.2 is published, and its identifiers are development values until P10.3. An extension
 outside this checkout is built and checked by `escapewheel extension build` and `escapewheel
 extension check <directory>`, which run the checks `extensions/registries.py` does, and
-`escapewheel-dev` reads one named in `ESCAPEWHEEL_DEV_EXTENSIONS`.
+`escapewheel-dev` reads one named by `--extension` or `ESCAPEWHEEL_DEV_EXTENSIONS`.
 
 **The template.** Base it on `~/Documents/Code/aind-python-copier-template`, which already carries
 the shape: `_templates_suffix: .jinja`, `_subdirectory: template`, copier ≥ 9.0.0, and conditional

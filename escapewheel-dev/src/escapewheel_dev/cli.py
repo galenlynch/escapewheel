@@ -34,6 +34,7 @@ from .registry import (
     Registry,
     Rule,
     Table,
+    add_extensions,
     columns,
     references_to,
     registries,
@@ -662,8 +663,29 @@ COMMANDS: Mapping[str, Callable[..., int | None]] = {
 DESCRIPTION = (
     "Read-only queries over this repository's current registries, specification parts, document "
     "schemas and packets. Text output is tab-separated under a '# Record: field ...' header; --json "
-    "prints every field. 'fields' lists each record's fields."
+    "prints every field. 'fields' lists each record's fields. '--extension PATH' before the "
+    "subcommand, repeatable, also reads an extension document or a directory of them from outside "
+    "this checkout, as ESCAPEWHEEL_DEV_EXTENSIONS does."
 )
+
+#: The option naming an extension outside the checkout, given before the subcommand.
+EXTENSION_OPTION = "--extension"
+
+
+def _extensions(given: list[str]) -> tuple[list[str], list[str]]:
+    """Split the leading `--extension PATH` options from the subcommand and its arguments.
+
+    Parsed here rather than by tyro, which offers no option shared by every subcommand of a union.
+    """
+    named = []
+    while given and given[0].split("=", 1)[0] == EXTENSION_OPTION:
+        option, *value = given.pop(0).split("=", 1)
+        if not value:
+            if not given:
+                raise KeyError(f"{option} needs a path")
+            value = [given.pop(0)]
+        named.append(value[0])
+    return named, given
 
 
 def main(args: Sequence[str] | None = None) -> int:
@@ -676,7 +698,12 @@ def main(args: Sequence[str] | None = None) -> int:
     """
     # tyro gives a subcommand one description for both the list and its own help. The list shows each
     # docstring's first line; the chosen subcommand keeps its whole docstring, so its help says what it prints.
-    given = list(sys.argv[1:] if args is None else args)
+    try:
+        named, given = _extensions(list(sys.argv[1:] if args is None else args))
+        add_extensions(*named)
+    except (KeyError, FileNotFoundError) as error:
+        print(f"error: {error.args[0] if error.args else error}", file=sys.stderr)
+        return 2
     chosen = given[0] if given else None
     choices: Any = Union[  # noqa: UP007  # a union built from a runtime tuple
         tuple(
@@ -696,7 +723,7 @@ def main(args: Sequence[str] | None = None) -> int:
             choices,
             prog="escapewheel-dev",
             description=DESCRIPTION,
-            args=args,
+            args=given,
             config=(tyro.conf.FlagCreatePairsOff,),
         )
     except KeyError as error:

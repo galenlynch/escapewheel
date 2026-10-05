@@ -16,11 +16,12 @@ uv run escapewheel-dev fields Requirement   # a record's fields, rather than gue
 ```
 
 An extension outside this checkout is read beside the repository's own by naming its document, or
-a directory of them, in `ESCAPEWHEEL_DEV_EXTENSIONS` (separated as `PATH` is); one sharing a
-registry ID with a document here replaces it. From any directory:
+a directory of them, with `--extension` before the subcommand (repeatable), in
+`ESCAPEWHEEL_DEV_EXTENSIONS` (separated as `PATH` is), or with `add_extensions(path)` in Python.
+One sharing a registry ID with a document read earlier replaces it. From any directory:
 
 ```bash
-ESCAPEWHEEL_DEV_EXTENSIONS=~/my-extension uv run --project <checkout>/escapewheel-dev escapewheel-dev tables my_extension
+uv run --project <checkout>/escapewheel-dev escapewheel-dev --extension ~/my-extension tables my_extension
 ```
 
 Text output is one record per line, tab-separated, under a `# Record: field ...` header; `--json`
@@ -33,7 +34,7 @@ the ones it has.
 
 | Function | Returns, with its fields |
 |---|---|
-| `registries()`, `registry(id)`, `extension_paths()` | `Registry`: registry_id, version, path, document, tables, is_extension |
+| `registries()`, `registry(id)`, `extension_paths()`, `add_extensions(*paths)` | `Registry`: registry_id, version, path, document, tables, is_extension |
 | `tables(id)`, `table(resource_id)` | `Table`: registry, resource_id, content_class, columns, primary_key, references, rules, raw; `.column(name)` |
 | `columns(id, presence=, roles=)` | `Column`: registry, table, name, type, presence, role, identity, unit, description, raw |
 | `references_to(resource_id)` | `Reference`: registry, table, columns, resource, resource_columns |
