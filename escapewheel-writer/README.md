@@ -12,6 +12,7 @@ recipe lands in `core.processing_runs.parameters`, so a committed packet says wh
 
 ```bash
 escapewheel inspect sorter /data/session_sorted        # what a source offers (Part 05 §4.1)
+escapewheel registry --out core.json                   # the core registry the recipe binds
 escapewheel init --session-id s001 \
   --source sorter=/data/session_sorted \
   --source nwb=/data/session.nwb > session.toml     # a draft; contested resources await a [preference]
@@ -24,7 +25,7 @@ escapewheel import session.toml                        # stage, validate, commit
 ```toml
 [packet]
 id = "ecephys_776259_2025-04-09"
-registry = "../spec/artifacts/logical_schemas.json"
+registry = "core.json"
 
 [session]
 session_id = "ecephys_776259_2025-04-09"

@@ -82,12 +82,13 @@ uses file layout as identity.
 Build from a checkout: no package is published to an index. Run `uv sync` in `escapewheel-writer/`
 for the standard sources, or in `escapewheel-aind/` to add AIND's, and run the commands below there
 with `uv run`. A recipe's paths resolve against the recipe's own directory. It names the core
-registry at `spec/artifacts/logical_schemas.json` and each extension by the path of its document:
+registry, which `escapewheel registry --out core.json` writes, and each extension by the path of
+its document:
 `dynamic_foraging` and `vr_foraging` lie in `extensions/`, and `aind_opto` and `aind_unit_qc` in
 `escapewheel-aind/extensions/`.
 
 ```bash
-
+escapewheel registry --out core.json             # the core registry a recipe binds
 escapewheel inspect sorter /data/session_sorted  # what a source offers (Part 05 §4.1)
 escapewheel init --session-id s001 \
   --source sorter=/data/session_sorted \

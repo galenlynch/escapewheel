@@ -970,3 +970,13 @@ def test_the_check_command_reads_the_registry_a_packet_binds(tmp_path, capsys, r
     document = _EXTENSIONS.parent / "escapewheel-aind/extensions/aind_opto.json"
     assert main(["extension", "check", str(document), "--packet", str(root)]) == 0
     assert "sound" in capsys.readouterr().out
+
+
+def test_the_registry_command_writes_the_core_this_release_carries(tmp_path, capsysbinary):
+    from escapewheel_reader.scripts.cli import main
+    from escapewheel_validator.registry_types import core_registry_bytes
+
+    assert main(["registry", "--out", str(tmp_path / "core.json")]) == 0
+    assert (tmp_path / "core.json").read_bytes() == core_registry_bytes()
+    assert main(["registry"]) == 0
+    assert capsysbinary.readouterr().out == core_registry_bytes()

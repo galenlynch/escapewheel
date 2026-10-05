@@ -128,7 +128,7 @@ def _init(args: argparse.Namespace) -> int:
         "[packet]",
         f'id = "{args.session_id}"',
         f'out = "{args.session_id}"{GUESSED}',
-        'registry = "spec/artifacts/logical_schemas.json"',
+        'registry = "core.json"  # written by `escapewheel registry --out core.json`',
         "",
         "[session]",
         f'session_id = "{args.session_id}"',
@@ -446,6 +446,16 @@ def _extension(args: argparse.Namespace) -> int:
     return 0
 
 
+def _registry(args: argparse.Namespace) -> int:
+    """Write the core registry this release carries, the document a recipe's `registry` names."""
+    if args.out is None:
+        sys.stdout.buffer.write(core_registry_bytes())
+        return 0
+    args.out.write_bytes(core_registry_bytes())
+    print(f"wrote {args.out}", file=sys.stderr)
+    return 0
+
+
 def _core_context(args: argparse.Namespace) -> CheckedRegistryContext | None:
     """Return the core an extension is checked under: a packet's, a file's, or this release's own."""
     if args.packet is not None:
@@ -656,6 +666,15 @@ def _extension_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentP
     checking.set_defaults(func=_extension_check)
 
 
+def _registry_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Add ``registry``, which writes the core registry this release carries."""
+    registry = subcommands.add_parser(
+        "registry", help="write the core registry this release carries, for a recipe's [packet].registry"
+    )
+    registry.add_argument("--out", type=Path, help="write here rather than to stdout")
+    registry.set_defaults(func=_registry)
+
+
 def _verify_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     """Add ``verify``, which records what is true of a committed packet's external resources."""
     verifier = subcommands.add_parser(
@@ -815,6 +834,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         _inspect_parser,
         _init_parser,
         _extension_parser,
+        _registry_parser,
         _verify_parser,
         _prune_parser,
         _import_parser,
