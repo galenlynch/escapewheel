@@ -22,7 +22,7 @@ jobs:
           enable-cache: true
       - name: Install the packages
         run: |
-          for package in escapewheel-reader escapewheel-validator escapewheel-writer escapewheel-aind escapewheel-dev; do
+          for package in escapewheel-reader escapewheel-validator escapewheel-writer escapewheel-aind escapewheel-dev examples/lick-wheel; do
             uv sync --all-extras --project "$package"
           done
       - name: Every generator and every check

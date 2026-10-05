@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "escapewheel-example-lick-wheel"
+description = "A worked Escapewheel source adapter: events, a sampled signal on its own clock, and its anchors"
+license = "MIT"
+requires-python = ">=3.12"
+version = "0.1.0"
+readme = "README.md"
+
+# The writer, because `escapewheel deliver` constructs and serves this adapter and the adapter hands
+# back what the writer defines; `arrays` for the Zarr writer a staged array needs.
+dependencies = [
+    "escapewheel-writer[arrays]",
+    "numpy>=1.26",
+]
+
+# The kind a recipe names this adapter by, which `escapewheel deliver` and `escapewheel declare`
+# look up here.
+[project.entry-points."escapewheel.sources"]
+lick_wheel = "lick_wheel.source:LickWheelSource"
+
+[dependency-groups]
+dev = ["escapewheel-reader", "escapewheel-validator", "pytest"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lick_wheel"]
+
+[tool.ruff]
+extend = "../../ruff.toml"
+
+[tool.ruff.lint.isort]
+# The tests' session writer, which their conftest puts on the path.
+known-local-folder = ["session"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --tb=short"
+testpaths = ["tests"]
+
+[tool.uv.sources]
+# Siblings in this monorepo. A project outside it names released versions instead.
+escapewheel-writer = { path = "../../escapewheel-writer", editable = true }
+escapewheel-reader = { path = "../../escapewheel-reader", editable = true }
+escapewheel-validator = { path = "../../escapewheel-validator", editable = true }

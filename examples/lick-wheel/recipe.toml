@@ -1,0 +1,35 @@
+# One session's recipe (Part 05 §3). Paths are relative to this file: the session directory, the
+# packet the build writes, and the core registry `escapewheel registry --out core.json` writes.
+
+[packet]
+id = "s001"
+out = "packet"
+registry = "core.json"
+
+[session]
+session_id = "s001"
+reference_clock_id = "harp"
+session_start_time = "2026-01-01T09:00:00Z"
+subject_id = "m001"
+
+[subject]
+subject_id = "m001"
+species = "Mus musculus"
+sex = "male"
+
+[[clock]]
+clock_id = "harp"
+name = "harp"
+tick_rate_num = 31250
+origin = "harp_epoch"
+
+[[source]]
+kind = "lick_wheel"
+root = "s001"
+
+# Run in a process of its own, as a build runs any adapter it does not import (Part 12 §2). The
+# installed entry point is what `escapewheel deliver` finds the class by, and the protocol is the
+# class's first, `stream-v0.1`.
+[source.delivery]
+command = ["escapewheel", "deliver", "lick_wheel"]
+report_path = "report.json"

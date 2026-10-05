@@ -309,6 +309,7 @@ and those checks:
 | the package test suites | asserted reference-implementation behavior outside the checks above |
 | `escapewheel-dev/` tests | a development query that no longer reads the current parts, registries, schemas or packets |
 | `integration/` | a writer, reader, and validator that disagree with one another, a Part 08 excerpt the writer no longer reproduces, or a Part 08 query that no longer runs |
+| `examples/` suites | a worked adapter that no longer builds the packet its README describes, in process or over a protocol |
 
 ## 9. Reading the result
 

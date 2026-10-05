@@ -25,6 +25,7 @@ class SuiteSelectionTests(unittest.TestCase):
         self.assertIn("escapewheel-reader: tests", selected)
         self.assertIn("escapewheel-writer: tests", selected)
         self.assertIn("escapewheel-aind: tests", selected)
+        self.assertIn("examples/lick-wheel: tests", selected)
         self.assertIn("integration: tests", selected)
 
     def test_an_aind_change_selects_only_the_aind_suite(self) -> None:

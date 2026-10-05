@@ -173,6 +173,7 @@ SUITES: list[Stage] = [
             ("escapewheel-writer", ("-n", "6")),
             ("escapewheel-aind", ()),
             ("escapewheel-dev", ()),
+            ("examples/lick-wheel", ()),
         )
     ),
     Stage("integration: tests", ROOT / "integration", WRITER, ("pytest", "-vv")),

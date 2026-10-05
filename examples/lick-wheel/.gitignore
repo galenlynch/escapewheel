@@ -1,0 +1,7 @@
+.venv/
+# What following the README in place leaves behind.
+/packet/
+/s001/
+/core.json
+/report.json
+/.escapewheel-source-cache/

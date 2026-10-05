@@ -54,6 +54,7 @@ partial reads expensive. Escapewheel keeps the science and changes the substrate
 | [`escapewheel-dev/`](escapewheel-dev/) | Read-only, typed queries over the current parts, registries, schemas and packets, for working on this repository. Never released. |
 | `fixtures/` | The conformance corpus: one valid packet and its variants, each with its expected finding recorded as data. `shared/` holds the packet fixture the reader's and validator's suites build and the NWB fixture the writer's and aind's read. |
 | `integration/` | The writer, reader, and validator run against one another, and the generator of Part 08's example packet. |
+| [`examples/`](examples/) | Worked source adapters, each a project depending on the packages as one outside this repository does, with a suite building it into a validated packet. |
 | `conformance/` | Mechanical probes producing the measured evidence revisions cite, and the registry checks needing more than the tree holds. |
 | [`bench/`](bench/) | Read benchmarks of a packet against its NWB and against other layouts of its own tables, with the dated history of every reading Part 10 and the writer's performance guide quote. Not a package. |
 | `inventory/` | Source inventories from discovery (Part 05 §4.1), and the upstream defects found while writing adapters. |

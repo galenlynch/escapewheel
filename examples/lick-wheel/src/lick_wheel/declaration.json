@@ -1,0 +1,43 @@
+{
+  "$schema": "https://escapewheel.org/schemas/adapter/0.1.0",
+  "kind": "lick_wheel",
+  "protocols": [
+    "stream-v0.1",
+    "files-v0.1"
+  ],
+  "produces": [
+    "core.array_assets",
+    "core.array_dimensions",
+    "core.clock_anchors",
+    "core.clock_observation_intervals",
+    "core.clocks",
+    "core.devices",
+    "core.event_stream_observation_intervals",
+    "core.event_streams",
+    "core.events"
+  ],
+  "contributes": [
+    "core.array_assets",
+    "core.array_dimensions",
+    "core.clock_anchors",
+    "core.clock_observation_intervals",
+    "core.clocks",
+    "core.devices",
+    "core.event_stream_observation_intervals",
+    "core.event_streams",
+    "core.events"
+  ],
+  "states": [
+    "subject.subject_id"
+  ],
+  "needs": [
+    "root",
+    "session_id",
+    "reference_clock",
+    "array_location"
+  ],
+  "accepts": [
+    "source_cache"
+  ],
+  "consumes": []
+}
