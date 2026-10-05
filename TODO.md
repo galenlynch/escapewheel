@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R169 accepted. R42 and R73 withdrawn. 2 change documents, 0 Open and 2 Ready. None of them is binding, and none takes a number until it is accepted.
+R1–R41, R43–R72 and R74–R170 accepted. R42 and R73 withdrawn. 1 change document, 0 Open and 1 Ready. None of them is binding, and none takes a number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 92 Tier 2 rules (2 advisory)
@@ -84,9 +84,6 @@ What is left:
   so a generated project's default git dependency installs only for someone with access. Nothing
   is released, so the escapewheel packages stay a dev group with `[tool.uv.sources]` until v0.2 is
   published, and identifiers are development values until P10.3.
-- **The working directory.** Part 09 §5.7 says a command runs "in the source's own root", which a
-  store URI cannot be, and the writer runs it in the build's. The template tells an adapter not to
-  rely on either.
 - **Not scaffolded:** self-validation against the extension's own document (Part 12 §9) and a run
   report (Part 12 §9), events and their streams, and clock anchors for a rig with several clocks.
 

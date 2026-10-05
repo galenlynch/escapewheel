@@ -198,7 +198,8 @@ identifier is the author's own and needs no registration. The build records each
 is missing or holds a null or empty value. A script that worked around nothing writes none.
 
 `command` is an argument list — **not a shell**, and with no opinion about how the environment is
-arranged. It does not run in `root`, so a script it names is an absolute path.
+arranged. The directory it runs in is unspecified (Part 12 §4), so a script it names is an absolute
+path, and the adapter opens its source at the `root` it is supplied, which a build makes absolute.
 `uv run /opt/vrf/export.py`, `python -m package.export` and `/opt/venv/bin/python -m
 package.export` are all just commands, so isolating an adapter's dependencies is your choice
 rather than a tool this package makes you adopt. A non-zero exit is a failure, and so is a wanted

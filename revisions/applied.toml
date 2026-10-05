@@ -4634,3 +4634,11 @@ disposition = "registry"
 [clause."R169 §3.4"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-self-description" }]
+
+[clause."R170 §3.1"]
+disposition = "applied"
+where = [{ part = "09", anchor = "ew-extension-delivery" }]
+
+[clause."R170 §3.2"]
+disposition = "applied"
+where = [{ part = "12", anchor = "ew-build-supplied-values" }]

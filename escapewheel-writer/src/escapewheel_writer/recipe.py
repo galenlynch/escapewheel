@@ -186,8 +186,8 @@ class DeliverySpec:
     Attributes
     ----------
     command : tuple of str
-        The argument list to run, in the source's own root. A list rather than a string because a
-        parse is a quoting convention no recipe declared (Part 05 §3.7).
+        The argument list to run, in a directory Part 12 §4 leaves unspecified. A list rather than a
+        string because a parse is a quoting convention no recipe declared (Part 05 §3.7).
     protocol : str
         The protocol the recipe names, empty where it names none; :func:`reached_by` settles the
         one a build uses (Part 12 §3).
@@ -524,7 +524,9 @@ class Recipe:
                 problems=[Problem(Level.ERROR, problem, RecipeFault.RECIPE_SHAPE) for problem in problems],
             )
 
-        here = path.parent
+        # Absolute even where the recipe was named relative to the build's directory, because an
+        # adapter is handed what this resolves and runs where Part 12 §4 leaves unspecified.
+        here = path.absolute().parent
         # A member the build writes into a row or the manifest itself is read less a credential it
         # recognizes (Part 05 §3.2). What it opens or hands an adapter is read as stated.
         written = redacted(document)

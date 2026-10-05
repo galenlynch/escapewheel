@@ -23,5 +23,4 @@ Dependencies run downward, so a document may depend on the ones above it and on 
 
 | order | document | status | placement |
 |---:|---|---|---|
-| 1 | `an-adapter-finds-its-source-by-root.md` | Ready | Part 09 §5.7; Part 12 §4 |
-| 2 | `a-build-supplies-every-command-a-recipe-names.md` | Ready | Part 05 §3.7 |
+| 1 | `a-build-supplies-every-command-a-recipe-names.md` | Ready | Part 05 §3.7 |

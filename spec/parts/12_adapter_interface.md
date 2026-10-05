@@ -71,7 +71,7 @@ The vocabulary is closed. Each term names one value and the form it takes, so an
 
 | term | what a build passes |
 |---|---|
-| `root` | the source's location as a URI, which the adapter opens for itself |
+| `root` | the source's location as an absolute local path or a URI, which the adapter opens for itself |
 | `session_id` | the session's own name, never the integer a build assigns (§5) |
 | `reference_clock` | the reference clock's row: identifier, rational tick rate, origin |
 | `clocks` | one such row per clock declared before this source runs |
@@ -102,6 +102,8 @@ What crosses is one JSON object keyed by the term. A build MUST write it to the 
 An argument list is not the channel because it has a size no profile can raise — 131,072 bytes for one argument on Linux, 32,767 characters for a whole command line on Windows — and a term carrying one record per unit reached 322,799 bytes on a real session, where an adapter's whole object measured 721 against a fixture that had none. Standard input carries nothing under any protocol of the group and has no such limit.
 
 The wanted set is a term a build supplies and an adapter MAY act on. A build settles ownership before any source is opened (Part 05 §3.4), so an adapter told what is wanted may extract no more; acting on it is permitted rather than required, because for some sources producing three resources costs what producing all of them costs, and a build cannot tell an adapter that extracted three from one that extracted everything and discarded the rest.
+
+Where a recipe states a local `root` relative to itself, a build MUST resolve it against the directory holding the recipe and supply the absolute path. The working directory in which a build runs an adapter's command is unspecified. An adapter MUST open its source at the `root` a build supplies, and MUST NOT depend on the directory it runs in, since a `root` that is a store URI names no directory to run in. No checker verifies either rule: a packet records each `root` as its recipe states it ([Part 05 §7](05_validation_and_import.md#ew-import-provenance)) and not as it was supplied.
 
 <a id="ew-referenced-resource-delivery" data-spec-anchor="canonical"></a>
 ## 5. What a delivery states

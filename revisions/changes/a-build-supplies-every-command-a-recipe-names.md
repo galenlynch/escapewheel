@@ -7,7 +7,7 @@
 | **Based on** | `01854e1fc007e237a0aabff715bb9846149263be` |
 | **Change form** | structural |
 | **Amends** | Part 05 §3.7 |
-| **Depends on** | R116 §3.2 (the sentence this removes); `an-adapter-finds-its-source-by-root.md` §3.1 (removes the converting command that sentence cites) |
+| **Depends on** | R116 §3.2 (the sentence this removes); R170 §3.1 (removes the converting command that sentence cites) |
 | **Profile** | all |
 | **Decision clauses** | §3.1 |
 
@@ -29,9 +29,8 @@ met, and its last sentence describes a command that no recipe can express. A rea
 the member that names a converting command finds none, and an implementer may write a path for
 one that nothing reaches.
 
-The sentence cited Part 09 §5.7 for its converting command, and `an-adapter-finds-its-source-by-root.md`
-§3.1 removes that framing from Part 09. Once that change is applied, the sentence names a kind of
-command that no other section describes either.
+The sentence cited Part 09 §5.7 for its converting command, and R170 §3.1 removed that framing
+from Part 09, so the sentence names a kind of command that no other section describes either.
 
 This change removes the condition and the sentence, so the paragraph binds every command a recipe
 names. It is structural because it rewrites sentences inside Part 05 §3.7; appending a section

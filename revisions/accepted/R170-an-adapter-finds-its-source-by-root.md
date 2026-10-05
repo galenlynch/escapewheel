@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Ready** |
+| **Status** | **Accepted** 2026-10-05 |
 | **Opened** | 2026-10-05 |
 | **Based on** | `7c78b05b239fa2d81a3d2a9ef9a899140cab5eaf` |
 | **Change form** | structural |
@@ -160,5 +160,7 @@ through the argument list its recipe author writes, which this change leaves as 
 
 A packet cannot show where its adapters ran or what `root` they were supplied, so no fixture
 distinguishes these rules from the current ones. The evidence is an implementation property: the
-writer's three launch sites pass no working directory (§2.2), and after incorporation a writer test
-holds that a recipe named by a relative path is supplied an absolute `root`.
+writer's three launch sites pass no working directory (§2.2), and the writer test
+`test_a_recipe_named_by_a_relative_path_supplies_an_absolute_root` in
+`escapewheel-writer/tests/test_recipe.py` holds that a recipe named by a relative path is supplied
+an absolute `root`.

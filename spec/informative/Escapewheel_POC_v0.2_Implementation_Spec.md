@@ -5202,7 +5202,7 @@ A writer MAY accept an extension that ships code — an adapter registered under
 <a id="ew-extension-delivery" data-spec-anchor="canonical"></a>
 ### 5.7 How an extension's document and rows reach a build
 
-An extension delivers a registry document in the format of Part 02 and, per table it declares, rows. Parquet written under the `delivery_root` a build supplies (`files-v0.1`) is one way. A build supports every protocol of the group its profile names (Part 12 §3), and an extension MAY deliver over any of them, since what the requirement rests on is a dependency closure that must not become the writer's and the process boundary is what answers that. Where a raw source needs converting first, a recipe names a command: an argument list carried as a list and run in the source's own root, never a shell line (Part 05 §3.7), so an extension isolates its dependencies however it likes and a build states no opinion about how.
+An extension delivers a registry document in the format of Part 02 and, per table it declares, rows. Parquet written under the `delivery_root` a build supplies (`files-v0.1`) is one way. A build supports every protocol of the group its profile names (Part 12 §3), and an extension MAY deliver over any of them, since what the requirement rests on is a dependency closure that must not become the writer's and the process boundary is what answers that. A recipe reaches a source through a command: an argument list carried as a list, never a shell line (Part 05 §3.7), so an extension isolates its dependencies however it likes and a build states no opinion about how.
 
 An extension's registry document and Part 12 §7's declaration document are different things for different readers, and neither substitutes for the other: the first declares logical resources, while the second declares what the adapter carrying them produces, states, needs, and speaks.
 
@@ -5891,7 +5891,7 @@ The vocabulary is closed. Each term names one value and the form it takes, so an
 
 | term | what a build passes |
 |---|---|
-| `root` | the source's location as a URI, which the adapter opens for itself |
+| `root` | the source's location as an absolute local path or a URI, which the adapter opens for itself |
 | `session_id` | the session's own name, never the integer a build assigns (§5) |
 | `reference_clock` | the reference clock's row: identifier, rational tick rate, origin |
 | `clocks` | one such row per clock declared before this source runs |
@@ -5922,6 +5922,8 @@ What crosses is one JSON object keyed by the term. A build MUST write it to the 
 An argument list is not the channel because it has a size no profile can raise — 131,072 bytes for one argument on Linux, 32,767 characters for a whole command line on Windows — and a term carrying one record per unit reached 322,799 bytes on a real session, where an adapter's whole object measured 721 against a fixture that had none. Standard input carries nothing under any protocol of the group and has no such limit.
 
 The wanted set is a term a build supplies and an adapter MAY act on. A build settles ownership before any source is opened (Part 05 §3.4), so an adapter told what is wanted may extract no more; acting on it is permitted rather than required, because for some sources producing three resources costs what producing all of them costs, and a build cannot tell an adapter that extracted three from one that extracted everything and discarded the rest.
+
+Where a recipe states a local `root` relative to itself, a build MUST resolve it against the directory holding the recipe and supply the absolute path. The working directory in which a build runs an adapter's command is unspecified. An adapter MUST open its source at the `root` a build supplies, and MUST NOT depend on the directory it runs in, since a `root` that is a store URI names no directory to run in. No checker verifies either rule: a packet records each `root` as its recipe states it ([Part 05 §7](../parts/05_validation_and_import.md#ew-import-provenance)) and not as it was supplied.
 
 <a id="ew-referenced-resource-delivery" data-spec-anchor="canonical"></a>
 ## 5. What a delivery states

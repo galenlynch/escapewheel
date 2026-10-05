@@ -94,6 +94,15 @@ def test_paths_resolve_against_the_recipe_not_the_caller(tmp_path):
     assert recipe.registry == tmp_path / "reg.json"
 
 
+def test_a_recipe_named_by_a_relative_path_supplies_an_absolute_root(tmp_path, monkeypatch):
+    """An adapter's working directory is unspecified, so the root it is handed is absolute (Part 12 §4)."""
+    (tmp_path / "r").mkdir()
+    write_recipe(tmp_path / "r", '\n[[source]]\nkind = "sorter"\nroot = "sorted"\nowns = []\n')
+    monkeypatch.chdir(tmp_path)
+    (spec,) = Recipe.load("r/session.toml").sources
+    assert spec.uri == str(tmp_path / "r" / "sorted")
+
+
 def test_the_digest_identifies_the_parameters(tmp_path):
     """`core.processing_runs` names the run; the digest is what makes the name answerable."""
     one = Recipe.load(write_recipe(tmp_path, "\n", "a.toml"))
