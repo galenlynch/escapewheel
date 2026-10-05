@@ -18,6 +18,11 @@ NWB is assumed to hold its spike times in seconds on the packet's reference cloc
 whether the readers agreed. `region units` counts the units with an electrode in one region and
 reads their trains; the NWB has no electrode coordinates of its own, so pynwb and lazynwb reach a
 unit's region through `location` where the units table has it and through its electrodes where not.
+`unit positions` reads the CCF position and spike count of every single unit, as a map coloured by
+activity needs; its value is the units with a position, their summed coordinates and their spikes.
+`MD waveforms` reads the mean waveform of each single unit in MD, the packet's on the unit's own
+contacts and the NWB's on every channel; its value is the units and the sum of each one's minimum
+in uV, which int16 quantisation shifts by a fraction of a microvolt.
 `list tables` names each table and array without opening one: the packet's resources and kinds,
 pynwb's `DynamicTable` objects, which it reaches only by building the whole tree, or lazynwb's
 default internal paths. `list` walks the store's full tree: every packet resource with a table's stored columns and
@@ -66,6 +71,8 @@ OPERATIONS = (
     "one train",
     "one train stored",
     "region units",
+    "unit positions",
+    "MD waveforms",
 )
 
 # The same five facts about a unit under each store's names.
@@ -73,6 +80,8 @@ FIVE_PACKET = ["local_unit_label", "probe_id", "firing_rate_hz", "n_spikes", "qu
 FIVE_NWB = ["ks_unit_id", "device_name", "firing_rate", "num_spikes", "default_qc"]
 # Ragged and two-dimensional columns of an NWB units table, which are not per-unit metadata.
 NWB_ARRAYS = ("spike_times", "electrodes", "extremum_channel", "waveform_mean", "waveform_sd")
+NWB_CCF = ["ccf_ap", "ccf_dv", "ccf_ml"]
+UNIT_QUESTIONS = ("unit positions", "MD waveforms")
 
 
 def packet_tree(packet) -> list[tuple]:
@@ -117,7 +126,57 @@ def run_packet(plan: dict, operation: str) -> object:
         )
         units = pc.unique(links["unit_id"]).to_pylist()
         return len(units), packet.table("core.spike_events", columns=["unit_id"], unit_id=units).num_rows
+    if operation in UNIT_QUESTIONS:
+        return packet_unit_question(packet, plan, operation)
     raise ValueError(operation)
+
+
+def packet_unit_question(packet, plan: dict, operation: str) -> object:
+    """`unit positions` or `MD waveforms` through the reader's PyArrow path."""
+    import pyarrow.compute as pc
+
+    if operation == "unit positions":
+        units = packet.table("core.units", columns=["unit_id", "n_spikes"], quality_label="sua")
+        values = packet.table("core.unit_coordinate_values", columns=["unit_id", "axis_value"], coordinate_frame="ccf")
+        placed = units.join(values, "unit_id", join_type="inner")
+        found = units.filter(pc.is_in(units["unit_id"], pc.unique(placed["unit_id"])))
+        return found.num_rows, round(pc.sum(placed["axis_value"]).as_py(), 1), pc.sum(found["n_spikes"]).as_py()
+    if operation == "MD waveforms":
+        units = packet.table("core.units", columns=["unit_id"], quality_label="sua")["unit_id"]
+        inside = packet.table(
+            "core.unit_coordinates", columns=["unit_id"], coordinate_frame="ccf", region_label=plan["region"]
+        )["unit_id"]
+        return packet_waveform_minima(packet, pc.filter(units, pc.is_in(units, inside)).to_pylist())
+    raise ValueError(operation)
+
+
+def waveform_array(packet):
+    """`core.waveform_mean` opened; on a store, with the anonymity `Packet.array` has no way to pass to fsspec."""
+    resource = packet.array_resource("core.waveform_mean")
+    if not benchkit.is_remote(resource.store):
+        return packet.array("core.waveform_mean")
+    import zarr
+
+    return zarr.open_array(resource.store, mode="r", storage_options={"anon": benchkit.anonymous()})
+
+
+def packet_waveform_minima(packet, unit_ids: list[int]) -> tuple[int, int]:
+    """The units, and the sum of each one's waveform minimum in its array's unit, read through the array's labels."""
+    import numpy as np
+
+    # `resource_id` names `Packet.table`'s own parameter, so that column is filtered after the read.
+    assets = packet.table("core.array_assets", columns=["resource_id", "array_asset_id", "conversion"])
+    asset = next(row for row in assets.to_pylist() if row["resource_id"] == "core.waveform_mean")
+    rows = packet.table(
+        "core.array_labels",
+        columns=["position_index"],
+        array_asset_id=asset["array_asset_id"],
+        axis_index=0,
+        label_id=unit_ids,
+    )["position_index"].to_numpy()
+    rows = np.sort(rows)
+    stored = waveform_array(packet).get_orthogonal_selection((rows, slice(None), slice(None)))
+    return len(rows), round(float(stored.reshape(len(rows), -1).min(axis=1).sum() * asset["conversion"]))
 
 
 REGION_UNITS = (
@@ -167,12 +226,35 @@ def run_packet_sql(plan: dict, operation: str) -> object:
     if operation == "region units":
         found = sql(REGION_UNITS.format(region=plan["region"])).to_pylist()[0]
         return found["units"], found["spikes"]
+    if operation in UNIT_QUESTIONS:
+        return packet_sql_unit_question(packet, sql, plan, operation)
+    raise ValueError(operation)
+
+
+def packet_sql_unit_question(packet, sql, plan: dict, operation: str) -> object:
+    """`unit positions` or `MD waveforms` through DuckDB."""
+    if operation == "unit positions":
+        found = sql(
+            "SELECT count(*) AS units, sum(placed) AS s, sum(n_spikes) AS spikes FROM ("
+            "SELECT u.unit_id, any_value(u.n_spikes) AS n_spikes, sum(v.axis_value) AS placed FROM core_units u "
+            "JOIN core_unit_coordinate_values v USING (session_id, unit_id) "
+            "WHERE u.quality_label = 'sua' AND v.coordinate_frame = 'ccf' GROUP BY u.unit_id)"
+        ).to_pylist()[0]
+        return found["units"], round(found["s"], 1), int(found["spikes"])
+    if operation == "MD waveforms":
+        # SQL selects the units; an array is read through the reader, since DuckDB reads no Zarr.
+        chosen = sql(
+            "SELECT u.unit_id FROM core_units u JOIN core_unit_coordinates c USING (session_id, unit_id) "
+            f"WHERE u.quality_label = 'sua' AND c.coordinate_frame = 'ccf' AND c.region_label = '{plan['region']}'"
+        )
+        return packet_waveform_minima(packet, chosen["unit_id"].to_pylist())
     raise ValueError(operation)
 
 
 def run_pynwb(plan: dict, operation: str) -> object:
     """One operation through pynwb, each column read by name."""
     import numpy as np
+
     nwb = benchkit.open_nwb(plan["nwb"])
     if operation == "list tables":
         from hdmf.common import DynamicTable
@@ -222,6 +304,28 @@ def run_pynwb(plan: dict, operation: str) -> object:
             plan["region"],
         )
         return len(rows), sum(len(units["spike_times"][int(row)]) for row in rows)
+    if operation in UNIT_QUESTIONS:
+        return pynwb_unit_question(units, column, plan, operation)
+    raise ValueError(operation)
+
+
+def pynwb_unit_question(units, column, plan: dict, operation: str) -> object:
+    """`unit positions` or `MD waveforms` through pynwb."""
+    import numpy as np
+
+    if operation == "unit positions":
+        single = column("decoder_label").astype(str) == "sua"
+        placed = np.stack([column(name) for name in NWB_CCF], axis=1)
+        found = single & np.isfinite(placed).all(axis=1)
+        return int(found.sum()), round(float(placed[found].sum()), 1), int(column("num_spikes")[found].sum())
+    if operation == "MD waveforms":
+        rows = np.flatnonzero(
+            (column("decoder_label").astype(str) == "sua") & (column("location").astype(str) == plan["region"])
+        )
+        data = units["waveform_mean"].data
+        # Zarr selects rows through `oindex`; h5py takes an ascending list directly.
+        stored = np.asarray(data.oindex[rows] if hasattr(data, "oindex") else data[rows])
+        return len(rows), round(float(stored.reshape(len(rows), -1).min(axis=1).sum()))
     raise ValueError(operation)
 
 
@@ -288,6 +392,18 @@ def run_lazynwb(plan: dict, operation: str) -> object:
             picked = frame.filter(pl.col("electrodes").list.eval(pl.element().is_in(rows)).list.any())
         found = picked.select(pl.col("spike_times").list.len()).collect()["spike_times"]
         return found.len(), int(found.sum())
+    if operation == "unit positions":
+        placed = frame.filter(pl.col("decoder_label") == "sua").select(*NWB_CCF, "num_spikes").collect()
+        placed = placed.filter(pl.all_horizontal(pl.col(NWB_CCF).is_not_nan() & pl.col(NWB_CCF).is_not_null()))
+        return (
+            placed.height,
+            round(float(placed.select(pl.sum_horizontal(NWB_CCF)).sum().item()), 1),
+            int(placed["num_spikes"].sum()),
+        )
+    if operation == "MD waveforms":
+        picked = frame.filter(pl.col("decoder_label") == "sua", pl.col("location") == plan["region"])
+        stored = picked.select("waveform_mean").collect()["waveform_mean"].to_numpy()
+        return len(stored), round(float(stored.reshape(len(stored), -1).min(axis=1).sum()))
     raise ValueError(operation)
 
 
