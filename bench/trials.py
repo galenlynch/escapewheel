@@ -431,11 +431,7 @@ def run_packet_aligned(plan: dict, analysis: str) -> object:
 
 
 def read_nwb(plan: dict):
-    from hdmf_zarr.nwb_zarrv2 import NWBZarrV2IO
-
-    # An AIND NWB-Zarr stores its object-reference columns with the pickle codec.
-    options = {"anon": benchkit.anonymous()} if benchkit.is_remote(plan["nwb"]) else None
-    return NWBZarrV2IO(plan["nwb"], "r", allow_pickle=True, storage_options=options).read()
+    return benchkit.open_nwb(plan["nwb"])
 
 
 def nwb_frames(plan: dict, analysis: str):
@@ -624,14 +620,18 @@ def run_lazynwb_intervals(plan: dict, analysis: str) -> object:
 #: Each arm: its runner, the analyses it offers, and the modules it imports before its clock starts.
 ARMS: dict[str, tuple[Callable[[dict, str], object], tuple[str, ...], tuple[str, ...]]] = {
     "packet pandas": (run_packet_pandas, ANALYSES, ("escapewheel_reader", "pandas", "numpy")),
-    "pynwb pandas": (run_pynwb_pandas, ANALYSES, ("hdmf_zarr.nwb_zarrv2", "numpy", "pandas")),
+    "pynwb pandas": (run_pynwb_pandas, ANALYSES, ("hdmf_zarr.nwb_zarrv2", "h5py", "remfile", "numpy", "pandas")),
     "lazynwb pandas": (run_lazynwb_pandas, ANALYSES, ("lazynwb", "pandas", "numpy")),
     "packet polars": (run_packet_polars, ANALYSES, ("escapewheel_reader", "polars")),
     "packet scanner": (run_packet_scanner, ANALYSES, ("escapewheel_reader", "pyarrow.dataset", "numpy")),
     "lazynwb polars": (run_lazynwb_polars, ANALYSES, ("lazynwb", "polars")),
     "packet duckdb": (run_packet_duckdb, ANALYSES, ("escapewheel_reader", "duckdb")),
     "lazynwb sql": (run_lazynwb_sql, ANALYSES, ("lazynwb", "polars", "numpy")),
-    "pynwb duckdb": (run_pynwb_duckdb, ANALYSES, ("hdmf_zarr.nwb_zarrv2", "numpy", "pandas", "duckdb")),
+    "pynwb duckdb": (
+        run_pynwb_duckdb,
+        ANALYSES,
+        ("hdmf_zarr.nwb_zarrv2", "h5py", "remfile", "numpy", "pandas", "duckdb"),
+    ),
     "packet aligned_spikes": (run_packet_aligned, (RASTERS,), ("escapewheel_reader", "duckdb")),
     "lazynwb intervals": (run_lazynwb_intervals, (RASTERS,), ("lazynwb", "polars")),
 }
@@ -699,7 +699,7 @@ def agreement(cells: list[dict], analysis: str) -> list[str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--packet", help="packet directory (else BENCH_PACKET)")
-    parser.add_argument("--nwb", help="the session's NWB-Zarr directory (else BENCH_NWB)")
+    parser.add_argument("--nwb", help="the session's NWB-Zarr directory or NWB-HDF5 file (else BENCH_NWB)")
     parser.add_argument("--arms", nargs="+", default=list(ARMS), choices=ARMS)
     parser.add_argument("--analyses", nargs="+", default=list(ANALYSES), choices=ANALYSES)
     parser.add_argument("--repeat", type=int, default=1, help="cold runs per cell; the median is reported")

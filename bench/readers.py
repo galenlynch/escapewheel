@@ -7,7 +7,7 @@ its own documented path and every operation forces a real read: counting spikes 
 ragged index touches no value, so the whole-table question sums them instead.
 
 - `packet` reads through `escapewheel_reader`'s PyArrow path, `packet-sql` through DuckDB.
-- `pynwb` reads the NWB through `hdmf-zarr`, projecting columns by name, since
+- `pynwb` reads the NWB through `hdmf-zarr`, or `h5py` for an NWB-HDF5 file, projecting columns by name, since
   `units.to_dataframe()` materialises the spike train and both waveform arrays.
 - `lazynwb` reads the same NWB without building an object model, through `scan_nwb`.
 
@@ -171,13 +171,9 @@ def run_packet_sql(plan: dict, operation: str) -> object:
 
 
 def run_pynwb(plan: dict, operation: str) -> object:
-    """One operation through pynwb and hdmf-zarr, each column read by name."""
+    """One operation through pynwb, each column read by name."""
     import numpy as np
-    from hdmf_zarr.nwb_zarrv2 import NWBZarrV2IO
-
-    # An AIND NWB-Zarr stores its object-reference columns with the pickle codec.
-    options = {"anon": benchkit.anonymous()} if benchkit.is_remote(plan["nwb"]) else None
-    nwb = NWBZarrV2IO(plan["nwb"], "r", allow_pickle=True, storage_options=options).read()
+    nwb = benchkit.open_nwb(plan["nwb"])
     if operation == "list tables":
         from hdmf.common import DynamicTable
 
@@ -344,7 +340,7 @@ def make_plan(
 IMPORTS = {
     "packet": ("escapewheel_reader", "pyarrow.compute", "pyarrow.dataset", "pyarrow.fs"),
     "packet-sql": ("escapewheel_reader", "duckdb"),
-    "pynwb": ("hdmf_zarr.nwb_zarrv2", "numpy", "pandas"),
+    "pynwb": ("hdmf_zarr.nwb_zarrv2", "h5py", "remfile", "numpy", "pandas"),
     "lazynwb": ("lazynwb", "polars"),
 }
 
@@ -360,7 +356,7 @@ def child(reader: str, operation: str, plan: dict) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--packet", help="packet directory (else BENCH_PACKET)")
-    parser.add_argument("--nwb", help="the session's NWB-Zarr directory (else BENCH_NWB)")
+    parser.add_argument("--nwb", help="the session's NWB-Zarr directory or NWB-HDF5 file (else BENCH_NWB)")
     parser.add_argument("--readers", nargs="+", default=list(READERS), choices=READERS)
     parser.add_argument("--operations", nargs="+", default=list(OPERATIONS), choices=OPERATIONS)
     parser.add_argument(

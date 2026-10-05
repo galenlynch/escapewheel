@@ -35,7 +35,19 @@ RESIDENT_LIMIT = 0.01
 REMOTE = ("s3://",)
 
 #: Packages whose versions a result records.
-VERSIONED = ("escapewheel-reader", "duckdb", "pyarrow", "polars", "numpy", "zarr", "pynwb", "hdmf-zarr", "lazynwb")
+VERSIONED = (
+    "escapewheel-reader",
+    "duckdb",
+    "pyarrow",
+    "polars",
+    "numpy",
+    "zarr",
+    "pynwb",
+    "hdmf-zarr",
+    "h5py",
+    "remfile",
+    "lazynwb",
+)
 
 _libc = ctypes.CDLL(None, use_errno=True)
 _libc.mmap.restype = ctypes.c_void_p
@@ -48,6 +60,39 @@ _MAP_FAILED = ctypes.c_void_p(-1).value
 def is_remote(store: str | Path) -> bool:
     """Whether a store is an object-store URI."""
     return str(store).startswith(REMOTE)
+
+
+def is_hdf5(store: str | Path) -> bool:
+    """Whether an NWB is one HDF5 file rather than a Zarr directory."""
+    if not is_remote(store):
+        return Path(store).is_file()
+    from pyarrow import fs
+
+    filesystem, key = fs.FileSystem.from_uri(str(store))
+    return filesystem.get_file_info(key).type == fs.FileType.File
+
+
+def open_nwb(store: str | Path):
+    """pynwb's NWBFile from an NWB-HDF5 file or an NWB-Zarr directory, local or on S3.
+
+    Remote HDF5 streams through `remfile`, the reader pynwb's streaming guide recommends.
+    """
+    store = str(store)
+    if is_hdf5(store):
+        import h5py
+        from pynwb import NWBHDF5IO
+
+        if is_remote(store):
+            import remfile
+
+            bucket, _, key = store.removeprefix("s3://").partition("/")
+            store = remfile.File(f"https://{bucket}.s3.amazonaws.com/{key}")
+        return NWBHDF5IO(file=h5py.File(store, "r"), mode="r").read()
+    from hdmf_zarr.nwb_zarrv2 import NWBZarrV2IO
+
+    # An AIND NWB-Zarr stores its object-reference columns with the pickle codec.
+    options = {"anon": anonymous()} if is_remote(store) else None
+    return NWBZarrV2IO(store, "r", allow_pickle=True, storage_options=options).read()
 
 
 def anonymous() -> bool:
@@ -118,6 +163,9 @@ def store_objects(store: str) -> list[tuple[str, int]]:
     from pyarrow import fs
 
     filesystem, prefix = fs.FileSystem.from_uri(store)
+    one = filesystem.get_file_info(prefix)
+    if one.type == fs.FileType.File:
+        return [(one.path, one.size)]
     found = filesystem.get_file_info(fs.FileSelector(prefix, recursive=True))
     return [(info.path, info.size) for info in found if info.type == fs.FileType.File]
 
