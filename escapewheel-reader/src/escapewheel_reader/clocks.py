@@ -1235,9 +1235,41 @@ def _with_seconds(
         name = f"{coordinate.removesuffix('_tick')}_second"
         if name in table.column_names:
             raise Refused(f"the table already carries {name}")
-        offset = pc.subtract(table.column(coordinate), pa.scalar(start, pa.int64()))
-        table = table.append_column(name, pc.divide(pc.cast(offset, pa.float64()), rate))
+        table = table.append_column(name, _seconds_column(table.column(coordinate), start, rate))
     return table
+
+
+def _seconds_column(ticks: Any, start: int, rate: float) -> Any:
+    """Return `(ticks - start) / rate` as float64, null where a tick is.
+
+    A null-free column is computed in slices across threads: Arrow takes three single-threaded
+    passes over one chunk, which on hundreds of millions of ticks costs more than mapping them.
+    Each step is the same IEEE operation either way, so the seconds are identical.
+    """
+    if ticks.null_count or not pa.types.is_integer(ticks.type):
+        offset = pc.subtract(ticks, pa.scalar(start, pa.int64()))
+        return pc.divide(pc.cast(offset, pa.float64()), rate)
+    out = np.empty(len(ticks), dtype=np.float64)
+    pieces: list[tuple[int, NDArray[Any]]] = []
+    offset = 0
+    for chunk in ticks.chunks if isinstance(ticks, pa.ChunkedArray) else [ticks]:
+        flat = chunk.to_numpy()
+        pieces.extend((offset + lo, flat[lo : lo + _CHUNK_ROWS]) for lo in range(0, flat.size, _CHUNK_ROWS))
+        offset += flat.size
+
+    def run(piece: tuple[int, NDArray[Any]]) -> None:
+        lo, flat = piece
+        seconds = out[lo : lo + flat.size]
+        seconds[:] = np.subtract(flat, start, dtype=np.int64)
+        np.divide(seconds, rate, out=seconds)
+
+    if len(pieces) > 1:
+        with ThreadPoolExecutor(min(len(pieces), os.cpu_count() or 1)) as pool:
+            list(pool.map(run, pieces))
+    else:
+        for piece in pieces:
+            run(piece)
+    return pa.array(out)
 
 
 def shared_clock(packet: PacketLike, clock: int | None) -> int | None:

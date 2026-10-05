@@ -2,6 +2,7 @@
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 import pytest
 
 from escapewheel_reader import ResourceNotFoundError, clocks
@@ -313,3 +314,13 @@ def test_placement_matches_the_distance_to_the_nearest_anchor(anchor_t):
     _, placed = edge(ticks)
     assert placed.tolist() == (np.interp(ticks, edge.knots, edge.distance) <= edge.span).tolist()
     assert edge.holes == (anchor_t.size < ANCHOR_T.size)
+
+
+def test_seconds_in_slices_equal_arrows_arithmetic(monkeypatch):
+    """The threaded path and Arrow's subtract, cast and divide give the same doubles, nulls included."""
+    monkeypatch.setattr(clocks, "_CHUNK_ROWS", 3)
+    ticks = pa.chunked_array([pa.array([7, 10**15, -5, 31_250], pa.int64()), pa.array([3, 9], pa.int64())])
+    expected = pc.divide(pc.cast(pc.subtract(ticks, pa.scalar(11, pa.int64())), pa.float64()), 31_250 / 3)
+    assert clocks._seconds_column(ticks, 11, 31_250 / 3).to_pylist() == expected.to_pylist()
+    nulled = pa.array([7, None], pa.int64())
+    assert clocks._seconds_column(nulled, 11, 2.0).to_pylist() == [-2.0, None]
