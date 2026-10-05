@@ -12,6 +12,80 @@ region operation were committed after they ran.
 does not reach the block device's buffer cache. "NVMe" is a WD SN850X under btrfs, where a cold
 read is checked by `mincore`.
 
+## The NWB-HDF5, the population tests and the copy to local disk
+
+`readers.py`, `trials.py`, `population.py`, `lazy.py` and `download.py` from 2026-10-04 into the
+early hours of 2026-10-05, which the later files record as their date. The packets are the
+`packet-r164` packets of the section on core 0.18.0, the NWB-Zarr is the one each section above
+reads, and the NWB-HDF5 is `to_hdf5.py`'s conversion of it, under `~/bench-cold/hdf5/` and beside
+the NWB-Zarr under the S3 prefix. Cold medians of three, read unsigned from S3. The tables are in
+[`../SUMMARY.md`](../SUMMARY.md), built from these files:
+
+- `*-readers-<session>-r164-local.json`: every reader's cell from the NVMe on the NWB-Zarr and the
+  packet, at a dirty `04b797c7` whose uncommitted changes add the NWB-HDF5, `unit positions` and
+  `MD waveforms`. `-local-positions.json` reruns the packet's `unit positions`, and supersedes
+  `-local.json`'s.
+- `*-readers-<session>-r164-local-hdf5.json` and `-s3-hdf5.json`: pynwb and lazynwb on the
+  NWB-HDF5. `-hdf5.json` is an earlier local run without the two unit operations, superseded.
+- `*-readers-<session>-r164-s3-units.json`: `unit positions` and `MD waveforms` from S3 for every
+  reader on the NWB-Zarr; `-s3-waveforms.json` reruns the packet's `MD waveforms` at a dirty
+  `01ace8ac`. The other S3 cells on the NWB-Zarr and the packet are the 2026-10-02 and 2026-10-03
+  runs above.
+- `*-readers-<session>-r164[-s3]-contents.json`: `list` through `Packet.contents`, at a dirty
+  `a0737796`.
+- `*-trials-<session>-r164[-s3]-grouped.json`: the go-cue rasters grouped by unit, the question
+  `04b797c7` commits, locally at a dirty `94b68298` and from S3 at a dirty `04b797c7`;
+  `-hdf5.json` and `-s3-hdf5.json` are the NWB arms on the NWB-HDF5. They supersede `-rasters.json`,
+  the first form of the question at `a0737796`; `-binjoin.json`, the window-wide bins of
+  `94b68298`; and `-anyorder.json`, before the grouping.
+- `*-population-<session>-r164[-s3][-hdf5].json`: the condition PSTH and the cross-correlograms, at
+  a dirty `04b797c7` whose uncommitted change is `population.py`, with aind-ephys-utils 0.4.0.
+- `*-lazy-<session>-r164[-s3]-clock2.json`: `rate on clock` after `5ab6cfd3` and `01ace8ac` made
+  `on_clock` and `seconds` work by runs of a key and in threads. It supersedes `-clock.json`, at
+  `a0737796`, where the eager arm took 4.21 s locally on 776259 and the lazy arm 3.19 s.
+- `*-download-<session>-r164[-ram].json`: each store copied whole by the AWS CLI and `s5cmd` to the
+  NVMe, and by `s5cmd` to `/dev/shm`; one run each.
+- `*-<script>-<session>-r164[-s3]-head.json`: the packet arms of `readers.py`, the go-cue rasters
+  and `population.py` rerun at `01ace8ac`, to check the cells above against the reader that
+  converts seconds in threads. Every answer was identical. Every local cell was within 0.05 s or
+  10% of the cell it checks, the aind-ephys-utils PSTH on 776259 taking 2.79 s against 2.76 s. From
+  S3 the reruns were up to 0.2 s slower, and the PyArrow scanner's rasters on 776259 0.9 s slower,
+  so the summary keeps the cells they check.
+
+**pynwb's slow NVMe reads did not reproduce.** On 2026-10-02 pynwb read every spike of 776259 from
+the NWB-Zarr in 19.67 s and the 10 s window in 22.23 s (`-rerun.json`, load average 6 to 10). On
+2026-10-04 the same store took 1.29 s and 1.54 s, and a cold rerun under a profiler 1.51 s, with
+the same pynwb 4.2.0, hdmf-zarr 0.14.0 and zarr 3.4.0. Other cells moved the other way: opening went
+from 0.31 s to 0.60 s and the units in MD from 1.14 s to 3.48 s, the latter after `c726c2be`
+rewrote the NWB arms. The cause of either difference was not established. The summary uses only
+the 2026-10-04 NVMe cells.
+
+**`spike_times` keeps reading `analysis.spike_events`.** With `on_clock` faster, reading
+`core.spike_events` and mapping it was timed against `analysis.spike_events` for one unit, the
+single units in MD and every unit, cold medians of three at `01ace8ac` through a scratch script
+that was not kept. Both returned the same rows and tick sums in every cell. Seconds, then MB
+received from S3:
+
+| store | session | units | `analysis.spike_events` | `core.spike_events` and `on_clock` |
+|---|---|---|---|---|
+| NVMe | 776259 | one | 0.052 | 0.048 |
+| NVMe | 776259 | MD single units | 0.27 | 0.19 |
+| NVMe | 776259 | every unit | 0.88 | 2.24 |
+| NVMe | 786867 | one | 0.030 | 0.034 |
+| NVMe | 786867 | MD single units | 0.14 | 0.082 |
+| NVMe | 786867 | every unit | 0.43 | 1.12 |
+| S3 | 776259 | one | 1.01 (10) | 1.40 (3) |
+| S3 | 776259 | MD single units | 1.38 (54) | 1.66 (38) |
+| S3 | 776259 | every unit | 5.26 (516) | 7.35 (484) |
+| S3 | 786867 | one | 1.19 (6) | 1.34 (2) |
+| S3 | 786867 | MD single units | 0.85 (15) | 1.31 (12) |
+| S3 | 786867 | every unit | 3.30 (257) | 4.22 (240) |
+
+The core route wins by under 0.1 s for a subset from the NVMe and loses everywhere else.
+
+The load average was below 5 on 24 threads for most files; `-rasters.json`, `-contents.json` and
+`-clock.json` ran at 7 to 23 beside other work. Each file records it.
+
 ## The lazy reader's final configuration, against the NWB readers
 
 `readers.py`, `trials.py` and `lazy.py` on 2026-10-03, against the `packet-r164` packets of the
