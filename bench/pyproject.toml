@@ -18,6 +18,9 @@ dependencies = [
     "boto3>=1.40",
     "narwhals>=2.26.0",
     "matplotlib>=3.11.2",
+    "aind-ephys-utils[numba]>=0.4",
+    "h5py>=3.16.0",
+    "remfile>=0.1.15",
 ]
 
 [tool.uv]
