@@ -24,6 +24,14 @@ def test_ticks_round_trip_at_the_harp_epoch():
     assert np.array_equal(harp().ticks(seconds) / HARP_TICK_RATE_HZ, seconds)
 
 
+def test_every_float_nearest_an_on_grid_second_quantizes():
+    """Most such floats times the rate are an ulp off an integer, which is no reason to refuse them."""
+    ticks = np.arange(0, HARP_TICK_RATE_HZ * 600, 7)
+    assert np.array_equal(harp().ticks(ticks / HARP_TICK_RATE_HZ), ticks)
+    late = ticks + 11576039 * HARP_TICK_RATE_HZ
+    assert np.array_equal(harp().ticks(late / HARP_TICK_RATE_HZ), late)
+
+
 def test_off_grid_seconds_are_refused():
     with pytest.raises(OffGrid) as caught:
         harp().ticks([1.0, 1.0000005])

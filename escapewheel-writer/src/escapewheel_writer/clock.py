@@ -117,7 +117,11 @@ class TickGrid:
         exact = values * self.tick_rate_num / self.tick_rate_den
         rounded = np.rint(exact)
         residual = np.abs(exact - rounded)
-        if off := int((residual > 0).sum()):
+        # A second on the grid is read as the float nearest it, and multiplying that float by the
+        # rate lands an ulp off an integer about one time in twenty, so a value also counts as on
+        # the grid where its tick converts back to the very same float.
+        on_grid = (residual == 0) | (rounded * self.tick_rate_den / self.tick_rate_num == values)
+        if off := int((~on_grid).sum()):
             worst = float(residual.max())
             raise OffGrid(
                 f"{self.clock_id}: {off} of {values.size} values miss the {self.hz:g} Hz grid "
