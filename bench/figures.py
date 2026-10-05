@@ -14,11 +14,23 @@ import numpy as np
 from matplotlib.ticker import NullFormatter
 
 RESULTS = Path(__file__).parent / "results"
-COLOURS = {"Escapewheel": "#1b7837", "pynwb": "#762a83", "lazynwb": "#e08214", "eager": "#8c8c8c", "lazy": "#1b7837"}
+COLOURS = {
+    "Escapewheel": "#1b7837",
+    "pynwb, Zarr": "#762a83",
+    "pynwb, HDF5": "#c2a5cf",
+    "lazynwb, Zarr": "#e08214",
+    "lazynwb, HDF5": "#fdb863",
+    "eager": "#8c8c8c",
+    "lazy": "#1b7837",
+}
+HDF5 = " HDF5"
 
 
-def cells(*names: str) -> dict[tuple[str, str], dict]:
-    """Each measured cell of the named result files, keyed by (reader or arm, operation), later files winning."""
+def cells(*names: str, suffix: str = "") -> dict[tuple[str, str], dict]:
+    """Each measured cell of the named result files, keyed by (reader or arm, operation), later files winning.
+
+    `suffix` is appended to each reader or arm, so an NWB-HDF5 run's cells sit beside the NWB-Zarr run's.
+    """
     found: dict[tuple[str, str], dict] = {}
     for name in names:
         path = RESULTS / name
@@ -26,33 +38,39 @@ def cells(*names: str) -> dict[tuple[str, str], dict]:
             raise SystemExit(f"missing result file: {path}")
         for cell in json.loads(path.read_text())["cells"]:
             if cell.get("runs"):
-                found[(cell.get("reader") or cell["arm"], cell.get("operation") or cell["analysis"])] = cell
+                found[((cell.get("reader") or cell["arm"]) + suffix, cell.get("operation") or cell["analysis"])] = cell
     return found
 
 
+def fastest(found: dict[tuple[str, str], dict], arms: list[str], op: str) -> dict | None:
+    """The fastest of `arms`' cells for `op`, as a summary column reports a reader."""
+    options = [found[(arm, op)] for arm in arms if (arm, op) in found]
+    return min(options, key=lambda cell: cell["seconds"]) if options else None
+
+
 def number(v: float) -> str:
-    return f"{v:,.0f}" if v >= 100 else f"{v:.3g}"
+    return f"{v:,.0f}" if v >= 100 else f"{v:.2g}" if v < 0.1 else f"{v:.3g}"
 
 
 def annotate(ax, y, values: list[float | None]) -> None:
     """Write each bar's value past its end."""
     for yy, v in zip(y, values, strict=True):
         if v is not None:
-            ax.text(v * 1.15, yy, number(v), va="center", fontsize=7)
+            ax.text(v * 1.15, yy, number(v), va="center", fontsize=6)
 
 
 def widen(ax, values: list[float | None]) -> None:
     """Fit every bar and the label past it on a log axis, without minor tick labels."""
     shown = [v for v in values if v is not None]
     ax.set_xscale("log")
-    ax.set_xlim(min(shown) / 2, max(shown) * 6)
+    ax.set_xlim(min(shown) / 2, max(shown) * 8)
     ax.xaxis.set_minor_formatter(NullFormatter())
 
 
 def bars(ax, labels: list[str], series: dict[str, list[float | None]], unit: str) -> None:
     """Horizontal grouped bars on a log axis, each bar annotated; the caller orders the shared y axis."""
     rows = np.arange(len(labels))
-    height = 0.8 / len(series)
+    height = 0.84 / len(series)
     for offset, (name, values) in enumerate(series.items()):
         y = rows + (offset - (len(series) - 1) / 2) * height
         shown = [np.nan if v is None else v for v in values]
@@ -69,104 +87,135 @@ def value(cell: dict | None, field: str = "seconds", scale: float = 1.0) -> floa
     return None if cell is None or cell.get(field) is None else cell[field] / scale
 
 
+def panels(fig_title: str, labels: list[str], stores: list[tuple[str, dict, str, float]], series, out: Path) -> None:
+    """One panel per (unit, cells, field, scale), sharing the questions on the y axis and the legend."""
+    fig, axes = plt.subplots(1, len(stores), figsize=(6 * len(stores), 0.62 * len(labels) + 1.6), sharey=True)
+    for ax, (unit, found, field, scale) in zip(axes, stores, strict=True):
+        bars(ax, labels, series(found, field, scale), unit)
+    axes[0].invert_yaxis()
+    fig.legend(*axes[0].get_legend_handles_labels(), loc="upper right", ncols=5, fontsize=8)
+    fig.suptitle(fig_title, x=0.01, ha="left")
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+
+
 READER_QUESTIONS = [
     ("open", "open"),
-    ("list", "list the full tree"),
+    ("list tables", "list tables"),
+    ("list", "full tree"),
     ("units 5 cols", "units, five columns"),
     ("trials", "trials"),
     ("every spike", "every spike"),
-    ("10 s window", "every unit, 10 s"),
-    ("one train", "one unit's train"),
-    ("region units", "units in MD, with trains"),
+    ("10 s window", "10 s window"),
+    ("one train", "one train"),
+    ("region units", "units in MD"),
+    ("unit positions", "unit positions"),
+    ("MD waveforms", "MD waveforms"),
 ]
+READERS = {
+    "Escapewheel": ["packet", "packet-sql"],
+    "pynwb, Zarr": ["pynwb"],
+    "pynwb, HDF5": ["pynwb" + HDF5],
+    "lazynwb, Zarr": ["lazynwb"],
+    "lazynwb, HDF5": ["lazynwb" + HDF5],
+}
+
+
+def reader_cells(session: str) -> tuple[dict, dict]:
+    """The NVMe and S3 cells SUMMARY.md's reader tables quote, Zarr and HDF5 side by side."""
+    run = f"readers-{session}-r164"
+    local = cells(f"2026-10-04-{run}-local.json", f"2026-10-04-{run}-local-positions.json")
+    local |= cells(f"2026-10-04-{run}-local-hdf5.json", suffix=HDF5)
+    remote = cells(
+        f"2026-10-02-{run}-s3.json",
+        f"2026-10-02-{run}-s3-lazynwb.json",
+        f"2026-10-03-{run}-s3-list.json",
+        f"2026-10-03-{run}-s3-list-lazynwb.json",
+        f"2026-10-03-{run}-s3-final.json",
+        f"2026-10-03-{run}-s3-region.json",
+        f"2026-10-03-{run}-s3-natural.json",
+        f"2026-10-04-{run}-s3-contents.json",
+        f"2026-10-04-{run}-s3-units.json",
+        f"2026-10-04-{run}-s3-waveforms.json",
+    ) | cells(f"2026-10-04-{run}-s3-hdf5.json", suffix=HDF5)
+    return local, remote
 
 
 def readers(session: str, out: Path) -> None:
-    day, nwb_day = "2026-10-03", "2026-10-02"
-    local = cells(
-        f"{nwb_day}-readers-{session}-r164-rerun.json",
-        f"{day}-readers-{session}-r164-list.json",
-        *([f"{day}-readers-{session}-r164-list-packet.json"] if session == "776259" else []),
-        f"{day}-readers-{session}-r164-final.json",
-        f"{day}-readers-{session}-r164-region.json",
-        f"{day}-readers-{session}-r164-natural.json",
-        f"2026-10-04-readers-{session}-r164-contents.json",
-    )
-    remote = cells(
-        f"{nwb_day}-readers-{session}-r164-s3.json",
-        f"{nwb_day}-readers-{session}-r164-s3-lazynwb.json",
-        f"{day}-readers-{session}-r164-s3-list.json",
-        f"{day}-readers-{session}-r164-s3-list-lazynwb.json",
-        f"{day}-readers-{session}-r164-s3-final.json",
-        f"{day}-readers-{session}-r164-s3-region.json",
-        f"{day}-readers-{session}-r164-s3-natural.json",
-        f"2026-10-04-readers-{session}-r164-s3-contents.json",
-    )
+    local, remote = reader_cells(session)
 
-    def packet(found, op):
-        """The faster of the Escapewheel PyArrow and DuckDB paths."""
-        options = [c for c in (found.get(("packet", op)), found.get(("packet-sql", op))) if c]
-        return min(options, key=lambda c: c["seconds"]) if options else None
-
-    labels = [label for _, label in READER_QUESTIONS]
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5.5), sharey=True)
-    panels = [
-        (axes[0], local, "seconds", 1.0, "seconds, local NVMe"),
-        (axes[1], remote, "seconds", 1.0, "seconds, S3"),
-        (axes[2], remote, "received_bytes", 1e6, "MB received, S3"),
-    ]
-    for ax, found, field, scale, unit in panels:
-        series = {
-            "Escapewheel": [value(packet(found, op), field, scale) for op, _ in READER_QUESTIONS],
-            "pynwb": [value(found.get(("pynwb", op)), field, scale) for op, _ in READER_QUESTIONS],
-            "lazynwb": [value(found.get(("lazynwb", op)), field, scale) for op, _ in READER_QUESTIONS],
+    def series(found, field, scale):
+        return {
+            name: [value(fastest(found, arms, op), field, scale) for op, _ in READER_QUESTIONS]
+            for name, arms in READERS.items()
         }
-        bars(ax, labels, series, unit)
-    axes[0].invert_yaxis()
-    fig.legend(*axes[0].get_legend_handles_labels(), loc="upper right", ncols=3, fontsize=8)
-    fig.suptitle(f"{session}: one question at a time, cold (Escapewheel: faster of PyArrow and DuckDB)")
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
-    fig.savefig(out / f"readers-{session}.png", dpi=150)
+
+    panels(
+        f"{session}: one question at a time, cold; each reader's fastest arm",
+        [label for _, label in READER_QUESTIONS],
+        [
+            ("seconds, NVMe", local, "seconds", 1.0),
+            ("seconds, S3", remote, "seconds", 1.0),
+            ("MB received, S3", remote, "received_bytes", 1e6),
+        ],
+        series,
+        out / f"readers-{session}.png",
+    )
 
 
-GO_CUE_ARMS = [
-    ("packet aligned_spikes", "Escapewheel", "Escapewheel: aligned_spikes"),
-    ("packet duckdb", "Escapewheel", "Escapewheel: DuckDB"),
-    ("packet scanner", "Escapewheel", "Escapewheel: PyArrow scanner"),
-    ("packet polars", "Escapewheel", "Escapewheel: Polars"),
-    ("packet pandas", "Escapewheel", "Escapewheel: pandas"),
-    ("lazynwb intervals", "lazynwb", "lazynwb: intervals"),
-    ("lazynwb polars", "lazynwb", "lazynwb: Polars"),
-    ("lazynwb pandas", "lazynwb", "lazynwb: pandas"),
-    ("lazynwb sql", "lazynwb", "lazynwb: SQL"),
-    ("pynwb pandas", "pynwb", "pynwb: pandas"),
-    ("pynwb duckdb", "pynwb", "pynwb: DuckDB"),
+ANALYSES = [
+    ("go-cue rasters", "go-cue rasters"),
+    ("condition psth", "condition PSTH"),
+    ("cross-correlograms", "cross-correlograms"),
 ]
 
 
-def go_cue(session: str, out: Path) -> None:
-    analysis = "go-cue rasters"
-    stores = {
-        "seconds, local NVMe": cells(
-            *(f"2026-10-04-trials-{session}-r164-{tag}.json" for tag in ("rasters", "binjoin"))
-        ),
-        "seconds, S3": cells(*(f"2026-10-04-trials-{session}-r164-s3-{tag}.json" for tag in ("rasters", "binjoin"))),
-    }
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
-    rows = np.arange(len(GO_CUE_ARMS))
-    for ax, (unit, found) in zip(axes, stores.items(), strict=True):
-        times = [value(found.get((arm, analysis))) for arm, _, _ in GO_CUE_ARMS]
-        ax.barh(rows, [np.nan if t is None else t for t in times], color=[COLOURS[k] for _, k, _ in GO_CUE_ARMS])
-        annotate(ax, rows, times)
-        widen(ax, times)
-        ax.set_yticks(rows, [label for _, _, label in GO_CUE_ARMS])
-        ax.set_xlabel(unit)
-        ax.grid(axis="x", alpha=0.3)
-        ax.set_axisbelow(True)
-    axes[0].invert_yaxis()
-    fig.suptitle(f"{session}: every unit's go-cue raster, spikes within [-1, +2] s of each cue, cold")
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
-    fig.savefig(out / f"go-cue-{session}.png", dpi=150)
+def analysis_cells(session: str) -> tuple[dict, dict]:
+    """The NVMe and S3 cells of the go-cue rasters and the population tests, Zarr and HDF5 side by side."""
+    local, remote = {}, {}
+    for found, store in ((local, ""), (remote, "-s3")):
+        found |= cells(
+            f"2026-10-04-trials-{session}-r164{store}-grouped.json", f"2026-10-04-population-{session}-r164{store}.json"
+        )
+        found |= cells(
+            f"2026-10-04-trials-{session}-r164{store}-hdf5.json",
+            f"2026-10-04-population-{session}-r164{store}-hdf5.json",
+            suffix=HDF5,
+        )
+    return local, remote
+
+
+def analyses(session: str, out: Path) -> None:
+    local, remote = analysis_cells(session)
+
+    def series(found, field, scale):
+        def arms(prefix: str, suffix: str) -> list[str]:
+            return [arm for arm, _ in found if arm.startswith(prefix + " ") and arm.endswith(suffix)]
+
+        readers = {
+            "Escapewheel": arms("packet", ""),
+            "pynwb, Zarr": [arm for arm in arms("pynwb", "") if not arm.endswith(HDF5)],
+            "pynwb, HDF5": arms("pynwb", HDF5),
+            "lazynwb, Zarr": [arm for arm in arms("lazynwb", "") if not arm.endswith(HDF5)],
+            "lazynwb, HDF5": arms("lazynwb", HDF5),
+        }
+        return {
+            name: [value(fastest(found, names, op), field, scale) for op, _ in ANALYSES]
+            for name, names in readers.items()
+        }
+
+    panels(
+        f"{session}: whole-session analyses, cold; each reader's fastest arm",
+        [label for _, label in ANALYSES],
+        [
+            ("seconds, NVMe", local, "seconds", 1.0),
+            ("seconds, S3", remote, "seconds", 1.0),
+            ("MB received, S3", remote, "received_bytes", 1e6),
+        ],
+        series,
+        out / f"analyses-{session}.png",
+    )
 
 
 LAZY_OPERATIONS = [
@@ -183,30 +232,30 @@ LAZY_OPERATIONS = [
 def lazy(session: str, out: Path) -> None:
     local = cells(
         *(f"2026-10-03-lazy-{session}-r164{tag}.json" for tag in ("", "-good", "-natural")),
-        f"2026-10-04-lazy-{session}-r164-clock.json",
+        f"2026-10-04-lazy-{session}-r164-clock2.json",
     )
     remote = cells(
         *(f"2026-10-03-lazy-{session}-r164-s3{tag}.json" for tag in ("", "-good", "-natural")),
-        f"2026-10-04-lazy-{session}-r164-s3-clock.json",
+        f"2026-10-04-lazy-{session}-r164-s3-clock2.json",
     )
-    labels = [label for _, label in LAZY_OPERATIONS]
-    fig, axes = plt.subplots(1, 4, figsize=(18, 4.8), sharey=True)
-    panels = [
-        (axes[0], local, "seconds", 1.0, "seconds, local NVMe"),
-        (axes[1], local, "peak_mib", 1024.0, "peak RSS GiB, local NVMe"),
-        (axes[2], remote, "seconds", 1.0, "seconds, S3"),
-        (axes[3], remote, "received_bytes", 1e6, "MB received, S3"),
-    ]
-    for ax, found, field, scale, unit in panels:
-        series = {
+
+    def series(found, field, scale):
+        return {
             arm: [value(found.get((arm, op)), field, scale) for op, _ in LAZY_OPERATIONS] for arm in ("eager", "lazy")
         }
-        bars(ax, labels, series, unit)
-    axes[0].invert_yaxis()
-    fig.legend(*axes[0].get_legend_handles_labels(), loc="upper right", ncols=2, fontsize=8)
-    fig.suptitle(f"{session}: the same question read whole, then filtered (eager), or narrowed before reading (lazy)")
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
-    fig.savefig(out / f"lazy-{session}.png", dpi=150)
+
+    panels(
+        f"{session}: each question read whole, then filtered (eager), or narrowed before reading (lazy)",
+        [label for _, label in LAZY_OPERATIONS],
+        [
+            ("seconds, NVMe", local, "seconds", 1.0),
+            ("peak RSS GiB, NVMe", local, "peak_mib", 1024.0),
+            ("seconds, S3", remote, "seconds", 1.0),
+            ("MB received, S3", remote, "received_bytes", 1e6),
+        ],
+        series,
+        out / f"lazy-{session}.png",
+    )
 
 
 def main() -> None:
@@ -216,7 +265,7 @@ def main() -> None:
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     readers(args.session, args.out)
-    go_cue(args.session, args.out)
+    analyses(args.session, args.out)
     lazy(args.session, args.out)
 
 
