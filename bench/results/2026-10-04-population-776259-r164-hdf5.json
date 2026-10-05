@@ -1,0 +1,131 @@
+{
+  "environment": {
+    "date": "2026-10-05",
+    "commit": "04b797c7+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      1.16,
+      1.85,
+      1.78
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r164/776259/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      },
+      {
+        "path": "/home/galen.lynch/bench-cold/hdf5/776259/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "h5py": "3.16.0",
+      "remfile": "0.1.15",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "/home/galen.lynch/bench-cold/r164/776259/packet",
+    "nwb": "/home/galen.lynch/bench-cold/hdf5/776259/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+    "region_aws": "us-west-2",
+    "trials": "dynamic_foraging.trials",
+    "clock": 12,
+    "rate": 31250
+  },
+  "core_version": "0.18.0",
+  "memory_max": "80G",
+  "once_above": null,
+  "cells": [
+    {
+      "arm": "pynwb aind-ephys-utils",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 1.8845216400222853,
+      "peak_mib": 8866.7109375,
+      "received_bytes": 2433,
+      "value": "{'spikes': 99452477, 'cells': 1691892, 'cell_sq': 57100839567, 'bin_sum': 2908832231, 'compute_s': 31.904}"
+    },
+    {
+      "arm": "pynwb aind-ephys-utils",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 0.33427828195272014,
+      "peak_mib": 537.9765625,
+      "received_bytes": 1694,
+      "value": "{'pairs': 69374161, 'cells': 175159, 'cell_sq': 53606131237, 'abs_lag': 705795997, 'compute_s': 0.366}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 3.2305603559943847,
+      "peak_mib": 11211.375,
+      "received_bytes": 4743,
+      "value": "{'spikes': 99452477, 'cells': 1691892, 'cell_sq': 57100839567, 'bin_sum': 2908832231}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 1.2493165570194833,
+      "peak_mib": 1219.92578125,
+      "received_bytes": 873,
+      "value": "{'pairs': 69374161, 'cells': 175159, 'cell_sq': 53606131237, 'abs_lag': 705795997}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 28.047217572981026,
+      "peak_mib": 17801.171875,
+      "received_bytes": 42800,
+      "value": "{'spikes': 99452477, 'cells': 1691892, 'cell_sq': 57100839567, 'bin_sum': 2908832231}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 4.545082278025802,
+      "peak_mib": 2470.12109375,
+      "received_bytes": 8125,
+      "value": "{'pairs': 69374161, 'cells': 175159, 'cell_sq': 53606131237, 'abs_lag': 705795997}"
+    },
+    {
+      "arm": "lazynwb aind-ephys-utils",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 7.536381778016221,
+      "peak_mib": 19486.78125,
+      "received_bytes": 7643,
+      "value": "{'spikes': 99452477, 'cells': 1691892, 'cell_sq': 57100839567, 'bin_sum': 2908832231, 'compute_s': 35.486}"
+    },
+    {
+      "arm": "lazynwb aind-ephys-utils",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 0.6304171420051716,
+      "peak_mib": 835.72265625,
+      "received_bytes": 896,
+      "value": "{'pairs': 69374161, 'cells': 175159, 'cell_sq': 53606131237, 'abs_lag': 705795997, 'compute_s': 0.319}"
+    }
+  ],
+  "disagreements": []
+}

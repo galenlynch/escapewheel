@@ -1,0 +1,191 @@
+{
+  "environment": {
+    "date": "2026-10-05",
+    "commit": "04b797c7+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      1.51,
+      1.58,
+      1.39
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r164/776259/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      },
+      {
+        "path": "/home/galen.lynch/bench-cold/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "h5py": "3.16.0",
+      "remfile": "0.1.15",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "/home/galen.lynch/bench-cold/r164/776259/packet",
+    "nwb": "/home/galen.lynch/bench-cold/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+    "region_aws": "us-west-2",
+    "trials": "dynamic_foraging.trials",
+    "clock": 12,
+    "rate": 31250
+  },
+  "core_version": "0.18.0",
+  "memory_max": "80G",
+  "once_above": null,
+  "cells": [
+    {
+      "arm": "packet duckdb",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 0.5592287029721774,
+      "peak_mib": 1065.2265625,
+      "received_bytes": 982,
+      "value": "{'spikes': 99452476, 'cells': 1691897, 'cell_sq': 57100904016, 'bin_sum': 2908817524}"
+    },
+    {
+      "arm": "packet duckdb",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 0.7103933829930611,
+      "peak_mib": 1096.51171875,
+      "received_bytes": 432,
+      "value": "{'pairs': 69411804, 'cells': 175158, 'cell_sq': 53713860556, 'abs_lag': 706549481}"
+    },
+    {
+      "arm": "packet polars",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 1.753578149015084,
+      "peak_mib": 3513.54296875,
+      "received_bytes": 3647,
+      "value": "{'spikes': 99452476, 'cells': 1691897, 'cell_sq': 57100904016, 'bin_sum': 2908817524}"
+    },
+    {
+      "arm": "packet polars",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 1.3480468289926648,
+      "peak_mib": 2886.10546875,
+      "received_bytes": 1673,
+      "value": "{'pairs': 69411804, 'cells': 175158, 'cell_sq': 53713860556, 'abs_lag': 706549481}"
+    },
+    {
+      "arm": "packet aind-ephys-utils",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 2.760372463031672,
+      "peak_mib": 16356.01171875,
+      "received_bytes": 2752,
+      "value": "{'spikes': 99452476, 'cells': 1691897, 'cell_sq': 57101012866, 'bin_sum': 2908805363, 'compute_s': 34.252}"
+    },
+    {
+      "arm": "packet aind-ephys-utils",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 0.39814272202784196,
+      "peak_mib": 1345.91796875,
+      "received_bytes": 192,
+      "value": "{'pairs': 69411804, 'cells': 175158, 'cell_sq': 53713860556, 'abs_lag': 706549481, 'compute_s': 0.31}"
+    },
+    {
+      "arm": "pynwb aind-ephys-utils",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 1.1262127680238336,
+      "peak_mib": 8898.8671875,
+      "received_bytes": 988,
+      "value": "{'spikes': 99452477, 'cells': 1691892, 'cell_sq': 57100839567, 'bin_sum': 2908832231, 'compute_s': 32.548}"
+    },
+    {
+      "arm": "pynwb aind-ephys-utils",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 1.103891989972908,
+      "peak_mib": 534.3359375,
+      "received_bytes": 1759,
+      "value": "{'pairs': 69374161, 'cells': 175159, 'cell_sq': 53606131237, 'abs_lag': 705795997, 'compute_s': 0.401}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 2.8851622660295106,
+      "peak_mib": 11223.31640625,
+      "received_bytes": 1864,
+      "value": "{'spikes': 99452477, 'cells': 1691892, 'cell_sq': 57100839567, 'bin_sum': 2908832231}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 1.9849338550120592,
+      "peak_mib": 1153.14453125,
+      "received_bytes": 1589,
+      "value": "{'pairs': 69374161, 'cells': 175159, 'cell_sq': 53606131237, 'abs_lag': 705795997}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 26.28069854300702,
+      "peak_mib": 17822.85546875,
+      "received_bytes": 80553,
+      "value": "{'spikes': 99452477, 'cells': 1691892, 'cell_sq': 57100839567, 'bin_sum': 2908832231}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 3.95013975299662,
+      "peak_mib": 2527.92578125,
+      "received_bytes": 5491,
+      "value": "{'pairs': 69374161, 'cells': 175159, 'cell_sq': 53606131237, 'abs_lag': 705795997}"
+    },
+    {
+      "arm": "lazynwb aind-ephys-utils",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 5.4657199590001255,
+      "peak_mib": 19499.921875,
+      "received_bytes": 7739,
+      "value": "{'spikes': 99452477, 'cells': 1691892, 'cell_sq': 57100839567, 'bin_sum': 2908832231, 'compute_s': 35.811}"
+    },
+    {
+      "arm": "lazynwb aind-ephys-utils",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 0.6896991929970682,
+      "peak_mib": 837.828125,
+      "received_bytes": 3801,
+      "value": "{'pairs': 69374161, 'cells': 175159, 'cell_sq': 53606131237, 'abs_lag': 705795997, 'compute_s': 0.319}"
+    }
+  ],
+  "disagreements": [
+    "condition psth: {'spikes': 99452476, 'cells': 1691897, 'cell_sq': 57100904016, 'bin_sum': 2908817524} from packet duckdb, packet polars",
+    "condition psth: {'spikes': 99452476, 'cells': 1691897, 'cell_sq': 57101012866, 'bin_sum': 2908805363} from packet aind-ephys-utils",
+    "condition psth: {'spikes': 99452477, 'cells': 1691892, 'cell_sq': 57100839567, 'bin_sum': 2908832231} from pynwb aind-ephys-utils, pynwb duckdb, lazynwb polars, lazynwb aind-ephys-utils",
+    "cross-correlograms: {'pairs': 69411804, 'cells': 175158, 'cell_sq': 53713860556, 'abs_lag': 706549481} from packet duckdb, packet polars, packet aind-ephys-utils",
+    "cross-correlograms: {'pairs': 69374161, 'cells': 175159, 'cell_sq': 53606131237, 'abs_lag': 705795997} from pynwb aind-ephys-utils, pynwb duckdb, lazynwb polars, lazynwb aind-ephys-utils"
+  ]
+}

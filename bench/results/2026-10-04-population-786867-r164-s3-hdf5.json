@@ -1,0 +1,129 @@
+{
+  "environment": {
+    "date": "2026-10-05",
+    "commit": "04b797c7+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      0.47,
+      0.53,
+      0.75
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "h5py": "3.16.0",
+      "remfile": "0.1.15",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+    "nwb": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb",
+    "region_aws": "us-west-2",
+    "trials": "dynamic_foraging.trials",
+    "clock": 10,
+    "rate": 31250
+  },
+  "core_version": "0.18.0",
+  "memory_max": "80G",
+  "once_above": 300.0,
+  "cells": [
+    {
+      "arm": "pynwb aind-ephys-utils",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 16.55794899200555,
+      "peak_mib": 4449.203125,
+      "received_bytes": 519736348,
+      "value": "{'spikes': 45723415, 'cells': 1215492, 'cell_sq': 5302331369, 'bin_sum': 1325983648, 'compute_s': 15.752}"
+    },
+    {
+      "arm": "pynwb aind-ephys-utils",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 2.787842634948902,
+      "peak_mib": 520.9453125,
+      "received_bytes": 33292967,
+      "value": "{'pairs': 17030331, 'cells': 82406, 'cell_sq': 9266187153, 'abs_lag': 173132512, 'compute_s': 0.231}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 14.663955431024078,
+      "peak_mib": 5780.4921875,
+      "received_bytes": 519602608,
+      "value": "{'spikes': 45723415, 'cells': 1215492, 'cell_sq': 5302331369, 'bin_sum': 1325983648}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 3.0987914980505593,
+      "peak_mib": 731.5078125,
+      "received_bytes": 33313081,
+      "value": "{'pairs': 17030331, 'cells': 82406, 'cell_sq': 9266187153, 'abs_lag': 173132512}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 25.60518894402776,
+      "peak_mib": 8840.23046875,
+      "received_bytes": 540995274,
+      "value": "{'spikes': 45723415, 'cells': 1215492, 'cell_sq': 5302331369, 'bin_sum': 1325983648}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 4.403433773026336,
+      "peak_mib": 1370.54296875,
+      "received_bytes": 29415623,
+      "value": "{'pairs': 17030331, 'cells': 82406, 'cell_sq': 9266187153, 'abs_lag': 173132512}"
+    },
+    {
+      "arm": "lazynwb aind-ephys-utils",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 15.730774259020109,
+      "peak_mib": 9453.921875,
+      "received_bytes": 543414008,
+      "value": "{'spikes': 45723415, 'cells': 1215492, 'cell_sq': 5302331369, 'bin_sum': 1325983648, 'compute_s': 18.004}"
+    },
+    {
+      "arm": "lazynwb aind-ephys-utils",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 1.7390092159621418,
+      "peak_mib": 580.5546875,
+      "received_bytes": 25597586,
+      "value": "{'pairs': 17030331, 'cells': 82406, 'cell_sq': 9266187153, 'abs_lag': 173132512, 'compute_s': 0.185}"
+    }
+  ],
+  "disagreements": []
+}

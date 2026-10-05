@@ -1,0 +1,328 @@
+{
+  "environment": {
+    "date": "2026-10-04",
+    "commit": "04b797c7+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      1.13,
+      1.46,
+      1.52
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r164/776259/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      },
+      {
+        "path": "/home/galen.lynch/bench-cold/hdf5/776259/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "h5py": "3.16.0",
+      "remfile": "0.1.15",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "/home/galen.lynch/bench-cold/r164/776259/packet",
+    "nwb": "/home/galen.lynch/bench-cold/hdf5/776259/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+    "region": "MD",
+    "region_aws": "us-west-2",
+    "window_tick": [
+      361749256863,
+      361749569363
+    ],
+    "window_s": [
+      11575976.219616,
+      11575986.219616
+    ],
+    "unit_id": 1475,
+    "unit_label": "671",
+    "probe_name": "45883-2",
+    "unit_spikes": 1789113,
+    "unit_tables": [
+      "core.units",
+      "aind_unit_qc.metrics"
+    ],
+    "trial_tables": [
+      "core.intervals",
+      "dynamic_foraging.trials"
+    ]
+  },
+  "core_version": "0.18.0",
+  "packet_bytes": 1219662231,
+  "nwb_bytes": 9013175804,
+  "cells": [
+    {
+      "reader": "pynwb",
+      "operation": "open",
+      "runs": 3,
+      "seconds": 0.18996166199212894,
+      "peak_mib": 234.765625,
+      "received_bytes": 557,
+      "value": "74"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "open",
+      "runs": 3,
+      "seconds": 0.03464793798048049,
+      "peak_mib": 196.73828125,
+      "received_bytes": 0,
+      "value": "78"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "list tables",
+      "runs": 3,
+      "seconds": 0.19112653599586338,
+      "peak_mib": 234.5234375,
+      "received_bytes": 581,
+      "value": "3"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "list tables",
+      "runs": 3,
+      "seconds": 0.02169852697988972,
+      "peak_mib": 189.359375,
+      "received_bytes": 60,
+      "value": "34"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "list",
+      "runs": 3,
+      "seconds": 0.1899314700276591,
+      "peak_mib": 234.35546875,
+      "received_bytes": 252,
+      "value": "232"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "list",
+      "runs": 3,
+      "seconds": 0.025169750035274774,
+      "peak_mib": 189.33203125,
+      "received_bytes": 0,
+      "value": "211"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "units 5 cols",
+      "runs": 3,
+      "seconds": 0.1948133529513143,
+      "peak_mib": 234.66015625,
+      "received_bytes": 318,
+      "value": "6781"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "units 5 cols",
+      "runs": 3,
+      "seconds": 0.058861877012532204,
+      "peak_mib": 215.671875,
+      "received_bytes": 342,
+      "value": "6781"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "units all meta",
+      "runs": 3,
+      "seconds": 0.21592122898437083,
+      "peak_mib": 234.84375,
+      "received_bytes": 581,
+      "value": "69"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "units all meta",
+      "runs": 3,
+      "seconds": 0.08529617200838402,
+      "peak_mib": 230.609375,
+      "received_bytes": 66,
+      "value": "71"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "trials",
+      "runs": 3,
+      "seconds": 0.1986332000233233,
+      "peak_mib": 234.82421875,
+      "received_bytes": 132,
+      "value": "708"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "trials",
+      "runs": 3,
+      "seconds": 0.0788005210342817,
+      "peak_mib": 216.92578125,
+      "received_bytes": 60,
+      "value": "708"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "every spike",
+      "runs": 3,
+      "seconds": 1.990351406042464,
+      "peak_mib": 2420.65625,
+      "received_bytes": 4752,
+      "value": "3322068097369330.0"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "every spike",
+      "runs": 3,
+      "seconds": 19.90270011901157,
+      "peak_mib": 17769.5078125,
+      "received_bytes": 35386,
+      "value": "3322068097369328.0"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "10 s window",
+      "runs": 3,
+      "seconds": 2.158501604979392,
+      "peak_mib": 3241.60546875,
+      "received_bytes": 10680,
+      "value": "349553"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "10 s window",
+      "runs": 3,
+      "seconds": 20.212105498008896,
+      "peak_mib": 17769.16796875,
+      "received_bytes": 31413,
+      "value": "349553"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "10 s spike_times",
+      "runs": 3,
+      "seconds": 2.156856196001172,
+      "peak_mib": 3241.75390625,
+      "received_bytes": 2697,
+      "value": "349553"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "10 s spike_times",
+      "runs": 3,
+      "seconds": 19.924208111013286,
+      "peak_mib": 17768.625,
+      "received_bytes": 32687,
+      "value": "349553"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "one train",
+      "runs": 3,
+      "seconds": 0.2130205130088143,
+      "peak_mib": 238.10546875,
+      "received_bytes": 722,
+      "value": "1789113"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "one train",
+      "runs": 3,
+      "seconds": 0.24874336400534958,
+      "peak_mib": 473.51953125,
+      "received_bytes": 630,
+      "value": "1789113"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "one train stored",
+      "runs": 3,
+      "seconds": 0.21848009998211637,
+      "peak_mib": 237.95703125,
+      "received_bytes": 442,
+      "value": "1789113"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "one train stored",
+      "runs": 3,
+      "seconds": 0.24489535600878298,
+      "peak_mib": 473.1015625,
+      "received_bytes": 660,
+      "value": "1789113"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "region units",
+      "runs": 3,
+      "seconds": 0.5081583539722487,
+      "peak_mib": 237.015625,
+      "received_bytes": 1206,
+      "value": "(409, 29394216)"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "region units",
+      "runs": 3,
+      "seconds": 2.2757248409907334,
+      "peak_mib": 2053.76171875,
+      "received_bytes": 2606,
+      "value": "(409, 29394216)"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "unit positions",
+      "runs": 3,
+      "seconds": 0.1954622170305811,
+      "peak_mib": 234.24609375,
+      "received_bytes": 258,
+      "value": "(1700, 21480774.4, 44112996)"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "unit positions",
+      "runs": 3,
+      "seconds": 0.08605090400669724,
+      "peak_mib": 225.44921875,
+      "received_bytes": 1866,
+      "value": "(1700, 21480774.4, 44112996)"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "MD waveforms",
+      "runs": 3,
+      "seconds": 0.4192638790118508,
+      "peak_mib": 269.125,
+      "received_bytes": 1031,
+      "value": "(93, -11394)"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "MD waveforms",
+      "runs": 3,
+      "seconds": 0.3264265760080889,
+      "peak_mib": 309.2421875,
+      "received_bytes": 230,
+      "value": "(93, -11394)"
+    }
+  ]
+}

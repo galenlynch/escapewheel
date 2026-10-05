@@ -1,0 +1,189 @@
+{
+  "environment": {
+    "date": "2026-10-05",
+    "commit": "04b797c7+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      0.78,
+      1.33,
+      1.58
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb.zarr",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "h5py": "3.16.0",
+      "remfile": "0.1.15",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+    "nwb": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb.zarr",
+    "region_aws": "us-west-2",
+    "trials": "dynamic_foraging.trials",
+    "clock": 10,
+    "rate": 31250
+  },
+  "core_version": "0.18.0",
+  "memory_max": "80G",
+  "once_above": 300.0,
+  "cells": [
+    {
+      "arm": "packet duckdb",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 4.625181280018296,
+      "peak_mib": 921.234375,
+      "received_bytes": 257910369,
+      "value": "{'spikes': 45723450, 'cells': 1215505, 'cell_sq': 5302339272, 'bin_sum': 1325978214}"
+    },
+    {
+      "arm": "packet duckdb",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 1.5242823919979855,
+      "peak_mib": 588.8046875,
+      "received_bytes": 14931017,
+      "value": "{'pairs': 17039338, 'cells': 82407, 'cell_sq': 9284808528, 'abs_lag': 173313293}"
+    },
+    {
+      "arm": "packet polars",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 3.5236787180183455,
+      "peak_mib": 2125.32421875,
+      "received_bytes": 257140346,
+      "value": "{'spikes': 45723450, 'cells': 1215505, 'cell_sq': 5302339272, 'bin_sum': 1325978214}"
+    },
+    {
+      "arm": "packet polars",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 4.357902591000311,
+      "peak_mib": 1262.25390625,
+      "received_bytes": 259215351,
+      "value": "{'pairs': 17039338, 'cells': 82407, 'cell_sq': 9284808528, 'abs_lag': 173313293}"
+    },
+    {
+      "arm": "packet aind-ephys-utils",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 5.328932687989436,
+      "peak_mib": 7755.9921875,
+      "received_bytes": 256488605,
+      "value": "{'spikes': 45723449, 'cells': 1215504, 'cell_sq': 5302353217, 'bin_sum': 1325972295, 'compute_s': 16.682}"
+    },
+    {
+      "arm": "packet aind-ephys-utils",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 1.9058130719931796,
+      "peak_mib": 865.4296875,
+      "received_bytes": 15060028,
+      "value": "{'pairs': 17039338, 'cells': 82407, 'cell_sq': 9284808528, 'abs_lag': 173313293, 'compute_s': 0.178}"
+    },
+    {
+      "arm": "pynwb aind-ephys-utils",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 48.7613340280368,
+      "peak_mib": 3971.171875,
+      "received_bytes": 559588611,
+      "value": "{'spikes': 45723415, 'cells': 1215492, 'cell_sq': 5302331369, 'bin_sum': 1325983648, 'compute_s': 15.845}"
+    },
+    {
+      "arm": "pynwb aind-ephys-utils",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 52.75988391600549,
+      "peak_mib": 496.96875,
+      "received_bytes": 88274441,
+      "value": "{'pairs': 17030331, 'cells': 82406, 'cell_sq': 9266187153, 'abs_lag': 173132512, 'compute_s': 0.18}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 48.791744971007574,
+      "peak_mib": 5300.66015625,
+      "received_bytes": 560908614,
+      "value": "{'spikes': 45723415, 'cells': 1215492, 'cell_sq': 5302331369, 'bin_sum': 1325983648}"
+    },
+    {
+      "arm": "pynwb duckdb",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 51.688014390005264,
+      "peak_mib": 739.3828125,
+      "received_bytes": 88396889,
+      "value": "{'pairs': 17030331, 'cells': 82406, 'cell_sq': 9266187153, 'abs_lag': 173132512}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 107.54670605802676,
+      "peak_mib": 9252.91015625,
+      "received_bytes": 604595985,
+      "value": "{'spikes': 45723415, 'cells': 1215492, 'cell_sq': 5302331369, 'bin_sum': 1325983648}"
+    },
+    {
+      "arm": "lazynwb polars",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 3.551186295982916,
+      "peak_mib": 1403.03125,
+      "received_bytes": 92738978,
+      "value": "{'pairs': 17030331, 'cells': 82406, 'cell_sq': 9266187153, 'abs_lag': 173132512}"
+    },
+    {
+      "arm": "lazynwb aind-ephys-utils",
+      "analysis": "condition psth",
+      "runs": 3,
+      "seconds": 98.11736851697788,
+      "peak_mib": 9045.78515625,
+      "received_bytes": 610007210,
+      "value": "{'spikes': 45723415, 'cells': 1215492, 'cell_sq': 5302331369, 'bin_sum': 1325983648, 'compute_s': 17.469}"
+    },
+    {
+      "arm": "lazynwb aind-ephys-utils",
+      "analysis": "cross-correlograms",
+      "runs": 3,
+      "seconds": 1.861004378006328,
+      "peak_mib": 606.37890625,
+      "received_bytes": 23540059,
+      "value": "{'pairs': 17030331, 'cells': 82406, 'cell_sq': 9266187153, 'abs_lag': 173132512, 'compute_s': 0.126}"
+    }
+  ],
+  "disagreements": [
+    "condition psth: {'spikes': 45723450, 'cells': 1215505, 'cell_sq': 5302339272, 'bin_sum': 1325978214} from packet duckdb, packet polars",
+    "condition psth: {'spikes': 45723449, 'cells': 1215504, 'cell_sq': 5302353217, 'bin_sum': 1325972295} from packet aind-ephys-utils",
+    "condition psth: {'spikes': 45723415, 'cells': 1215492, 'cell_sq': 5302331369, 'bin_sum': 1325983648} from pynwb aind-ephys-utils, pynwb duckdb, lazynwb polars, lazynwb aind-ephys-utils",
+    "cross-correlograms: {'pairs': 17039338, 'cells': 82407, 'cell_sq': 9284808528, 'abs_lag': 173313293} from packet duckdb, packet polars, packet aind-ephys-utils",
+    "cross-correlograms: {'pairs': 17030331, 'cells': 82406, 'cell_sq': 9266187153, 'abs_lag': 173132512} from pynwb aind-ephys-utils, pynwb duckdb, lazynwb polars, lazynwb aind-ephys-utils"
+  ]
+}

@@ -1,0 +1,292 @@
+{
+  "environment": {
+    "date": "2026-10-04",
+    "commit": "04b797c7+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      0.99,
+      1.62,
+      1.36
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r164/786867/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      },
+      {
+        "path": "/home/galen.lynch/bench-cold/hdf5/786867/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "h5py": "3.16.0",
+      "remfile": "0.1.15",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "/home/galen.lynch/bench-cold/r164/786867/packet",
+    "nwb": "/home/galen.lynch/bench-cold/hdf5/786867/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb",
+    "region": "MD",
+    "region_aws": "us-west-2",
+    "window_tick": [
+      450807531692,
+      450807844192
+    ],
+    "window_s": [
+      14425841.014144,
+      14425851.014144
+    ],
+    "unit_id": 5,
+    "unit_label": "5",
+    "probe_name": "46101",
+    "unit_spikes": 518291,
+    "unit_tables": [
+      "core.units",
+      "aind_unit_qc.metrics"
+    ],
+    "trial_tables": [
+      "core.intervals",
+      "dynamic_foraging.trials"
+    ]
+  },
+  "core_version": "0.18.0",
+  "packet_bytes": 604667752,
+  "nwb_bytes": 5093532514,
+  "cells": [
+    {
+      "reader": "pynwb",
+      "operation": "open",
+      "runs": 3,
+      "seconds": 0.18536864005727693,
+      "peak_mib": 211.9375,
+      "received_bytes": 225,
+      "value": "74"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "open",
+      "runs": 3,
+      "seconds": 0.038434949005022645,
+      "peak_mib": 195.79296875,
+      "received_bytes": 0,
+      "value": "78"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "list tables",
+      "runs": 3,
+      "seconds": 0.18412157602142543,
+      "peak_mib": 212.1171875,
+      "received_bytes": 66,
+      "value": "3"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "list tables",
+      "runs": 3,
+      "seconds": 0.027496973983943462,
+      "peak_mib": 188.6640625,
+      "received_bytes": 0,
+      "value": "30"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "list",
+      "runs": 3,
+      "seconds": 0.184451382025145,
+      "peak_mib": 212.64453125,
+      "received_bytes": 60,
+      "value": "221"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "list",
+      "runs": 3,
+      "seconds": 0.027567102981265634,
+      "peak_mib": 188.3359375,
+      "received_bytes": 0,
+      "value": "203"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "units 5 cols",
+      "runs": 3,
+      "seconds": 0.18201056198449805,
+      "peak_mib": 212.546875,
+      "received_bytes": 158,
+      "value": "4505"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "units 5 cols",
+      "runs": 3,
+      "seconds": 0.06282902898965403,
+      "peak_mib": 214.25390625,
+      "received_bytes": 60,
+      "value": "4505"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "units all meta",
+      "runs": 3,
+      "seconds": 0.19425507495179772,
+      "peak_mib": 211.984375,
+      "received_bytes": 186,
+      "value": "69"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "units all meta",
+      "runs": 3,
+      "seconds": 0.07809691497823223,
+      "peak_mib": 224.875,
+      "received_bytes": 66,
+      "value": "71"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "trials",
+      "runs": 3,
+      "seconds": 0.18740532896481454,
+      "peak_mib": 212.16015625,
+      "received_bytes": 1247,
+      "value": "450"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "trials",
+      "runs": 3,
+      "seconds": 0.0762488300097175,
+      "peak_mib": 215.5,
+      "received_bytes": 0,
+      "value": "450"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "every spike",
+      "runs": 3,
+      "seconds": 1.0575406239950098,
+      "peak_mib": 1225.27734375,
+      "received_bytes": 1091,
+      "value": "1895772623540943.5"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "every spike",
+      "runs": 3,
+      "seconds": 8.697292522992939,
+      "peak_mib": 8313.68359375,
+      "received_bytes": 19381,
+      "value": "1895772623540943.0"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "10 s window",
+      "runs": 3,
+      "seconds": 1.1315285659511574,
+      "peak_mib": 1601.01953125,
+      "received_bytes": 1882,
+      "value": "294524"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "10 s window",
+      "runs": 3,
+      "seconds": 8.727139988041017,
+      "peak_mib": 8484.59765625,
+      "received_bytes": 11563,
+      "value": "294524"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "10 s spike_times",
+      "runs": 3,
+      "seconds": 1.1270062400144525,
+      "peak_mib": 1600.8359375,
+      "received_bytes": 5057,
+      "value": "294524"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "10 s spike_times",
+      "runs": 3,
+      "seconds": 8.827135259984061,
+      "peak_mib": 8313.8671875,
+      "received_bytes": 11347,
+      "value": "294524"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "one train",
+      "runs": 3,
+      "seconds": 0.19256001099711284,
+      "peak_mib": 212.5078125,
+      "received_bytes": 120,
+      "value": "518291"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "one train",
+      "runs": 3,
+      "seconds": 0.13819088600575924,
+      "peak_mib": 293.953125,
+      "received_bytes": 66,
+      "value": "518291"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "one train stored",
+      "runs": 3,
+      "seconds": 0.19165914005134255,
+      "peak_mib": 212.359375,
+      "received_bytes": 240,
+      "value": "518291"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "one train stored",
+      "runs": 3,
+      "seconds": 0.13152191799599677,
+      "peak_mib": 293.08203125,
+      "received_bytes": 60,
+      "value": "518291"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "region units",
+      "runs": 3,
+      "seconds": 0.22241416800534353,
+      "peak_mib": 219.57421875,
+      "received_bytes": 198,
+      "value": "(140, 5424090)"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "region units",
+      "runs": 3,
+      "seconds": 0.4598558599827811,
+      "peak_mib": 583.62890625,
+      "received_bytes": 423,
+      "value": "(140, 5424090)"
+    }
+  ]
+}

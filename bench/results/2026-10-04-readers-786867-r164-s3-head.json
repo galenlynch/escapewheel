@@ -1,0 +1,326 @@
+{
+  "environment": {
+    "date": "2026-10-05",
+    "commit": "01ace8ac+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "load_average": [
+      2.85,
+      4.27,
+      2.31
+    ],
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      },
+      {
+        "path": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb.zarr",
+        "region": "us-west-2",
+        "interface": "enp6s0",
+        "link_mbps": 1000
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "h5py": "3.16.0",
+      "remfile": "0.1.15",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/packet",
+    "nwb": "s3://aind-scratch-data/galen.lynch/nwb-lake-bench/r164/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb.zarr",
+    "region": "MD",
+    "region_aws": "us-west-2",
+    "window_tick": [
+      450807531692,
+      450807844192
+    ],
+    "window_s": [
+      14425841.014144,
+      14425851.014144
+    ],
+    "unit_id": 5,
+    "unit_label": "5",
+    "probe_name": "46101",
+    "unit_spikes": 518291,
+    "unit_tables": [
+      "core.units",
+      "aind_unit_qc.metrics"
+    ],
+    "trial_tables": [
+      "core.intervals",
+      "dynamic_foraging.trials"
+    ]
+  },
+  "core_version": "0.18.0",
+  "packet_bytes": 604667752,
+  "nwb_bytes": 4735714418,
+  "cells": [
+    {
+      "reader": "packet",
+      "operation": "open",
+      "runs": 3,
+      "seconds": 0.16211060504429042,
+      "peak_mib": 206.4296875,
+      "received_bytes": 39170,
+      "value": "58"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "open",
+      "runs": 3,
+      "seconds": 0.5022809270303696,
+      "peak_mib": 206.4296875,
+      "received_bytes": 91815,
+      "value": "1"
+    },
+    {
+      "reader": "packet",
+      "operation": "list tables",
+      "runs": 3,
+      "seconds": 0.326505308970809,
+      "peak_mib": 206.4296875,
+      "received_bytes": 70951,
+      "value": "58"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "list tables",
+      "runs": 3,
+      "seconds": 0.3080204369616695,
+      "peak_mib": 206.6171875,
+      "received_bytes": 79009,
+      "value": "58"
+    },
+    {
+      "reader": "packet",
+      "operation": "list",
+      "runs": 3,
+      "seconds": 0.6091194309992716,
+      "peak_mib": 206.6171875,
+      "received_bytes": 2313944,
+      "value": "416"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "list",
+      "runs": 3,
+      "seconds": 0.495442199986428,
+      "peak_mib": 206.9765625,
+      "received_bytes": 2314486,
+      "value": "416"
+    },
+    {
+      "reader": "packet",
+      "operation": "units 5 cols",
+      "runs": 3,
+      "seconds": 0.30939907097490504,
+      "peak_mib": 206.6171875,
+      "received_bytes": 168921,
+      "value": "4505"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "units 5 cols",
+      "runs": 3,
+      "seconds": 0.5725607670028694,
+      "peak_mib": 206.6171875,
+      "received_bytes": 140231,
+      "value": "4505"
+    },
+    {
+      "reader": "packet",
+      "operation": "units all meta",
+      "runs": 3,
+      "seconds": 0.5156517349532805,
+      "peak_mib": 206.6171875,
+      "received_bytes": 768242,
+      "value": "39"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "units all meta",
+      "runs": 3,
+      "seconds": 0.889675532002002,
+      "peak_mib": 206.6171875,
+      "received_bytes": 596473,
+      "value": "39"
+    },
+    {
+      "reader": "packet",
+      "operation": "trials",
+      "runs": 3,
+      "seconds": 0.5090772190014832,
+      "peak_mib": 206.6171875,
+      "received_bytes": 176322,
+      "value": "[450, 450]"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "trials",
+      "runs": 3,
+      "seconds": 0.8312674330081791,
+      "peak_mib": 206.8046875,
+      "received_bytes": 165563,
+      "value": "[450, 450]"
+    },
+    {
+      "reader": "packet",
+      "operation": "every spike",
+      "runs": 3,
+      "seconds": 2.895918175985571,
+      "peak_mib": 1425.14453125,
+      "received_bytes": 240220455,
+      "value": "8407061691180272"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "every spike",
+      "runs": 3,
+      "seconds": 2.7143472749739885,
+      "peak_mib": 494.1640625,
+      "received_bytes": 240584750,
+      "value": "8407061691180272"
+    },
+    {
+      "reader": "packet",
+      "operation": "10 s window",
+      "runs": 3,
+      "seconds": 0.7944764549611136,
+      "peak_mib": 258.8203125,
+      "received_bytes": 18976417,
+      "value": "294526"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "10 s window",
+      "runs": 3,
+      "seconds": 0.8631411420064978,
+      "peak_mib": 258.38671875,
+      "received_bytes": 18511837,
+      "value": "294526"
+    },
+    {
+      "reader": "packet",
+      "operation": "10 s spike_times",
+      "runs": 3,
+      "seconds": 1.0712265230249614,
+      "peak_mib": 338.484375,
+      "received_bytes": 19020718,
+      "value": "294526"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "10 s spike_times",
+      "runs": 3,
+      "seconds": 0.9348030609544367,
+      "peak_mib": 257.83984375,
+      "received_bytes": 18569191,
+      "value": "294526"
+    },
+    {
+      "reader": "packet",
+      "operation": "one train",
+      "runs": 3,
+      "seconds": 1.0521734339999966,
+      "peak_mib": 258.55859375,
+      "received_bytes": 5509387,
+      "value": "518291"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "one train",
+      "runs": 3,
+      "seconds": 0.6683049940038472,
+      "peak_mib": 206.8046875,
+      "received_bytes": 1687923,
+      "value": "518291"
+    },
+    {
+      "reader": "packet",
+      "operation": "one train stored",
+      "runs": 3,
+      "seconds": 0.946573666005861,
+      "peak_mib": 206.8046875,
+      "received_bytes": 1778267,
+      "value": "518291"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "one train stored",
+      "runs": 3,
+      "seconds": 0.692446878994815,
+      "peak_mib": 206.8046875,
+      "received_bytes": 1694336,
+      "value": "518291"
+    },
+    {
+      "reader": "packet",
+      "operation": "region units",
+      "runs": 3,
+      "seconds": 0.7222034690203145,
+      "peak_mib": 263.5703125,
+      "received_bytes": 388360,
+      "value": "(164, 5887635)"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "region units",
+      "runs": 3,
+      "seconds": 1.0828320019645616,
+      "peak_mib": 208.6328125,
+      "received_bytes": 542817,
+      "value": "(164, 5887635)"
+    },
+    {
+      "reader": "packet",
+      "operation": "unit positions",
+      "runs": 3,
+      "seconds": 0.5555698149837554,
+      "peak_mib": 206.8046875,
+      "received_bytes": 268806,
+      "value": "(1471, 21512989.6, 47570176)"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "unit positions",
+      "runs": 3,
+      "seconds": 0.9486990600125864,
+      "peak_mib": 206.8046875,
+      "received_bytes": 207898,
+      "value": "(1471, 21512989.6, 47570176)"
+    },
+    {
+      "reader": "packet",
+      "operation": "MD waveforms",
+      "runs": 3,
+      "seconds": 1.450609927996993,
+      "peak_mib": 206.8046875,
+      "received_bytes": 801140,
+      "value": "(64, -6410)"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "MD waveforms",
+      "runs": 3,
+      "seconds": 1.5341404060018249,
+      "peak_mib": 250.86328125,
+      "received_bytes": 767536,
+      "value": "(64, -6410)"
+    }
+  ]
+}
