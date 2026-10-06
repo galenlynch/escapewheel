@@ -98,7 +98,7 @@ def _shard(codecs, *, index=(_BYTES, _CRC), location="end"):
     ids=["blosc_zstd", "sharded", "absent_location", "index_at_start", "codec_after_shard", "lz4", "delta"],
 )
 def test_a_packet_owned_array_is_compared_with_the_v3_floor(packet_root, codecs, inside):
-    """Part 03 §6.4 matched under its rules; outside a reader-only floor is `info`, never a failure."""
+    """Part 03 §6.3 matched under its rules; outside a reader-only floor is `info`, never a failure."""
     document = zarr_v3_metadata()
     document["codecs"] = codecs
     add_array(packet_root, declared=[], document=document)
@@ -112,7 +112,7 @@ def test_a_packet_owned_array_is_compared_with_the_v3_floor(packet_root, codecs,
 
 
 def test_an_unrecognized_codec_is_outside_the_floor_and_not_invalid(packet_root):
-    """Part 03 §6.4: Zarr v3 admits extension codecs, so an unknown name is valid metadata."""
+    """Part 03 §6.3: Zarr v3 admits extension codecs, so an unknown name is valid metadata."""
     document = zarr_v3_metadata(sharded=False)
     document["codecs"] = [_BYTES, {"name": "example.unknown"}]
     add_array(packet_root, declared=[], document=document)
@@ -211,7 +211,7 @@ def test_a_referenced_v2_array_is_compared_with_the_floors_patterns_and_byte_ord
     if outside:
         observed = "; ".join(f"{member} {value}" for member, value in outside)
         assert findings[0].message == (
-            f"core.waveform_mean: zarr v2 {observed} is outside the reader floor of Part 03 §6.4"
+            f"core.waveform_mean: zarr v2 {observed} is outside the reader floor of Part 03 §6.3"
         )
     assert "external.physical_unassessed" not in {f.check for f in report.findings}
 
@@ -220,7 +220,7 @@ def test_a_referenced_v2_array_is_compared_with_the_floors_patterns_and_byte_ord
     "zarray", [{"dtype": None}, {"dtype": 2}, {"dtype": [["count"]]}], ids=["null", "number", "field_without_a_type"]
 )
 def test_a_referenced_v2_array_whose_dtype_cannot_be_compared_draws_no_floor_finding(packet_root, zarray):
-    """Part 03 §6.4: the floor classifies a valid array, and metadata that is not one is upstream invalidity."""
+    """Part 03 §6.3: the floor classifies a valid array, and metadata that is not one is upstream invalidity."""
     root = external_array(packet_root, zarray={"compressor": _ZSTD, **zarray})
     report = validate(open_packet(root), verification=Verification(external=True))
     assert _outside(report) == []

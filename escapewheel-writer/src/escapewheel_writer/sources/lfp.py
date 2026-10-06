@@ -235,7 +235,7 @@ class LFPSource(Compensates):
 
     @staticmethod
     def _codecs(meta: dict[str, Any]) -> tuple[str, ...]:
-        """Name the codecs a v2 array's own metadata uses, its filters first (Part 03 §6.4)."""
+        """Name the codecs a v2 array's own metadata uses, its filters first (Part 03 §6.3)."""
         names = [str(f["id"]) for f in meta.get("filters") or []]
         if compressor := meta.get("compressor"):
             names.append(str(compressor["id"]))
@@ -369,7 +369,7 @@ class LFPSource(Compensates):
         return rows
 
     def array_dimensions(self) -> list[dict[str, Any]]:
-        """`core.array_dimensions`: a regular tick axis, then a labelled channel axis (Part 03 §6.3)."""
+        """`core.array_dimensions`: a regular tick axis, then a labelled channel axis (Part 02 §12.11)."""
         rows = []
         for series in self._series:
             clock_id = self._clock(series)
@@ -429,7 +429,7 @@ class LFPSource(Compensates):
         return table, columns, names
 
     def array_labels(self) -> list[dict[str, Any]]:
-        """`core.array_labels`, the electrode at each channel position of every series (Part 03 §6.3).
+        """`core.array_labels`, the electrode at each channel position of every series (Part 02 §12.11).
 
         A label is the contact's name, which the writer numbers in `core.electrodes`' numbering.
         """

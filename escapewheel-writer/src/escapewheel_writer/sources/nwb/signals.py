@@ -60,7 +60,7 @@ class Signals(NWBFile):
             ticks, values = self._signal(name)
             del ticks  # the axis is a clock and its anchors, not an array
             # Delta, because a densely sampled signal is smooth and its differences compress far
-            # better than its values. Part 03 §6.4 permits any codec, but delta is outside the v3
+            # better than its values. Part 03 §6.3 permits any codec, but delta is outside the v3
             # reader floor: Zarr.jl, TensorStore, and zarrs cannot read it (Part 10 §5), and a
             # validator reports the array at `info`.
             staged.append(
@@ -111,7 +111,7 @@ class Signals(NWBFile):
         return f"{self.prefix}{name}.dispatch"
 
     def array_dimensions(self) -> list[dict[str, Any]]:
-        """`core.array_dimensions`, one axis per signal, in Part 03 §6.3's regular form.
+        """`core.array_dimensions`, one axis per signal, in Part 02 §12.11's regular form.
 
         Tick `k` is sample `k`. That is not an approximation: a HARP device schedules its
         dispatch on its own microsecond timer, accumulating rather than re-basing, so the

@@ -192,6 +192,7 @@ PHYSICAL_OUTSIDE_READER_FLOOR = _named("physical.outside_reader_floor", _INFO, _
 PHYSICAL_PAGE_TYPES_UNASSESSED = _unnamed("physical.page_types_unassessed", _INFO, _PACKET)
 EXTERNAL_PHYSICAL_UNASSESSED = _named("external.physical_unassessed", _INFO, _RESOURCE)
 PHYSICAL_OPAQUE_NAME_PORTABILITY = _named("physical.opaque_name_portability", _WARNING, _RESOURCE)
+PHYSICAL_OUTSIDE_TYPE_MAPPING = _named("physical.outside_type_mapping", _INFO, _COLUMN)
 
 # A session's declared time origin.
 TIME_ORIGIN_UNMAPPABLE = _named("time.origin_unmappable", _ERROR, _COLUMN)
@@ -425,6 +426,7 @@ __all__ = [
     "PACKET_RESOURCE_URI_FORM",
     "PHYSICAL_OPAQUE_NAME_PORTABILITY",
     "PHYSICAL_OUTSIDE_READER_FLOOR",
+    "PHYSICAL_OUTSIDE_TYPE_MAPPING",
     "PHYSICAL_PAGE_TYPES_UNASSESSED",
     "RESOURCE_MISSING",
     "RESOURCE_UNREADABLE",

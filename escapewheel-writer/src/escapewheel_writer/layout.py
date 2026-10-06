@@ -8,14 +8,14 @@ from typing import Any
 from . import opaque
 
 #: Where the portable profile stores each bound registry, as `<registry_id>/<version>.json.gz`
-#: (Part 03 §3.3).
+#: (Part 03 §3.2).
 REGISTRIES = "registries"
 
 #: The directories under the packet root a commit promotes from its staging area, which a root holding
 #: any of them without a committed manifest cannot take another commit into.
 PROMOTED = ("tables", "arrays", opaque.ROOT, REGISTRIES)
 
-#: The portable profile's staging area, directly under the packet root (Part 03 §3.4).
+#: The portable profile's staging area, directly under the packet root (Part 03 §3.3).
 STAGING = "staging"
 
 #: The promotion record inside the staging area (Part 05 §6). Its format is this writer's.

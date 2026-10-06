@@ -54,7 +54,7 @@ def test_a_transpose_inside_a_shard_is_caught(packet_root):
 
 
 def test_a_rank_the_dimensions_do_not_cover_is_caught(packet_root):
-    """Part 03 §6.3: axis_index enumerates every stored axis, so two rows cannot describe rank 3."""
+    """Part 02 §12.11: axis_index enumerates every stored axis, so two rows cannot describe rank 3."""
     add_array(packet_root, declared=["sharding_indexed", "blosc"], axes=2)
     assert "array.rank_disagrees_with_dimensions" in checks_under(validate(open_packet(packet_root)))
 
@@ -113,7 +113,7 @@ def _index(name, **extra):
 
 
 def _label_axis(root, labels, *, depends_on=None, kind="core.sessions"):
-    """Label axis 1 of the test array by `kind`'s rows (Part 03 §6.3).
+    """Label axis 1 of the test array by `kind`'s rows (Part 02 §12.11).
 
     `labels` holds (`depends_on_position_index`, `position_index`, `label_id`) rows; `depends_on`
     makes axis 1 depend on that axis.
@@ -214,7 +214,7 @@ def _label_axis(root, labels, *, depends_on=None, kind="core.sessions"):
 
 def test_an_external_axis_is_checked_against_its_labels(packet_root):
     """A re-generated array with a different channel count leaves its labels naming positions that
-    are not there, or positions with none (Part 03 §6.3)."""
+    are not there, or positions with none (Part 02 §12.11)."""
     root = add_array(packet_root, declared=["blosc"], external=True, axes=3)
     _label_axis(root, [(0, 0, 1), (0, 1, 1)])  # axis 1 is 2 long in zarr_v3_metadata's [4, 2, 3]
     report = validate(open_packet(root), verification=Verification(external=True))
@@ -274,7 +274,7 @@ def test_a_label_on_an_unlabelled_axis_is_caught(packet_root):
 
 
 def test_a_packet_owned_array_carries_its_axes_names(packet_root):
-    """Part 03 §6.5: the axes table owns the names, and a packet-owned array repeats them."""
+    """Part 03 §6.4: the axes table owns the names, and a packet-owned array repeats them."""
     document = zarr_v3_metadata()
     document["dimension_names"] = ["unit", "sample", "channel"]
     add_array(packet_root, declared=["sharding_indexed", "blosc"], document=document)
@@ -289,7 +289,7 @@ def test_a_packet_owned_array_without_dimension_names_is_caught(packet_root):
 
 
 def test_a_referenced_array_may_name_its_axes_otherwise(packet_root):
-    """The axes table governs an external array's names, which its producer chose (Part 03 §6.5)."""
+    """The axes table governs an external array's names, which its producer chose (Part 03 §6.4)."""
     document = zarr_v3_metadata()
     del document["dimension_names"]
     root = add_array(packet_root, declared=["blosc", "sharding_indexed"], document=document, external=True)

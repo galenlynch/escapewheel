@@ -240,7 +240,7 @@ def retain(root: Path, superseded: Mapping[str, Any], amended: Mapping[str, Any]
 def store_registries(
     documents: Iterable[Mapping[str, Any]], root: Path, *, staging: Path | None = None
 ) -> tuple[dict[str, dict[str, str]], list[str]]:
-    """Store core and every extension as Part 03 §3.3 requires, returning their descriptors.
+    """Store core and every extension as Part 03 §3.2 requires, returning their descriptors.
 
     The digest covers the exact serialized bytes (Part 04 §10). A registry ID and version that
     the packet's current or a retained manifest already binds is reused where the digest

@@ -55,6 +55,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "orphan_manifest_session": ("error", "core.sessions.manifest_sessions_match"),
     "bad_type": ("error", "schema.column_type"),
     "extension_bad_type": ("error", "schema.column_type"),
+    "unsigned_type": ("error", "schema.column_type"),
     "missing_column": ("error", "schema.column_absent"),
     "undeclared_column": ("error", "schema.column_undeclared"),
     "extension_undeclared_column": ("error", "schema.column_undeclared"),

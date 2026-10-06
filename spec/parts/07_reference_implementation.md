@@ -80,7 +80,7 @@ These are properties of the reference implementation and the libraries it uses, 
   65,536-row sample and keeping the smallest costs about **0.4 s** for a whole packet against a
   467 s build, so cost is not what refuses it: a measured choice records no reason for itself, and
   it differs between a `--sample` build and a full one. Counting each column instead, as
-  Part 03 §5.5's rules do, costs 0.12 s to 0.20 s a packet and states its reason in the count.
+  Part 10 §2.13's rules do, costs 0.12 s to 0.20 s a packet and states its reason in the count.
 - **Its reader projects a constant rather than joining for it.** It adds session identity to a
   view as a scalar expression over `session_id`. An engine can prune a projection a query does not
   select; it generally cannot prune a join whose output might filter or duplicate rows.

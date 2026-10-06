@@ -100,7 +100,7 @@ class ResourceUnreadableError(ResourceError):
 
 
 class UnsupportedCodecError(ResourceError):
-    """The reader cannot decode a codec one resource uses (Part 03 §6.4).
+    """The reader cannot decode a codec one resource uses (Part 03 §6.3).
 
     Raised when the resource's values are asked for, never when the packet opens, so only that
     resource fails.

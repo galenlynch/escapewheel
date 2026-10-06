@@ -9,7 +9,7 @@ from .session import content
 from .writing import digest, edit_manifest, listing, write_packet
 
 #: The reference writer's default and sharded pipelines, both inside the v3 reader floor, and its
-#: delta-filtered one, outside it (Part 03 §6.4).
+#: delta-filtered one, outside it (Part 03 §6.3).
 BLOSC = {
     "name": "blosc",
     "configuration": {
@@ -45,7 +45,7 @@ PIPELINES = {
 #: The axes every catalogued array has unless a variant says otherwise.
 AXES = ("unit", "sample")
 
-#: Part 03 §6.3's numeric form for an axis that is only an order: position k is k.
+#: Part 02 §12.11's numeric form for an axis that is only an order: position k is k.
 ORDER_ONLY = {"origin_value": 0.0, "step_value": 1.0, "coordinate_unit": "1"}
 
 
@@ -53,7 +53,7 @@ def zarr_metadata(codecs: list[dict], shape: tuple = (2, 3), dimension_names: tu
     """A Zarr v3 array with no chunk written, so every element is its fill value.
 
     Its metadata is all a floor assessment or an axis check reads, and the corpus needs no Zarr
-    library to write it. Part 03 §6.5 has a packet-owned array name its axes.
+    library to write it. Part 03 §6.4 has a packet-owned array name its axes.
     """
     document = {
         "zarr_format": 3,
@@ -72,7 +72,7 @@ def zarr_metadata(codecs: list[dict], shape: tuple = (2, 3), dimension_names: tu
 
 
 def catalogue_arrays(tables: dict[str, list[dict]], names: list[str], axes: tuple = AXES) -> None:
-    """Catalogue one array per name, as `core.<name>`, each axis only an order (Part 03 §6.3)."""
+    """Catalogue one array per name, as `core.<name>`, each axis only an order (Part 02 §12.11)."""
     tables["core.array_assets"] = [
         {"session_id": "s001", "array_asset_id": name, "resource_id": f"core.{name}"} for name in names
     ]
@@ -122,7 +122,7 @@ LABELLED_SHAPE = (2, 4, 3)
 LABELLED_AXES = ("unit", "channel", "sample")
 
 #: Each unit's contacts along the channel axis. The second unit has two, so its last two
-#: positions are padding, which is what the one positive variant holds (Part 03 §6.3).
+#: positions are padding, which is what the one positive variant holds (Part 02 §12.11).
 LABELLED_CONTACTS = {
     1: ("elec_000", "elec_001", "elec_003", None),
     2: ("elec_001", "elec_003", None, None),

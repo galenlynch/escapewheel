@@ -82,8 +82,8 @@ STEPS = [
         set(),
         {"core.unit_coordinate_values"},
     ),
-    ("Part 03 §6.3 + core.array_labels", set(), {"core.array_labels"}),
-    ("Part 03 §6.3 + analysis.array_labels", set(), {"analysis.array_labels"}),
+    ("Part 02 §12.11 + core.array_labels", set(), {"core.array_labels"}),
+    ("Part 02 §12.11 + analysis.array_labels", set(), {"analysis.array_labels"}),
     ("Part 02 §12.10 + core.sidecars", set(), {"core.sidecars"}),
     ("Part 02 §12.10 + core.sidecar_scopes", set(), {"core.sidecar_scopes"}),
 ]

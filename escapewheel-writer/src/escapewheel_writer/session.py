@@ -123,7 +123,7 @@ class Context:
         adapter puts this on declare no other.
     clocks : dict
         Clock ID to that clock's `core.clocks` row, for a source placing an array axis on one.
-        An axis advances in ticks (Part 03 §6.3), so a step cannot be derived without the rate, and
+        An axis advances in ticks (Part 02 §12.11), so a step cannot be derived without the rate, and
         the row is what carries it.
     stores : dict
         Resolved source root and source-cache location to the open store. Three adapters in a

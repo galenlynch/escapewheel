@@ -1,4 +1,4 @@
-"""Check a physical-profile descriptor (Part 03 §1) and the overriding orders it declares (Part 03 §5.4)."""
+"""Check a physical-profile descriptor (Part 03 §2.1) and the overriding orders it declares (Part 03 §5.4)."""
 
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ def check_physical_profile(
 
 
 def _misplaced_orders(mappings: Mapping[str, Any], interfaces: Mapping[str, Any]) -> list[str]:
-    """Only the interface storing tables has a row order to override (Part 03 §1)."""
+    """Only the interface storing tables has a row order to override (Part 03 §2.1)."""
     return [
         f"interface {name!r} declares overriding_orders but does not store tables"
         for name, entry in interfaces.items()

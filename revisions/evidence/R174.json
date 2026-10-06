@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "revision": "R174",
+  "based_on": "8e218b9193592bf69634bed803cbb95d52016ac6",
+  "clauses": {
+    "R174 \u00a73.1": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-descriptor-conformance"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_descriptor.py::test_the_schema_identifier_is_0_4_0_and_a_0_3_0_descriptor_fails"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/tools/checkers/descriptor.py",
+          "escapewheel-reader/src/escapewheel_reader/descriptor.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "No guide cites the moved paragraphs by section."
+      }
+    },
+    "R174 \u00a73.2": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-portable-directory-layout"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "No checker looked for the file, and a stray is already outside packet content."
+      },
+      "implementations": {
+        "unchanged": "No writer writes the file or refuses it."
+      },
+      "documentation": {
+        "unchanged": "No guide names the file."
+      }
+    },
+    "R174 \u00a73.3": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-table-encoding"
+        },
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_tables.py::test_a_packet_owned_column_off_the_type_table_is_at_the_wrong_type[unsigned-int64]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_tables.py::test_a_packet_owned_column_off_the_type_table_is_at_the_wrong_type[json-annotated]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_tables.py::test_a_packet_owned_column_off_the_type_table_is_at_the_wrong_type[millis-timestamp]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_tables.py::test_an_external_column_elsewhere_in_its_family_is_reported_at_info_only[millis-timestamp]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_tables.py::test_an_external_column_outside_its_family_is_at_the_wrong_type[text-for-int64]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_tables.py::test_an_external_column_outside_its_family_is_at_the_wrong_type[local-time-timestamp]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_tables.py::test_every_column_of_the_valid_packet_is_at_its_type_tables_type"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/shim/tables.py",
+          "escapewheel-validator/src/escapewheel_validator/registry_types.py",
+          "escapewheel-validator/src/escapewheel_validator/check_table.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R174 \u00a73.4": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-parquet-reader-floor"
+        },
+        {
+          "path": "spec/parts/10_performance_notes.md",
+          "anchor": "ew-encoding-choice"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "Every encoding in the floor is conforming, so no packet distinguishes guidance from a recommendation."
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/encoding.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/docs/source/design.md",
+          "escapewheel-writer/docs/source/performance.md"
+        ]
+      }
+    },
+    "R174 \u00a73.5": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-array-axis-coordinates"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "The rules move unchanged, and the existing axis cases still distinguish them."
+      },
+      "implementations": {
+        "unchanged": "No behaviour depends on which part states the rules; implementations cite the new section."
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md",
+          "escapewheel-reader/docs/source/design.md"
+        ]
+      }
+    },
+    "R174 \u00a73.6": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-array-codecs"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/parts/03_portable_physical_profile.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_build.py::test_part_03_states_each_zarr_floor_exactly_as_the_descriptor_does"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/tools/build.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "No guide restates the floors."
+      }
+    },
+    "R174 \u00a73.7": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-array-metadata-placement"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "No array-asset table declares dtype or shape, so no packet distinguishes the removed sentence."
+      },
+      "implementations": {
+        "unchanged": "No implementation reads dtype or shape from a table."
+      },
+      "documentation": {
+        "unchanged": "No guide cites the removed paragraph."
+      }
+    }
+  }
+}

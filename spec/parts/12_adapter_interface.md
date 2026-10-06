@@ -117,7 +117,7 @@ A resource an adapter owns and has no rows for MUST arrive empty rather than not
 An adapter's arrays MUST NOT cross as rows. A dense array crosses by identity and location. Where
 the packet will own the array, a build MUST supply a location under the staging area (Part 05 §2),
 and an adapter reached by a protocol MUST write the array there, so promotion (Part 05 §6) moves it
-to its final path by a rename within one filesystem ([Part 03 §3.4](03_portable_physical_profile.md#ew-staging-area)). An adapter a build runs in process MAY instead hand the build the
+to its final path by a rename within one filesystem ([Part 03 §3.3](03_portable_physical_profile.md#ew-staging-area)). An adapter a build runs in process MAY instead hand the build the
 array's values, and the build writes the array there. Where the array is external (Part 03 §8.2), a build
 supplies no location and the producer returns the URI its source already has.
 
@@ -172,7 +172,7 @@ Nothing else crosses for a payload. A build MUST NOT require an adapter to state
 media type, size, or digest; it takes `size_bytes` and `digest` from the staged bytes (Part 03 §10) and
 records no format. A payload in `opaque_location` is staged by its delivery, as a packet-owned array
 in `array_location` is (Part 05 §2), and promotion moves it to its final path by a rename within one
-filesystem (Part 03 §3.4).
+filesystem (Part 03 §3.3).
 
 An adapter a build runs in process MAY instead hand the build each payload's resource ID, name, and
 bytes, or for a directory the path of each file relative to it and that file's bytes. The build then

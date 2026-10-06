@@ -111,7 +111,7 @@ def test_with_no_values_only_the_declaration_decides():
 
 
 def test_an_inefficient_encoding_is_reported(tmp_path, registry, minimal):
-    """Part 03 §5.5's rules are good guesses, and a column it guesses wrong about is said aloud.
+    """Part 10 §2.13's rules are good guesses, and a column it guesses wrong about is said aloud.
 
     Collected and never read is how this mechanism failed first: the notes were appended in two
     places and emitted in none, so the report existed and reached nobody. Both halves are pinned
@@ -130,7 +130,7 @@ def test_inefficient_finds_a_column_encoded_worse_than_it_could_be(registry):
     """An ascending integer is what delta exists for, so calling it anything else is reported.
 
     The check is over what a caller says it chose, not over what a rule would choose, so a writer
-    that ignores Part 03 §5.5 entirely still learns what its choice cost.
+    that ignores Part 10 §2.13 entirely still learns what its choice cost.
     """
     ramp = pa.table({"t_tick": pa.array(range(1_000_000, 1_020_000), type=pa.int64())})
     assert inefficient("core.pretend", ramp, delta=[], plain=["t_tick"]), "delta is far smaller"

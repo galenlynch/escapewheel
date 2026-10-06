@@ -249,10 +249,10 @@ choice for each of the 14 referred later.
 | R128 §3.8 | the core registry | weakened | B | a packet resource's validation state MUST NOT change its declaration-derived content class or canonicality |
 | R129 §3.1 | the core registry | weakened | D | a generic profile checker MUST enforce those invariants without embedding this profile's identifiers or assignments |
 | R129 §3.1 | the core registry | missing | A | the generic checker MUST require every listed anchor to resolve uniquely in Part 03 to the clause that defines the entry's meaning |
-| R129 §3.11 | Part 03 §6.5 | weakened | F | those physical facts MUST NOT be duplicated merely to make physical validation possible |
+| R129 §3.11 | Part 03 §6.4 | weakened | F | those physical facts MUST NOT be duplicated merely to make physical validation possible |
 | R129 §3.3 | Part 03 §5.1 | weakened | D | a writer MUST NOT emit such a table, and a validator that can inspect the resource MUST reject one |
 | R129 §3.4 | Part 03 §6.1 | weakened | D | a reader or validator MUST determine the variant from the Zarr metadata's `zarr_format` when it accesses or physically assesses the resource |
-| R129 §3.4 | Part 03 §6.4 | weakened | B | a conforming reader MUST expose logical dense-array values for every valid v2 resource whose metadata matches a floor pattern |
+| R129 §3.4 | Part 03 §6.3 | weakened | B | a conforming reader MUST expose logical dense-array values for every valid v2 resource whose metadata matches a floor pattern |
 | R129 §3.5 | the core registry | missing | A | an implementation MAY support additional upstream features without changing the descriptor or packet |
 | R129 §3.7 | Part 05 §14.3 | missing | A | the failing reader MUST identify the missing support |
 | R129 §3.9 | the core registry | weakened | B | lack of a recognized payload format or specialized decoder MUST NOT by itself invalidate the resource |

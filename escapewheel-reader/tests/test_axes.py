@@ -1,4 +1,4 @@
-"""Describing a dense array's axes and scaling from the packet's tables (Part 03 §6.3)."""
+"""Describing a dense array's axes and scaling from the packet's tables (Part 02 §12.11)."""
 
 from fractions import Fraction
 

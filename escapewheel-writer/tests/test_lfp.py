@@ -16,7 +16,7 @@ def nwb(tmp_path):
 
 
 def test_the_time_axis_is_ticks_on_the_probes_own_clock(nwb):
-    """Part 03 §6.3: three integers replace 7,983,750 float64 timestamps, and 24 is derived not assumed."""
+    """Part 02 §12.11: three integers replace 7,983,750 float64 timestamps, and 24 is derived not assumed."""
     axis = lfpfixture.source(nwb).records()["core.array_dimensions"][0]
     assert axis["clock_id"] == lfpfixture.CLOCK
     assert (axis["origin_tick"], axis["step_tick_num"], axis["step_tick_den"]) == (0, 24, 1)
@@ -51,7 +51,7 @@ def test_a_non_integer_decimation_is_refused(nwb):
 
 
 def test_the_channel_axis_is_labelled_with_electrodes(nwb):
-    """LFP keeps every fourth contact, so the axis cannot be a range (Part 03 §6.3)."""
+    """LFP keeps every fourth contact, so the axis cannot be a range (Part 02 §12.11)."""
     axis = lfpfixture.source(nwb).records()["core.array_dimensions"][1]
     assert axis["coordinate_resource"] == "core.electrodes"
     assert "depends_on_axis_index" not in axis
@@ -82,7 +82,7 @@ def test_nwb_volts_is_recorded_as_its_ucum_code(nwb):
 
 
 def test_the_reference_declares_zarr_v2_and_its_codec(nwb):
-    """Part 03 §6.1: only an external resource may be v2, and Part 03 §6.4 declares its codecs per resource."""
+    """Part 03 §6.1: only an external resource may be v2, and Part 03 §6.3 declares its codecs per resource."""
     array = lfpfixture.source(nwb).external_arrays()["core.45883-1.lfp"]
     assert array.physical_profile == "zarr_v2"
     assert array.codecs == ("blosc",)

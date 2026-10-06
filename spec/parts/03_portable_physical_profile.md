@@ -11,25 +11,7 @@ This part incorporates `artifacts/physical_profile.schema.json` and
 `artifacts/physical_profiles/escapewheel-portable-v0.1.json`. The schema owns the reusable closed
 shape. The descriptor owns the profile's exact identifiers, kind-to-interface mapping, interface
 forms, ownership compatibility, variants, reader floors, floor roles, overriding orders, and
-anchors. This prose owns their meaning and actor obligations. A conforming distributed copy MUST
-pass the schema and the generic cross-member checker at a packaging or equivalent conformance
-boundary; an implementation MAY cache that result and MUST NOT revalidate an unchanged bundled
-descriptor for each packet. The generic cross-member checker MUST enforce the requirements this
-part places on a descriptor's members, and MUST NOT rely on this profile's identifiers or
-assignments to do so: a descriptor that satisfies the schema and differs from the incorporated one
-only in those is judged by the same requirements. No check verifies the second obligation, since
-this specification incorporates one descriptor.
-
-The physical-profile schema's `$id`, and the `$schema` value it requires of a descriptor, are
-`https://escapewheel.org/schemas/physical-profile/0.4.0`, and the portable descriptor's `$schema`
-names it. `overriding_orders` is a member only of the interface the descriptor's `kind_interfaces`
-maps `table` to, and the generic cross-member checker MUST refuse it on any other interface.
-
-Each descriptor interface and variant lists `anchors`, which the schema requires to be a nonempty
-array of distinct canonical `ew-` identifiers. Each anchor MUST name a section of this part that
-defines the entry's meaning, and the generic cross-member checker MUST refuse a descriptor any of
-whose anchors does not resolve exactly once in this part. No checker verifies that the section an
-anchor names defines the entry's meaning.
+anchors. This prose owns their meaning and actor obligations.
 
 The portable physical profile defined by this part is identified by
 `escapewheel-portable-v0.1`.
@@ -77,6 +59,29 @@ alone neither makes the upstream representation malformed nor decides packet con
 MAY expose the logical values of a resource that uses a valid feature outside its interface's
 floor, and doing so changes neither the descriptor nor the packet.
 
+<a id="ew-descriptor-conformance" data-spec-anchor="canonical"></a>
+### 2.1 Descriptor conformance
+
+A conforming distributed copy MUST pass the schema and the generic cross-member checker at a
+packaging or equivalent conformance boundary; an implementation MAY cache that result and MUST
+NOT revalidate an unchanged bundled descriptor for each packet. The generic cross-member checker MUST enforce the requirements this
+part places on a descriptor's members, and MUST NOT rely on this profile's identifiers or
+assignments to do so: a descriptor that satisfies the schema and differs from the incorporated one
+only in those is judged by the same requirements. No check verifies the second obligation, since
+this specification incorporates one descriptor.
+
+The physical-profile schema's `$id`, and the `$schema` value it requires of a descriptor, are
+`https://escapewheel.org/schemas/physical-profile/0.4.0`, and the portable descriptor's `$schema`
+names it. `overriding_orders` is a member only of the interface the descriptor's `kind_interfaces`
+maps `table` to, and the generic cross-member checker MUST refuse it on any other interface.
+
+Each descriptor interface and variant lists `anchors`, which the schema requires to be a nonempty
+array of distinct canonical `ew-` identifiers. Each anchor MUST name a section of this part that
+defines the entry's meaning, and the generic cross-member checker MUST refuse a descriptor any of
+whose anchors does not resolve exactly once in this part. No checker verifies that the section an
+anchor names defines the entry's meaning.
+
+<a id="ew-portable-directory-layout" data-spec-anchor="canonical"></a>
 ## 3. Directory layout
 
 <a id="ew-portable-packet-layout" data-spec-anchor="canonical"></a>
@@ -99,7 +104,7 @@ packet_root/
     <resource_id>/  <name>                  a packet-owned opaque resource under its own name
 
   registries/
-    <registry_id>/  <version>.json.gz       bound registries (§3.3)
+    <registry_id>/  <version>.json.gz       bound registries (§3.2)
 
   manifests/        <packet_version>.json   superseded manifests
 
@@ -108,13 +113,8 @@ packet_root/
 
 The manifest MUST record the actual layout. A reader MUST resolve resources through the manifest and MUST NOT infer them from paths.
 
-<a id="ew-portable-forbidden-files" data-spec-anchor="canonical"></a>
-### 3.2 Files that MUST NOT be written
-
-A writer MUST NOT write `schemas/semantic_version.txt`, which would restate `semantic_standard_version`, a field the manifest is required to carry. No checker verifies this.
-
 <a id="ew-portable-bound-registries" data-spec-anchor="canonical"></a>
-### 3.3 Bound registries
+### 3.2 Bound registries
 
 A writer MUST store each registry that the manifest binds under
 [Part 04 §8](04_packet_catalog.md#ew-packet-registry-bindings) at its descriptor's `path`, as
@@ -129,7 +129,7 @@ anywhere else. A descriptor's `path` names a file for the immutability, amendmen
 of §8.1 and [Part 05 §15](05_validation_and_import.md#ew-packet-amendment).
 
 <a id="ew-staging-area" data-spec-anchor="canonical"></a>
-### 3.4 The staging area
+### 3.3 The staging area
 
 In this profile a build's staging area ([Part 05 §2](05_validation_and_import.md#ew-import-pipeline))
 is the directory `staging/` directly under the packet root, and a writer MUST stage an import or an
@@ -175,6 +175,37 @@ relative URI resolves under that prefix
 A table MUST be exactly one object containing one valid Parquet file. A directory, prefix, glob,
 explicit member set, or multi-file dataset MUST NOT realize a table in this profile. Compression
 SHOULD be Zstandard where available.
+
+A writer MUST write each column of a packet-owned table, of each logical type of
+Part 02 §5.1, with the Parquet physical type and
+logical type this table gives.
+
+| logical type | Parquet physical type | Parquet logical type |
+|---|---|---|
+| `int32` | `INT32` | none, or `INTEGER` with bit width 32 and signed |
+| `int64` | `INT64` | none, or `INTEGER` with bit width 64 and signed |
+| `float32` | `FLOAT` | none |
+| `float64` | `DOUBLE` | none |
+| `bool` | `BOOLEAN` | none |
+| `string` | `BYTE_ARRAY` | `STRING` |
+| `json_string` | `BYTE_ARRAY` | `STRING` |
+| `timestamp` | `INT64` | `TIMESTAMP` with `isAdjustedToUTC=true` and unit `MICROS` |
+| `date` | `INT32` | `DATE`, days since the Unix epoch |
+
+An external table's column may instead be at another type of its declared type's **family**:
+
+| family | its declared types | the Parquet types of the family |
+|---|---|---|
+| integer | `int32`, `int64` | `INT32` or `INT64`, with no logical type or with `INTEGER` of any bit width, signed or not |
+| float | `float32`, `float64` | `FLOAT` or `DOUBLE`, with no logical type |
+| boolean | `bool` | `BOOLEAN` |
+| text | `string`, `json_string` | `BYTE_ARRAY` with `STRING`, `ENUM` or `JSON` |
+| instant | `timestamp` | `INT64` with `TIMESTAMP`, `isAdjustedToUTC=true`, of any unit |
+| date | `date` | `INT32` with `DATE` |
+
+Such a column is outside the portability guarantee, as a valid feature outside a reader-only floor
+is (§2): a reader MAY expose its values as the declared type, and the column's type alone does not
+make the packet non-conforming. A column at a type outside its family is at the wrong type.
 
 A large table SHOULD use row groups sized for analytical scans. Part 10 carries the sizes measured for one.
 
@@ -247,7 +278,7 @@ A writer **SHOULD** start a new row group at each bucket boundary. A group cut a
 A reader MUST support footer-reported compressions `UNCOMPRESSED`, `SNAPPY`, `GZIP`, and `ZSTD`;
 encodings `PLAIN`, `RLE`, `RLE_DICTIONARY`, and `DELTA_BINARY_PACKED`; and data-page types
 `DATA_PAGE` and `DATA_PAGE_V2`, in a file whose footer and columns are not encrypted. A packet writer MUST keep every written
-table within that same floor and SHOULD use Zstd. It MUST configure its page type and absence of
+table within that same floor. It MUST configure its page type and absence of
 encryption before writing, inspect the footer afterwards, and refuse an outside-floor compression
 or encoding. `PLAIN_DICTIONARY` is valid upstream but outside this writer floor.
 
@@ -261,46 +292,7 @@ compression and encodings with the floor's `compressions` and `encodings`. It ne
 headers or determine data-page types. A validator that does not compare data-page types MUST state
 in its report that it did not assess them.
 
-A writer SHOULD choose the encoding of each integer, float, string, timestamp and date column from
-the column's declarations and from four counts over the rows it holds when it chooses: the rows,
-nulls included; the distinct non-null values; the runs, a run being a maximal sequence of equal
-values once nulls are set aside; and, for an integer, whether its non-null values never decrease.
-Where a writer writes a table whole the rows are the table's; where it streams a table,
-they are the row group it is about to write, or the first row group where the writer keeps one
-encoding for the whole file. The first of the four rules below that applies decides.
-
-1. A writer SHOULD write plain a column in which every row is null.
-2. A writer SHOULD dictionary-encode a column holding one distinct non-null value where it holds
-   50,000 rows or more, and below that SHOULD encode it with `DELTA_BINARY_PACKED` where it is an
-   integer and plain otherwise. A dictionary page costs its bytes in every row group,
-   and only a long row group repays them (Part 10 §2.8).
-3. An integer column is **ordered** where its name ends `_tick`; where it is the first column of its
-   table's sort order other than `session_id` and its role is `identifier`; where its role is
-   `structural_index` or `sequence_position` (Part 02 §8.1); where it is an `assigned` identifier
-   (Part 02 §8.2); or where its non-null values never decrease. A writer SHOULD encode an ordered
-   integer with `DELTA_BINARY_PACKED`, and SHOULD write it plain where it holds at least 50 rows for
-   each run. A declaration states no distribution, but it marks a column likely to climb
-   within groups, which no count over the whole column sees (Part 10 §2.9).
-4. A writer SHOULD dictionary-encode any other column, a float included, where it holds at least 50
-   rows for each distinct non-null value, and SHOULD write it plain otherwise. Repetition
-   is what a dictionary indexes, and no declaration says how often a value repeats (Part 10 §2.10).
-
-None of the four is the property it stands in for, so a writer MUST be able to override each per
-column, and every override MUST record what it measured and on what. An exception
-recording nothing cannot be re-judged when the data changes. A writer SHOULD refuse an exception
-naming a column no table declares, which is decidable with no packet in hand.
-
-A writer SHOULD report, at `info`, a column whose encoding costs more than **1.5x** the smallest
-available to it, measured over a sample of the rows it wrote. It SHOULD measure a column
-by its own compressed chunks rather than by a file carrying it, and SHOULD judge a string, timestamp
-or date column between a dictionary and plain, the two encodings the rules choose among for it.
-These rules are good guesses, and the report is how the author of a table learns that
-theirs is one a guess misses. A report and not a refusal: every encoding above is permitted, so a
-packet is conforming whichever it uses.
-
-Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
-precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
-
+<a id="ew-array-storage" data-spec-anchor="canonical"></a>
 ## 6. Array storage
 
 <a id="ew-array-version" data-spec-anchor="canonical"></a>
@@ -321,62 +313,8 @@ Array axes are stored order, slowest-varying first. An array's codec chain MUST 
 
 A reader MUST NOT treat the order in which its language enumerates an array's axes as the declared order: `axis_index` counts axes in stored order, and a column-major binding enumerates them in reverse. The client adapts; the format does not. No check observes this.
 
-<a id="ew-array-axis-coordinates" data-spec-anchor="canonical"></a>
-### 6.3 Axis coordinates
-
-Every axis MUST declare its coordinates in the dense-array declaration's `array.axes_resource`, in
-one of its declared coordinate forms. A regularly sampled axis declares an origin tick, a step,
-and a length rather than storing per-sample values.
-
-A step MAY be rational, declared as a numerator and denominator: a 30 ms bin at 31,250 Hz is 937.5 ticks.
-
-
-An axis MUST declare no more than one coordinate form: two descriptions of the same positions can disagree and nothing would say which governs.
-
-A rational step is a numerator and a denominator. `step_tick_den`, where present, MUST be positive, the numerator MUST be present wherever an origin is, and the pair SHOULD be in lowest terms so two packets describing the same axis describe it identically.
-
-Where an array declares both a sampling rate and a regular tick axis, the two describe the same thing and MUST agree. The rate is retained as a validated denormalization, not as a second source of truth.
-
-A writer MUST declare an axis whose positions carry only their order in the numeric form, with
-`step_value` 1, `coordinate_unit` `1` and `origin_value` the number its source gives the first
-position, or 0 where the source numbers none. A principal-component axis is one. No rule can tell
-an order-only axis from a measured one, so nothing checks this.
-
-No form labels a position with text. An axis whose positions are categories that are not rows of a
-resource is declared order-only, or the array is split along it into one array per category, each
-naming its category in `semantic_type`
-([Part 01 §3.17](01_semantic_standard.md#ew-array-asset-concept)).
-
-An axis is **labelled** where its row declares `coordinate_resource`, and each of its positions
-then stands for the row its label names, or for none. Its labels are rows of the table that
-`coordinate_resource`'s `discriminates_via` names: `core.array_labels` for a core array and
-`analysis.array_labels` for an analysis one. A label's `label_id` is the identifier of the row its
-position stands for, in the resource `coordinate_resource` names, and a null `label_id` stands for
-no row, which is how a packet states padding. A writer MUST NOT write a null `label_id` for a
-position of a labelled axis whose row it could not determine. No checker verifies this, since a
-packet holds nothing that separates such a position from padding.
-
-An axis is **dependent** where its row declares `depends_on_axis_index`: which row each of its
-positions stands for changes along the axis `depends_on_axis_index` names, and each label row's
-`depends_on_position_index` is the position on that axis. A packet MUST satisfy each of these:
-
-- a labelled axis has one label row at each of its positions, and a dependent axis one at each of
-  its positions for each position of the axis it depends on;
-- a dependent axis is labelled;
-- the axis a dependent axis names is not itself dependent, which excludes an axis naming itself;
-- every label row of an axis that is not dependent has `depends_on_position_index` 0; and
-- no two label rows of one axis at one `depends_on_position_index` hold one non-null `label_id`, so
-  a row is at most one position.
-
-A core axis MUST name a `core` resource. A label must resolve, and an analysis resource may be
-deleted ([Part 06 §2](06_analysis_layer.md#ew-analysis-rules)), which would leave a core array's
-positions standing for nothing. A core axis has no need to name an extension resource: a kind of
-interval an extension specialises is a row of `core.intervals`. Only a core axis is limited to core
-resources, so an analysis array may instead label a category axis with a resource whose rows are
-the categories, such as an extension's table.
-
 <a id="ew-array-codecs" data-spec-anchor="canonical"></a>
-### 6.4 Codecs
+### 6.3 Codecs
 
 A writer MAY use any codec permitted by the applicable Zarr specification, subject to §6.2's
 `transpose` prohibition and the regular-grid rule. The resource's own metadata is the sole owner of
@@ -397,6 +335,7 @@ admits a sharded pipeline whose shard holds one of those sequences, under the ru
 conforming reader MUST expose the logical values of every valid v3 array whose pipeline matches the
 floor. The descriptor's `interfaces.zarr.variants.v3.reader_floor` is exactly:
 
+<!-- BEGIN GENERATED ZARR V3 FLOOR -->
 ```json
 {
   "codec_sequences": [
@@ -411,6 +350,7 @@ floor. The descriptor's `interfaces.zarr.variants.v3.reader_floor` is exactly:
   }
 }
 ```
+<!-- END GENERATED ZARR V3 FLOOR -->
 
 A reader or validator comparing a v3 array's metadata with the floor MUST apply these rules. A
 codec matches a codec pattern when its `name` equals the pattern's and every configuration member
@@ -447,6 +387,7 @@ Any other valid v2 array is outside the floor. In a v2 pattern, JSON null matche
 stated member compares equal, and unmentioned configuration members do not participate. The
 descriptor's `interfaces.zarr.variants.v2.reader_floor` is exactly:
 
+<!-- BEGIN GENERATED ZARR V2 FLOOR -->
 ```json
 {
   "metadata_patterns": [
@@ -457,6 +398,7 @@ descriptor's `interfaces.zarr.variants.v2.reader_floor` is exactly:
   "dtype_byte_orders": ["<", "|"]
 }
 ```
+<!-- END GENERATED ZARR V2 FLOOR -->
 
 A reader or validator comparing a v2 array's metadata with the floor MUST apply these rules. A
 conforming reader MUST expose the logical values of every valid v2 array that the v2 reader floor
@@ -464,20 +406,8 @@ admits. The descriptor declares the Zarr interface `materialized`, `logical_valu
 with floor role `reader_only`; v3 permits packet and external ownership, while v2 permits external
 ownership only. It does not enumerate optional codecs.
 
-The physical-profile schema declares the Zarr floors with these definitions:
-
-| definition | shape |
-|---|---|
-| `codec_pattern` | closed object; requires `name`, a string; admits `configuration` only where `name` is `blosc`, and there `configuration` is a closed object requiring `cname`, a string |
-| `codec_sequence` | array of one or more `codec_pattern` |
-| `sharding_floor` | closed object; requires `index_codec_sequences`, an array of one or more distinct `codec_sequence`, and `index_location`, `start` or `end` |
-| `zarr_v3_floor` | closed object; requires `codec_sequences`, an array of one or more distinct `codec_sequence`; admits `sharding`, a `sharding_floor` |
-| `zarr_v2_floor` | closed object; requires `metadata_patterns`, an array of one or more distinct closed objects, each requiring `filters`, null, and `compressor`, null or a closed object requiring `id`, a string, and admitting `cname`, a string; requires `dtype_byte_orders`, an array of one or more distinct byte-order characters, each one of the three a type string may begin with |
-
 <a id="ew-array-metadata-placement" data-spec-anchor="canonical"></a>
-### 6.5 What the array declares, and what the tables declare
-
-`core.array_assets` MUST NOT carry dtype or shape. The Zarr array declares them, and restating them buys no otherwise-unavailable access.
+### 6.4 What the array declares, and what the tables declare
 
 The declaration-selected axes table owns axis names, since a Zarr v2 array has no field for them.
 A packet-owned array MUST carry Zarr v3 `dimension_names`, holding at each position the
@@ -535,7 +465,7 @@ an old version named from a file nothing ever named. A packet never amended reta
 carries no `manifests/` directory at all, so the common case costs nothing.
 
 A **stray** is a file under the packet root that no manifest ever named, that lies outside the
-staging area (§3.4), and that neither is listed by nor lies inside a directory listed by a promotion
+staging area (§3.3), and that neither is listed by nor lies inside a directory listed by a promotion
 record whose `packet_version` is unpublished ([Part 05 §6](05_validation_and_import.md#ew-import-commit)).
 
 <a id="ew-owned-resource-digests" data-spec-anchor="canonical"></a>
@@ -593,4 +523,4 @@ The application column states the extent to which this part invokes each externa
 | [Zarr v3 Zstandard codec specification](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/zstd/) | unversioned | `zstd` codec metadata object and configuration |
 | [Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html) | 2.0 | permitted external Zarr v2 arrays |
 | [RFC 8878](https://www.rfc-editor.org/info/rfc8878) | exact | Zstandard framing |
-| [RFC 1951](https://www.rfc-editor.org/info/rfc1951) | exact | DEFLATE compression of a bound registry (§3.3) |
+| [RFC 1951](https://www.rfc-editor.org/info/rfc1951) | exact | DEFLATE compression of a bound registry (§3.2) |

@@ -3,7 +3,7 @@
 `../artifacts/logical_schemas.json` is the incorporated core registry: the machine-readable
 declaration of core and analysis resources under [Part 02](../parts/02_core_logical_schemas.md).
 This directory holds its source, `core/`, and this guide to it. A packet binds the registry as
-registry `core`, stored at `registries/core/<version>.json.gz` (Part 04 §8, Part 03 §3.3).
+registry `core`, stored at `registries/core/<version>.json.gz` (Part 04 §8, Part 03 §3.2).
 
 <!-- BEGIN generated: counts -->
 ```

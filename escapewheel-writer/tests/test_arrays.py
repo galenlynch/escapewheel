@@ -4,7 +4,7 @@ from tests.builders import waveform_values
 
 
 def test_a_codec_outside_the_reader_floor_is_written(tmp_path):
-    """Part 03 §6.4: the Zarr reader floor is not a writer ceiling."""
+    """Part 03 §6.3: the Zarr reader floor is not a writer ceiling."""
     from escapewheel_writer.arrays import declared_codecs
     from escapewheel_writer.bindings import StagedArray
 

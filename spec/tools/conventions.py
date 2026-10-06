@@ -18,10 +18,10 @@ NAMING_EXCEPTIONS = {
     "core.units.n_spikes": "a count, not a plural duration",
     "core.source_files.size_bytes": "a quantity in bytes, not a plural of `size_byte`",
     "core.media_frames.pts": "the container's own initialism for one timestamp, not a plural (Part 01 §3.18)",
-    # Part 03 §6.3: `_kind` reads as a category, and this holds the table whose rows an axis's
+    # Part 02 §12.11: `_kind` reads as a category, and this holds the table whose rows an axis's
     # positions stand for, which its role says and its name cannot.
     "core.array_dimensions.coordinate_resource": "names the table whose rows the axis's positions stand for, "
-    "not a kind of thing (Part 03 §6.3)",
+    "not a kind of thing (Part 02 §12.11)",
     "analysis.array_dimensions.coordinate_resource": "as core.array_dimensions.coordinate_resource",
 }
 

@@ -151,7 +151,7 @@ REFERENCE_ROWS = {
         (
             "[RFC 1952](https://www.rfc-editor.org/info/rfc1952)",
             "exact",
-            "gzip member format of a bound registry (Part 03 §3.3) and CRC-32 (Part 04 §4.3)",
+            "gzip member format of a bound registry (Part 03 §3.2) and CRC-32 (Part 04 §4.3)",
         ),
         (
             "[Apache Parquet format](https://github.com/apache/parquet-format), including [logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)",
@@ -225,7 +225,7 @@ REFERENCE_ROWS = {
         (
             "[RFC 1951](https://www.rfc-editor.org/info/rfc1951)",
             "exact",
-            "DEFLATE compression of a bound registry (§3.3)",
+            "DEFLATE compression of a bound registry (§3.2)",
         ),
     ),
     "04": (

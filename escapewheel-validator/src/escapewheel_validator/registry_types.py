@@ -1,7 +1,8 @@
 """What a registry document's declarations mean to the layers that read them.
 
 - :func:`registry_meta_schema` -- the meta-schema a registry document is checked against.
-- :data:`ARROW_TYPES` -- each registry column type's Arrow type, for the schema comparison.
+- :data:`PARQUET_TYPES`, :func:`in_family` -- each registry column type's Parquet types, for the schema
+  comparison.
 - :data:`DDL` -- each registry column type's DuckDB type, for a typed empty relation.
 - :func:`visible_declarations` -- core's declarations with those of the extensions beside it.
 
@@ -15,18 +16,41 @@ from collections.abc import Mapping, Sequence
 from importlib import resources as importlib_resources
 from typing import Any
 
-#: Registry column type -> the Arrow type a conforming writer must emit (Part 03 §5.5).
-ARROW_TYPES = {
-    "string": "string",
-    "int32": "int32",
-    "int64": "int64",
-    "float32": "float",
-    "float64": "double",
-    "bool": "bool",
-    "date": "date32[day]",
-    "timestamp": "timestamp[us, tz=UTC]",
-    "json_string": "string",
+#: A Parquet column's type: its physical type, and its logical type as a tuple whose first member
+#: names it and whose others are the parameters Part 03 §5.1 distinguishes.
+ParquetType = tuple[str, tuple[Any, ...]]
+
+#: Registry column type -> the Parquet types a packet-owned table's column takes (Part 03 §5.1).
+PARQUET_TYPES: dict[str, frozenset[ParquetType]] = {
+    "int32": frozenset({("INT32", ("NONE",)), ("INT32", ("INT", 32, True))}),
+    "int64": frozenset({("INT64", ("NONE",)), ("INT64", ("INT", 64, True))}),
+    "float32": frozenset({("FLOAT", ("NONE",))}),
+    "float64": frozenset({("DOUBLE", ("NONE",))}),
+    "bool": frozenset({("BOOLEAN", ("NONE",))}),
+    "string": frozenset({("BYTE_ARRAY", ("STRING",))}),
+    "json_string": frozenset({("BYTE_ARRAY", ("STRING",))}),
+    "timestamp": frozenset({("INT64", ("TIMESTAMP", True, "MICROS"))}),
+    "date": frozenset({("INT32", ("DATE",))}),
 }
+
+
+def in_family(declared: str, observed: ParquetType) -> bool:
+    """Whether an external table's column is at a Parquet type of its declared type's family (Part 03 §5.1)."""
+    physical, logical = observed
+    match declared:
+        case "int32" | "int64":
+            return physical in {"INT32", "INT64"} and logical[0] in {"NONE", "INT"}
+        case "float32" | "float64":
+            return physical in {"FLOAT", "DOUBLE"} and logical == ("NONE",)
+        case "bool":
+            return physical == "BOOLEAN"
+        case "string" | "json_string":
+            return physical == "BYTE_ARRAY" and logical[0] in {"STRING", "ENUM", "JSON"}
+        case "timestamp":
+            return physical == "INT64" and logical[:2] == ("TIMESTAMP", True)
+        case "date":
+            return physical == "INT32" and logical == ("DATE",)
+    return False
 
 
 def visible_declarations(

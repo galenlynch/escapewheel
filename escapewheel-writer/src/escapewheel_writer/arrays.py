@@ -4,7 +4,7 @@ Part 03 §6.1 requires a packet-owned array to be v3, with a regular chunk grid;
 only for one the packet references. Part 03 §6.2 forbids the `transpose` codec -- axes are stored
 in the order the packet declares them, and a column-major binding enumerates them in reverse
 rather than the format rearranging itself. Zarr v3 requires the `fill_value` every array is
-written with, and Part 03 §6.4 leaves the byte order to the writer, which takes zarr-python's
+written with, and Part 03 §6.3 leaves the byte order to the writer, which takes zarr-python's
 default.
 
 - :func:`write_zarr` -- write one staged array and return its size on disk in bytes.
@@ -122,7 +122,7 @@ def declared_codecs(spec: StagedArray) -> tuple[str, ...]:
 
     Derived from the layout, not from `codecs` alone, because **sharding is a codec**. An array
     written with a shard uses `sharding_indexed` whether or not the caller named it. The stored
-    metadata, not this list, is what Part 03 §6.4 compares with the reader floor.
+    metadata, not this list, is what Part 03 §6.3 compares with the reader floor.
 
     Parameters
     ----------
@@ -186,7 +186,7 @@ def write_zarr(path: Path, spec: StagedArray) -> int:
     Raises
     ------
     UsageError
-        If a declared codec is outside Part 03 §6.4's permitted set, or the shard is not a whole
+        If a declared codec is outside Part 03 §6.3's permitted set, or the shard is not a whole
         number of chunks in every axis -- a partial shard is not a regular grid.
     """
     import zarr

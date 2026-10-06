@@ -65,7 +65,7 @@ def parquet_floor() -> Mapping[str, Any]:
 
 
 def zarr_floor_admits(metadata: Mapping[str, Any], reader_floor: Mapping[str, Any]) -> bool:
-    """Whether a Zarr array's own metadata lies within a variant's reader floor (Part 03 §6.4).
+    """Whether a Zarr array's own metadata lies within a variant's reader floor (Part 03 §6.3).
 
     Parameters
     ----------
@@ -83,7 +83,7 @@ def zarr_floor_admits(metadata: Mapping[str, Any], reader_floor: Mapping[str, An
 
 
 def zarr_floor_outside(metadata: Mapping[str, Any], reader_floor: Mapping[str, Any]) -> tuple[str, ...]:
-    """Name the metadata members that place a Zarr array outside a variant's reader floor (Part 03 §6.4).
+    """Name the metadata members that place a Zarr array outside a variant's reader floor (Part 03 §6.3).
 
     The floor's members drive the comparison, so a restated floor needs no code. A v2 floor lists
     `metadata_patterns`, compared with `filters` and `compressor`, and `dtype_byte_orders`,
@@ -142,7 +142,7 @@ def _pipeline_admitted(pipeline: Sequence[Any], reader_floor: Mapping[str, Any])
 
 
 def _type_strings(dtype: Any) -> Iterator[str]:
-    """Yield a v2 `dtype`'s type strings, through the fields of a structured type (Part 03 §6.4)."""
+    """Yield a v2 `dtype`'s type strings, through the fields of a structured type (Part 03 §6.3)."""
     if isinstance(dtype, str):
         yield dtype
     elif isinstance(dtype, list) and all(isinstance(field, list) and len(field) >= 2 for field in dtype):

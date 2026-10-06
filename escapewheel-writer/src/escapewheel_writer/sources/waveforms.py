@@ -531,7 +531,7 @@ class WaveformSource:
         return rows
 
     def array_labels(self) -> list[dict[str, Any]]:
-        """`core.array_labels`, every position of both labelled axes of each array (Part 03 §6.3).
+        """`core.array_labels`, every position of both labelled axes of each array (Part 02 §12.11).
 
         A label is the name the writer numbers, so it resolves in the numbering of the resource the
         axis names. The deviation is cut on the mean's support and repeats its rows.

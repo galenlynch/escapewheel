@@ -50,7 +50,7 @@ until step 7 has finished.
 The **staging area** is the location a build or an amendment owns while it runs and into which it
 writes what it will publish. What it holds belongs to no packet until promotion moves it to its
 final location. A physical profile names where its staging area lies; the portable profile's is
-[Part 03 §3.4](03_portable_physical_profile.md#ew-staging-area).
+[Part 03 §3.3](03_portable_physical_profile.md#ew-staging-area).
 
 A writer MAY empty or remove a staging area:
 
@@ -561,9 +561,14 @@ report at `error`, naming the resource and the column:
   declaration does not declare
   ([Part 02 §6.1](02_core_logical_schemas.md#ew-undeclared-columns)).
 
-Apart from the timestamp of
-[Part 03 §5.5](03_portable_physical_profile.md#ew-parquet-reader-floor), no part fixes which Parquet
-type represents each declared type. Each finding concerns one resource, so
+A column of a packet-owned table is at a type other than its declared type where it is not at the
+Parquet physical and logical type that
+[Part 03 §5.1](03_portable_physical_profile.md#ew-table-encoding)'s type table gives that type, and
+a column of an external table where it is at a type outside its declared type's family. For an
+external table's column at another type of its family, a validator MUST instead report one finding
+at `info` under the check ID `physical.outside_type_mapping`, naming the resource, the column, its
+declared type and its observed Parquet physical and logical type, and MUST NOT report that column
+under `schema.column_type`. Each finding concerns one resource, so
 [§9.5](#ew-verdict-composition) attributes it to the registry whose declaration the resource's entry
 names. The shim declares as the inputs of each check the packet manifest, which binds the registry
 holding the declaration, and the table resource, so §15.4 re-runs each check on every amendment. A
@@ -583,14 +588,14 @@ For each dense array whose metadata it reads, a validator MUST report at `error`
 
 A validator finds an axis's label rows in the table that the `discriminates_via` of the axes
 table's `coordinate_resource` names
-([Part 03 §6.3](03_portable_physical_profile.md#ew-array-axis-coordinates)), and its names under
-[Part 03 §6.5](03_portable_physical_profile.md#ew-array-metadata-placement).
+([Part 02 §12.11](02_core_logical_schemas.md#ew-array-axis-coordinates)), and its names under
+[Part 03 §6.4](03_portable_physical_profile.md#ew-array-metadata-placement).
 
 A validator MUST assess floor membership for every packet-owned resource whose interface declares a
 reader floor, and for every external one whose format-owned metadata it reads under
 [Part 04 §5.3](04_packet_catalog.md#ew-external-resource-verification). Membership is judged under
 [Part 03 §5.5](03_portable_physical_profile.md#ew-parquet-reader-floor) for Parquet and
-[Part 03 §6.4](03_portable_physical_profile.md#ew-array-codecs) for Zarr. For each assessed resource
+[Part 03 §6.3](03_portable_physical_profile.md#ew-array-codecs) for Zarr. For each assessed resource
 using a feature outside its floor, it MUST report one finding under the check ID
 `physical.outside_reader_floor`, naming:
 

@@ -1,4 +1,4 @@
-"""The physical-profile descriptor checker (Part 03 §1) and the overriding-order conditions (Part 03 §5.4)."""
+"""The physical-profile descriptor checker (Part 03 §2.1) and the overriding-order conditions (Part 03 §5.4)."""
 
 import copy
 import json
@@ -44,7 +44,7 @@ def test_generic_checker_rejects_cross_member_drift():
 
 
 def test_the_schema_accepts_the_v3_floor_of_patterns_and_sharding():
-    """Part 03 §6.4 states the descriptor's v3 floor exactly."""
+    """Part 03 §6.3 states the descriptor's v3 floor exactly."""
     floor = _v3_floor(DESCRIPTOR)
     assert floor["codec_sequences"][-1] == [{"name": "bytes"}, {"name": "blosc", "configuration": {"cname": "zstd"}}]
     assert floor["sharding"]["index_location"] == "end"
@@ -71,7 +71,7 @@ def test_the_checker_rejects_a_descriptor_naming_the_old_schema():
 
 
 def test_the_schema_identifier_is_0_4_0_and_a_0_3_0_descriptor_fails():
-    """Part 03 §1 states the identifier the descriptor's `$schema` must name."""
+    """Part 03 §2.1 states the identifier the descriptor's `$schema` must name."""
     assert SCHEMA["$id"] == "https://escapewheel.org/schemas/physical-profile/0.4.0"
     descriptor = _descriptor()
     descriptor["$schema"] = "https://escapewheel.org/schemas/physical-profile/0.3.0"
@@ -79,7 +79,7 @@ def test_the_schema_identifier_is_0_4_0_and_a_0_3_0_descriptor_fails():
 
 
 def test_the_schema_accepts_the_v2_floor_of_patterns_and_byte_orders():
-    """Part 03 §6.4 states the descriptor's v2 floor exactly."""
+    """Part 03 §6.3 states the descriptor's v2 floor exactly."""
     assert _v2_floor(DESCRIPTOR) == {
         "metadata_patterns": [
             {"filters": None, "compressor": None},
@@ -97,7 +97,7 @@ def test_the_schema_accepts_the_v2_floor_of_patterns_and_byte_orders():
     ids=["absent", "empty", "unknown-character", "repeated"],
 )
 def test_the_schema_requires_a_v2_floor_to_list_byte_order_characters(byte_orders):
-    """Part 03 §6.4: one or more distinct members of `<`, `>` and `|`, and never omitted."""
+    """Part 03 §6.3: one or more distinct members of `<`, `>` and `|`, and never omitted."""
     descriptor = _descriptor()
     if byte_orders is None:
         del _v2_floor(descriptor)["dtype_byte_orders"]
@@ -113,7 +113,7 @@ def test_the_schema_admits_every_byte_order_character():
 
 
 def test_the_schema_refuses_byte_orders_on_the_v3_floor():
-    """Part 03 §6.4: a v3 array's byte order is its `bytes` codec's, which the v3 floor does not bound."""
+    """Part 03 §6.3: a v3 array's byte order is its `bytes` codec's, which the v3 floor does not bound."""
     descriptor = _descriptor()
     _v3_floor(descriptor)["dtype_byte_orders"] = ["<", "|"]
     assert any(error.startswith(_V3_FLOOR) for error in _check(descriptor))

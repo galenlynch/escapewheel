@@ -15,7 +15,7 @@ Part 05 treats validation as the act of importing: copying or converting bytes o
 and a resource is imported once it passes the checks for its schema. `PacketWriter` therefore
 works in this order (Part 05 §2):
 
-1. it writes the normalized resources and the import's provenance under `staging/` (Part 03 §3.4);
+1. it writes the normalized resources and the import's provenance under `staging/` (Part 03 §3.3);
 2. it derives the analysis resources the caller asked for from the staged packet (Part 05 §8);
 3. it validates the whole staged packet in place;
 4. it records every path that promotion will create, then promotes the files to those paths
@@ -116,7 +116,7 @@ A writer does not invent a schema. `arrow` takes every column's type and presenc
 
 ## Encoding rules cover every table; exceptions are measured
 
-`encoding.choose` implements Part 03 §5.5's rules. The rules apply to any table the writer stages,
+`encoding.choose` implements Part 10 §2.13's rules. The rules apply to any table the writer stages,
 an extension's as much as core's, because Part 09 §5.6 lets a writer require no code of an
 extension. The exception tables name `core.*` and `analysis.*` columns only. An extension that has
 its own exceptions passes them to `PacketWriter`.

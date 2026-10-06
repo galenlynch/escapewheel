@@ -78,7 +78,7 @@ def build(label, dtype, chunks, codecs, shard, data):
     if shard is None:
         serializer, chunk_shape = [BytesCodec(), *codecs], chunks
     else:
-        # Part 03 §6.4 permits sharding_indexed: many small chunks inside few files.
+        # Part 03 §6.3 permits sharding_indexed: many small chunks inside few files.
         serializer, chunk_shape = (
             [ShardingCodec(chunk_shape=chunks, codecs=[BytesCodec(), *codecs])],
             shard,

@@ -1,4 +1,4 @@
-"""A packet's dense arrays as xarray objects, each axis carrying its coordinates (Part 03 §6.3).
+"""A packet's dense arrays as xarray objects, each axis carrying its coordinates (Part 02 §12.11).
 
 - :class:`EscapewheelBackend` -- the ``escapewheel`` engine of :func:`xarray.open_dataset` and
   :func:`xarray.open_datatree`.

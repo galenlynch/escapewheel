@@ -424,7 +424,7 @@ class ArrayResource:
 
         A remote array is read through Zarr, which needs the ``arrays`` extra and a backend for
         the URI's scheme. A local one is the JSON document itself, so shape, dtype, chunking
-        and codecs cost nothing and need no library at all -- which is the property Part 03 §6.5
+        and codecs cost nothing and need no library at all -- which is the property Part 03 §6.4
         protects and the reason `arrays` is an extra in the first place.
 
         Returns

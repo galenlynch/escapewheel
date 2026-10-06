@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import itertools
+import json
 from collections.abc import Mapping
 from typing import Any
 
@@ -24,7 +25,7 @@ from ..registry_document import (
     UCUM_URI,
     ucum_error,
 )
-from ..registry_types import ARROW_TYPES
+from ..registry_types import PARQUET_TYPES, ParquetType, in_family
 from ..report import ROW_CAP, Report
 from ..vocabulary import EvaluationStatus
 from .floors import check_parquet_floor
@@ -49,7 +50,7 @@ def check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> 
             continue
         present[resource_id] = handle
         for column in spec["columns"]:
-            _check_column(resource_id, column, schema, report)
+            _check_presence(resource_id, column, schema, report)
         declared_names = {column["name"] for column in spec["columns"]}
         for name in schema.names:
             if name not in declared_names:
@@ -71,34 +72,83 @@ def check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> 
                 detail=str(exc).splitlines()[0][:160],
             )
             continue
+        _check_types(handle.resource, spec["columns"], footer, report)
         check_parquet_floor(handle.resource, footer, report)
     return present
 
 
-def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, report: Report) -> None:
-    """Check one column's presence and type against the registry."""
-    if column["name"] not in schema.names:
-        if column["presence"] != "optional":
+def _check_presence(resource_id: str, column: Mapping[str, Any], schema: Any, report: Report) -> None:
+    """Report a `required` or `nullable` column the file does not hold."""
+    if column["name"] not in schema.names and column["presence"] != "optional":
+        report.add_about(
+            resource_id,
+            check_table.SCHEMA_COLUMN_ABSENT,
+            f"{resource_id}.{column['name']} absent (presence={column['presence']})",
+            column=column["name"],
+        )
+
+
+_TIME_UNITS = {"milliseconds": "MILLIS", "microseconds": "MICROS", "nanoseconds": "NANOS"}
+
+
+def parquet_type(column: Any) -> ParquetType:
+    """Return a footer column's physical type, and its logical type as Part 03 §5.1 compares it.
+
+    A dictionary is an encoding, not a type, so a dictionary-encoded string column is `STRING` here
+    as Parquet records it.
+    """
+    logical = json.loads(column.logical_type.to_json())
+    kind = str(logical["Type"]).upper()
+    if kind == "INT":
+        return column.physical_type, ("INT", logical["bitWidth"], logical["isSigned"])
+    if kind == "TIMESTAMP":
+        unit = _TIME_UNITS.get(logical["timeUnit"], str(logical["timeUnit"]))
+        return column.physical_type, ("TIMESTAMP", logical["isAdjustedToUTC"], unit)
+    return column.physical_type, (kind,)
+
+
+def _spelled(observed: ParquetType) -> str:
+    physical, logical = observed
+    if logical == ("NONE",):
+        return f"{physical} with no logical type"
+    if logical[0] == "INT":
+        return f"{physical} INTEGER({logical[1]}, {'signed' if logical[2] else 'unsigned'})"
+    if logical[0] == "TIMESTAMP":
+        return f"{physical} TIMESTAMP(isAdjustedToUTC={str(logical[1]).lower()}, {logical[2]})"
+    return f"{physical} {logical[0]}"
+
+
+def _check_types(resource: Any, columns: Any, footer: Any, report: Report) -> None:
+    """Compare each held column's Parquet type with Part 03 §5.1's type table or family (Part 05 §5.3).
+
+    A nested column has no single leaf of its name, and no declared type maps to one.
+    """
+    leaves = {footer.schema.column(i).path: footer.schema.column(i) for i in range(footer.num_columns)}
+    held = set(footer.schema.to_arrow_schema().names)
+    resource_id = resource.resource_id
+    for column in columns:
+        name, declared = column["name"], column["type"]
+        if name not in held:
+            continue
+        observed = parquet_type(leaves[name]) if name in leaves else None
+        if observed is not None and observed in PARQUET_TYPES[declared]:
+            continue
+        if observed is not None and resource.is_external and in_family(declared, observed):
             report.add_about(
                 resource_id,
-                check_table.SCHEMA_COLUMN_ABSENT,
-                f"{resource_id}.{column['name']} absent (presence={column['presence']})",
-                column=column["name"],
+                check_table.PHYSICAL_OUTSIDE_TYPE_MAPPING,
+                f"{resource_id}.{name} is {_spelled(observed)}, another type of its declared {declared}'s "
+                "family, outside the portability guarantee (Part 03 §5.1)",
+                [(name, declared, _spelled(observed))],
+                column=name,
             )
-        return
-    actual = schema.field(column["name"]).type
-    # A dictionary is an encoding, not a type. Parquet has no dictionary type at all: the column
-    # is BYTE_ARRAY/String either way, and only the Arrow schema pyarrow stores as metadata
-    # distinguishes them. Comparing the wrapper would reject a conforming file over how its
-    # writer chose to hold the column.
-    if pa.types.is_dictionary(actual):
-        actual = actual.value_type
-    if str(actual) != ARROW_TYPES[column["type"]]:
+            continue
         report.add_about(
             resource_id,
             check_table.SCHEMA_COLUMN_TYPE,
-            f"{resource_id}.{column['name']} is {actual}, registry declares {column['type']}",
-            column=column["name"],
+            f"{resource_id}.{name} is {_spelled(observed) if observed else 'a nested column'}, "
+            f"registry declares {declared}",
+            column=name,
         )
 
 

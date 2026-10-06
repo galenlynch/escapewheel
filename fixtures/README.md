@@ -81,6 +81,7 @@ prose description, and is not all of them.
 | `orphan_manifest_session` | manifest disagrees with `core.sessions` | `core.sessions.manifest_sessions_match` |
 | `bad_type` | `start_tick` written as int32 | `schema.column_type` |
 | `extension_bad_type` | the extension's `trial_id` written as float64 | `schema.column_type`, filed under `dynamic_foraging`, which fails while core passes |
+| `unsigned_type` | `start_tick` written as int64 annotated unsigned | `schema.column_type` |
 | `missing_column` | required column absent from the file | `schema.column_absent` |
 | `undeclared_column` | an all-null column `core.intervals` does not declare | `schema.column_undeclared` |
 | `extension_undeclared_column` | the same column added to the extension's table | `schema.column_undeclared`, filed under `dynamic_foraging` |
@@ -106,12 +107,12 @@ sharded, and delta-filtered pipelines; only the delta one is outside the v3 read
 external arrays and draws one `external.physical_unassessed` per array. Both packets conform,
 and `corpus.py` checks the count; `valid` must draw neither finding (Part 05 §5.3). Each array is
 a `zarr.json` with no chunk written, so no Zarr library is needed to build the corpus. Every axis
-of these five arrays is only an order, which Part 03 §6.3 declares in the numeric form.
+of these five arrays is only an order, which Part 02 §12.11 declares in the numeric form.
 
 `padded_labels` adds `core.waveform_mean`, a packet-owned array of two units by four channels by
 three samples. Its unit axis is labelled with `core.units`, and its channel axis with
 `core.electrodes` and depends on the unit axis; the second unit has two contacts, so its last two
-channel positions are rows with a null label (Part 03 §6.3). It is clean. Twelve variants each break
+channel positions are rows with a null label (Part 02 §12.11). It is clean. Twelve variants each break
 one rule of it, and each draws one error: `axis_without_form` and `axis_with_two_forms` break the
 sample axis's form; `label_naming_no_row` names `elec_009`; `label_on_unlabelled_axis` puts a label
 row on the sample axis; `label_missing` drops a padding row; `chained_dependency` has the unit axis
@@ -120,7 +121,7 @@ depend on the sample axis; `independent_label_off_zero` adds a unit label at
 `label_beyond_axis` adds a channel label at `position_index` 4, one past the axis's end;
 `dependent_axis_unlabelled` has the sample axis depend on the unit axis without labels;
 `label_outside_core` labels the unit axis with `analysis.array_assets`, every label null; and
-`array_without_dimension_names` writes the array without `dimension_names` (Part 03 §6.5).
+`array_without_dimension_names` writes the array without `dimension_names` (Part 03 §6.4).
 
 Eleven packets exercise how Part 02 §12.9 numbers intervals. `two_kinds_one_label` adds a tone of
 the fixture-local extension `cue`, labelled `"1"` as the first trial is, and numbers it first,

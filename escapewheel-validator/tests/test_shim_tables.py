@@ -1,32 +1,103 @@
 """A table's physical schema, and the values a registry constrains without a rule."""
 
+from types import SimpleNamespace
+
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 from escapewheel_reader import open_packet
 from packet_fixture import install_registry, read_registry
 
 from escapewheel_validator import Report, validate
-from escapewheel_validator.shim.tables import _check_column
+from escapewheel_validator.registry_types import PARQUET_TYPES
+from escapewheel_validator.shim.tables import _check_types, parquet_type
 
 from .builders import add_extension, read_table, rewrite_table, verdicts_of, with_column
 
 
-def test_a_dictionary_column_satisfies_a_string_declaration():
+def _types_of(tmp_path, declared, values, *, external=False):
+    """Write one column of `values`, declared `declared`, and return the findings its footer draws."""
+    path = tmp_path / "t.parquet"
+    pq.write_table(pa.table({"c": values}), path)
+    report = Report()
+    resource = SimpleNamespace(resource_id="core.t", is_external=external)
+    _check_types(resource, [{"name": "c", "type": declared}], pq.read_metadata(path), report)
+    return [(f.check, f.level) for f in report.findings]
+
+
+def test_a_dictionary_column_satisfies_a_string_declaration(tmp_path):
     """A dictionary is an encoding, not a type: Parquet stores BYTE_ARRAY/String either way."""
-    report = Report()
-    column = {"name": "session_id", "type": "string", "presence": "required"}
-    schema = pa.schema([pa.field("session_id", pa.dictionary(pa.int32(), pa.string()))])
-    _check_column("core.units", column, schema, report)
-    assert not report.findings
+    assert _types_of(tmp_path, "string", pa.array(["a", "a"]).dictionary_encode()) == []
 
 
-def test_a_dictionary_over_the_wrong_value_type_is_still_refused():
+def test_a_dictionary_over_the_wrong_value_type_is_still_refused(tmp_path):
     """Unwrapping the encoding must not unwrap the check."""
-    report = Report()
-    column = {"name": "session_id", "type": "string", "presence": "required"}
-    schema = pa.schema([pa.field("session_id", pa.dictionary(pa.int32(), pa.int64()))])
-    _check_column("core.units", column, schema, report)
-    assert [f.check for f in report.findings] == ["schema.column_type"]
+    found = _types_of(tmp_path, "string", pa.array([1, 1], pa.int64()).dictionary_encode())
+    assert found == [("schema.column_type", "error")]
+
+
+@pytest.mark.parametrize(
+    ("declared", "values"),
+    [
+        ("int64", pa.array([1], pa.uint64())),
+        ("json_string", pa.array(["{}"], pa.json_(pa.string()))),
+        ("timestamp", pa.array([1], pa.timestamp("ms", tz="UTC"))),
+    ],
+    ids=["unsigned-int64", "json-annotated", "millis-timestamp"],
+)
+def test_a_packet_owned_column_off_the_type_table_is_at_the_wrong_type(tmp_path, declared, values):
+    """Part 03 §5.1 gives a packet-owned column of each logical type one Parquet type."""
+    assert _types_of(tmp_path, declared, values) == [("schema.column_type", "error")]
+
+
+@pytest.mark.parametrize(
+    ("declared", "values"),
+    [
+        ("timestamp", pa.array([1], pa.timestamp("ms", tz="UTC"))),
+        ("int64", pa.array([1], pa.uint32())),
+        ("float32", pa.array([1.0])),
+        ("json_string", pa.array(["{}"], pa.json_(pa.string()))),
+    ],
+    ids=["millis-timestamp", "unsigned-int32", "double-for-float32", "json-annotated"],
+)
+def test_an_external_column_elsewhere_in_its_family_is_reported_at_info_only(tmp_path, declared, values):
+    """Part 05 §5.3: outside the portability guarantee, and never also `schema.column_type`."""
+    found = _types_of(tmp_path, declared, values, external=True)
+    assert found == [("physical.outside_type_mapping", "info")]
+
+
+@pytest.mark.parametrize(
+    ("declared", "values"),
+    [
+        ("int64", pa.array(["1"])),
+        ("timestamp", pa.array([1], pa.timestamp("us"))),
+        ("date", pa.array([1], pa.int32())),
+    ],
+    ids=["text-for-int64", "local-time-timestamp", "integer-for-date"],
+)
+def test_an_external_column_outside_its_family_is_at_the_wrong_type(tmp_path, declared, values):
+    assert _types_of(tmp_path, declared, values, external=True) == [("schema.column_type", "error")]
+
+
+def test_every_column_of_the_valid_packet_is_at_its_type_tables_type(packet_root):
+    """Part 03 §5.1, read from each table's footer rather than through the validator's findings."""
+    packet = open_packet(packet_root)
+    registry = read_registry(packet_root)["resources"]
+    checked = 0
+    for resource in packet.resources():
+        declaration = registry.get(resource.declaration_id, {}).get("table")
+        if declaration is None:
+            continue
+        footer = pq.read_metadata(packet.table_resource(resource.resource_id).path)
+        leaves = {footer.schema.column(i).path: footer.schema.column(i) for i in range(footer.num_columns)}
+        for column in declaration["columns"]:
+            if column["name"] in leaves:
+                assert parquet_type(leaves[column["name"]]) in PARQUET_TYPES[column["type"]], (
+                    resource.resource_id,
+                    column["name"],
+                )
+                checked += 1
+    assert checked
 
 
 def test_equal_varying_columns_are_reported_at_info_only(packet_root):

@@ -384,7 +384,7 @@ verifies either.
 
 This reading holds for such a column whatever registry declares it, except where a numbered part
 gives a null in that column another reading.
-[Part 03 §6.3](03_portable_physical_profile.md#ew-array-axis-coordinates) gives the only other
+[§12.11](#ew-array-axis-coordinates) gives the only other
 readings: a null `label_id` on `core.array_labels` or `analysis.array_labels` states padding, and a
 null `coordinate_resource`, `coordinate_array_asset_id` or `clock_id` on `core.array_dimensions` or
 `analysis.array_dimensions` says the axis does not take that coordinate form. A consequence a
@@ -711,7 +711,7 @@ invalid; this does not affect the packet manifest's resource-lineage `derived_fr
 
 A packet binds each registry that declares its resources under
 [Part 04 §8](04_packet_catalog.md#ew-packet-registry-bindings), and
-[Part 03 §3.3](03_portable_physical_profile.md#ew-portable-bound-registries) owns how the portable
+[Part 03 §3.2](03_portable_physical_profile.md#ew-portable-bound-registries) owns how the portable
 profile stores a bound registry.
 
 The incorporated registry meta-schema has `$id`
@@ -1351,6 +1351,59 @@ A scope row states only that the sidecar is about the named row. A consumer MUST
 a scope row any other relation between the two, such as that a session followed a protocol, that a
 coordinate was derived from an image, or that the named row depends on the sidecar. No checker
 verifies this, since what a consumer concludes leaves no trace in a packet.
+
+<a id="ew-array-axis-coordinates" data-spec-anchor="canonical"></a>
+### 12.11 An array's axis coordinates
+
+Every axis MUST declare its coordinates in the dense-array declaration's `array.axes_resource`, in
+one of its declared coordinate forms. A regularly sampled axis declares an origin tick, a step,
+and a length rather than storing per-sample values.
+
+A step MAY be rational, declared as a numerator and denominator: a 30 ms bin at 31,250 Hz is 937.5 ticks.
+
+An axis MUST declare no more than one coordinate form: two descriptions of the same positions can disagree and nothing would say which governs.
+
+A rational step is a numerator and a denominator. `step_tick_den`, where present, MUST be positive, the numerator MUST be present wherever an origin is, and the pair SHOULD be in lowest terms so two packets describing the same axis describe it identically.
+
+Where an array declares both a sampling rate and a regular tick axis, the two describe the same thing and MUST agree. The rate is retained as a validated denormalization, not as a second source of truth.
+
+A writer MUST declare an axis whose positions carry only their order in the numeric form, with
+`step_value` 1, `coordinate_unit` `1` and `origin_value` the number its source gives the first
+position, or 0 where the source numbers none. A principal-component axis is one. No rule can tell
+an order-only axis from a measured one, so nothing checks this.
+
+No form labels a position with text. An axis whose positions are categories that are not rows of a
+resource is declared order-only, or the array is split along it into one array per category, each
+naming its category in `semantic_type`
+([Part 01 §3.17](01_semantic_standard.md#ew-array-asset-concept)).
+
+An axis is **labelled** where its row declares `coordinate_resource`, and each of its positions
+then stands for the row its label names, or for none. Its labels are rows of the table that
+`coordinate_resource`'s `discriminates_via` names: `core.array_labels` for a core array and
+`analysis.array_labels` for an analysis one. A label's `label_id` is the identifier of the row its
+position stands for, in the resource `coordinate_resource` names, and a null `label_id` stands for
+no row, which is how a packet states padding. A writer MUST NOT write a null `label_id` for a
+position of a labelled axis whose row it could not determine. No checker verifies this, since a
+packet holds nothing that separates such a position from padding.
+
+An axis is **dependent** where its row declares `depends_on_axis_index`: which row each of its
+positions stands for changes along the axis `depends_on_axis_index` names, and each label row's
+`depends_on_position_index` is the position on that axis. A packet MUST satisfy each of these:
+
+- a labelled axis has one label row at each of its positions, and a dependent axis one at each of
+  its positions for each position of the axis it depends on;
+- a dependent axis is labelled;
+- the axis a dependent axis names is not itself dependent, which excludes an axis naming itself;
+- every label row of an axis that is not dependent has `depends_on_position_index` 0; and
+- no two label rows of one axis at one `depends_on_position_index` hold one non-null `label_id`, so
+  a row is at most one position.
+
+A core axis MUST name a `core` resource. A label must resolve, and an analysis resource may be
+deleted ([Part 06 §2](06_analysis_layer.md#ew-analysis-rules)), which would leave a core array's
+positions standing for nothing. A core axis has no need to name an extension resource: a kind of
+interval an extension specialises is a row of `core.intervals`. Only a core axis is limited to core
+resources, so an analysis array may instead label a category axis with a resource whose rows are
+the categories, such as an extension's table.
 
 <a id="ew-logical-schema-normative-references" data-spec-anchor="canonical"></a>
 ## 13. Normative references

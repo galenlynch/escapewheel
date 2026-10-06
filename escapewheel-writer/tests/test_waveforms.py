@@ -182,7 +182,7 @@ def test_every_unit_gets_exactly_one_primary(asset: Path) -> None:
 
 
 def test_the_unit_and_channel_axes_are_labelled_and_the_channel_axis_depends_on_the_unit(asset: Path) -> None:
-    """Which contact a channel position means is per unit, so no coordinate array can say it (Part 03 §6.3)."""
+    """Which contact a channel position means is per unit, so no coordinate array can say it (Part 02 §12.11)."""
     axes = {a["axis_index"]: a for a in _source(asset).array_dimensions()}
     assert (axes[0]["coordinate_resource"], axes[1]["coordinate_resource"]) == ("core.units", "core.electrodes")
     assert axes[1]["depends_on_axis_index"] == 0
@@ -217,7 +217,7 @@ def test_the_deviation_repeats_the_means_labels(asset: Path) -> None:
 
 
 def test_a_staged_array_names_its_axes(asset: Path) -> None:
-    """Part 03 §6.5: a packet-owned array's `dimension_names` are the axes' own names."""
+    """Part 03 §6.4: a packet-owned array's `dimension_names` are the axes' own names."""
     staged = _source(asset, sd=True).staged_arrays()
     assert {s.dimension_names for s in staged} == {("unit", "channel", "sample")}
 

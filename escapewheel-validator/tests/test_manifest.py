@@ -318,7 +318,7 @@ def test_a_registry_that_is_not_gzip_is_unreadable(packet_root):
 
 
 def test_a_registry_of_two_gzip_members_is_unreadable(packet_root):
-    """Part 03 §3.3: one member, so the digest covers exactly one decompressed stream."""
+    """Part 03 §3.2: one member, so the digest covers exactly one decompressed stream."""
     stored = _stored(packet_root)
     body = gzip.decompress(stored.read_bytes())
     half = len(body) // 2

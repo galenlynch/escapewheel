@@ -15,7 +15,7 @@ A section is confirmed where it states a rule the clause decided. It is rejected
 | R2 §8 | Part 02 `ew-registry-self-description` | Part 02 §9.1; Part 04 §8 |  |  |  |
 | R2 §9 | Part 02 `ew-registry-self-description` | Part 02 §9.4 |  |  |  |
 | R3 §2.1 | Part 03 `ew-parquet-reader-floor` | Part 02 §5.1; Part 02 §5.2; Part 02 §5.3; Part 02 §6 |  |  |  |
-| R3 §5.1 | Part 03 §6.2 | Part 03 §6.5 |  |  |  |
+| R3 §5.1 | Part 03 §6.2 | Part 03 §6.4 |  |  |  |
 | R3 §6 | Part 02 §8.1.1 |  |  | Part 05 §5.3 |  |
 | R3 §7.1 | Part 03 §6.1 | Part 03 §6.2 |  |  |  |
 | R6 §2 | Part 01 §3.9 | Part 03 §5.5 |  |  |  |
@@ -52,7 +52,7 @@ A section is confirmed where it states a rule the clause decided. It is rejected
 | R52 §2.4 | Part 05 `ew-incremental-revalidation` | Part 03 §8.1; Part 04 §4.3 |  |  | Part 05 `ew-incremental-revalidation` |
 | R56 §2.5 | Part 02 §8.4 |  |  | Part 01 §2.2 |  |
 | R57 §2.1 | Part 02 `ew-registry-self-description` |  |  |  | Part 02 `ew-registry-self-description` |
-| R62 §2.2 | Part 04 §3 | Part 03 §3.3 |  |  |  |
+| R62 §2.2 | Part 04 §3 | Part 03 §3.2 |  |  |  |
 | R71 §2.1 | Part 00 `ew-packet-content-classes` | Part 06 §2 |  |  |  |
 | R71 §2.2 | Part 05 `ew-error-policy` | Part 00 §4.1; Part 09 §3 | Part 05 `ew-error-policy` |  |  |
 | R72 §2.4 | Part 05 `ew-verdict-composition` | Part 09 §5.4 |  |  |  |
@@ -125,10 +125,10 @@ A section is confirmed where it states a rule the clause decided. It is rejected
 | R129 §3.2 | Part 03 `ew-portable-profile-technologies` |  |  | Part 03 §1 |  |
 | R129 §3.3 | Part 03 `ew-table-encoding`; Part 03 `ew-parquet-reader-floor` | Part 04 §6 |  |  |  |
 | R129 §3.4 | Part 03 `ew-array-version`; Part 03 `ew-array-codecs` | Part 03 §12 |  |  |  |
-| R129 §3.5 | Part 03 `ew-portable-profile-technologies` | Part 03 §6.4 |  |  |  |
+| R129 §3.5 | Part 03 `ew-portable-profile-technologies` | Part 03 §6.3 |  |  |  |
 | R129 §3.6 | Part 04 `ew-packet-identifiers`; Part 04 `ew-packet-resource-entry-fields`; Part 04 `ew-packet-codecs` |  |  | Part 05 §3.8 |  |
 | R129 §3.7 | Part 05 `ew-reader-registry-independence` | Part 03 §6.1 |  |  |  |
-| R129 §3.8 | Part 04 `ew-external-resource-verification`; Part 05 `ew-validation-shim` | Part 03 §6.4 |  |  |  |
+| R129 §3.8 | Part 04 `ew-external-resource-verification`; Part 05 `ew-validation-shim` | Part 03 §6.3 |  |  |  |
 | R129 §3.9 | Part 03 `ew-portable-profile-technologies` | Part 04 §5.3 |  |  |  |
 | R130 §3.11 | Part 02 `ew-registry-self-description`; Part 02 `ew-registry-conformance` |  |  | Part 04 §10 |  |
 | R130 §3.2 | Part 04 `ew-packet-identifiers`; Part 04 `ew-packet-resource-entry-fields`; Part 04 `ew-packet-validation-block` | Part 04 §7 |  |  |  |

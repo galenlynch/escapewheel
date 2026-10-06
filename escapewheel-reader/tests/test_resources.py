@@ -346,7 +346,7 @@ def test_a_uri_that_is_no_relative_reference_is_unreadable_naming_the_entry(pack
     assert packet.table("core.intervals").num_rows == 2
 
 
-# -- Part 03 §§6.1 and 6.4: the reader floor, and a codec this reader cannot decode ---------------
+# -- Part 03 §§6.1 and 6.3: the reader floor, and a codec this reader cannot decode ---------------
 
 
 def _zarr_json(store):
@@ -438,7 +438,7 @@ def _floor_vectors():
     ],
 )
 def test_the_descriptor_floor_classifies_written_v3_metadata(tmp_path, name):
-    """Part 03 §6.4 against zarr-python's own `zarr.json` for each pipeline Part 10 §5 measured."""
+    """Part 02 §12.11 against zarr-python's own `zarr.json` for each pipeline Part 10 §5 measured."""
     from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_admits
 
     layout, admitted = _floor_vectors()[name]
@@ -447,7 +447,7 @@ def test_the_descriptor_floor_classifies_written_v3_metadata(tmp_path, name):
 
 
 def test_the_descriptor_floor_reads_an_absent_index_location_as_end_and_nothing_after_a_shard(tmp_path):
-    """Part 03 §6.4: `end` is the sharding codec's default; a codec after the shard leaves the floor."""
+    """Part 02 §12.11: `end` is the sharding codec's default; a codec after the shard leaves the floor."""
     from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_admits
 
     floor = variant_for_zarr_format(3)["reader_floor"]
@@ -603,7 +603,7 @@ def test_a_floor_codec_this_installation_lacks_is_marked_within_the_floor(array_
     ],
 )
 def test_the_v2_floor_compares_only_the_members_a_pattern_states(filters, compressor, admitted):
-    """Part 03 §6.4: null matches only null, and unmentioned configuration does not participate."""
+    """Part 02 §12.11: null matches only null, and unmentioned configuration does not participate."""
     from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_admits
 
     metadata = {"zarr_format": 2, "shape": [4], "dtype": "<i2", "filters": filters, "compressor": compressor}
@@ -637,7 +637,7 @@ def _v2_vectors():
     "name", ["big_zstd", "little_zstd", "byte_zstd", "one_big_field_zstd", "big_lz4", "little_lz4"]
 )
 def test_the_descriptor_floor_classifies_written_v2_metadata(tmp_path, name):
-    """Part 03 §6.4 against zarr-python's own `.zarray`: every type string's byte order is compared."""
+    """Part 02 §12.11 against zarr-python's own `.zarray`: every type string's byte order is compared."""
     from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_outside
 
     dtype, compressor, stored_dtype, outside = _v2_vectors()[name]
@@ -648,7 +648,7 @@ def test_the_descriptor_floor_classifies_written_v2_metadata(tmp_path, name):
 
 
 def test_a_structured_v2_dtype_is_compared_through_its_nested_fields():
-    """Part 03 §6.4: a field's data type may itself be structured, and a field may carry a shape."""
+    """Part 02 §12.11: a field's data type may itself be structured, and a field may carry a shape."""
     from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_outside
 
     floor = variant_for_zarr_format(2)["reader_floor"]
@@ -673,7 +673,7 @@ def test_a_v2_document_without_a_usable_dtype_is_not_classified():
 
 
 def test_the_v3_floor_does_not_bound_the_bytes_codecs_byte_order(tmp_path):
-    """Part 03 §6.4: a floor sequence names `bytes` alone, so either `endian` matches it."""
+    """Part 02 §12.11: a floor sequence names `bytes` alone, so either `endian` matches it."""
     from zarr.codecs import BytesCodec
 
     from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_outside

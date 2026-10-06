@@ -140,16 +140,17 @@
 "12.8" = "A coordinate's atlas annotation"
 "12.9" = "Interval identity"
 "12.10" = "Sidecars"
+"12.11" = "An array's axis coordinates"
 "13" = "Normative references"
 
 ["03"]
 "1" = "Scope"
 "2" = "Descriptor and interfaces"
+"2.1" = "Descriptor conformance"
 "3" = "Directory layout"
 "3.1" = "Recommended layout"
-"3.2" = "Files that MUST NOT be written"
-"3.3" = "Bound registries"
-"3.4" = "The staging area"
+"3.2" = "Bound registries"
+"3.3" = "The staging area"
 "4" = "URI rules"
 "5" = "Table storage"
 "5.1" = "Encoding"
@@ -160,9 +161,8 @@
 "6" = "Array storage"
 "6.1" = "Version"
 "6.2" = "Axis order"
-"6.3" = "Axis coordinates"
-"6.4" = "Codecs"
-"6.5" = "What the array declares, and what the tables declare"
+"6.3" = "Codecs"
+"6.4" = "What the array declares, and what the tables declare"
 "7" = "Metadata placement"
 "8" = "Immutability"
 "8.1" = "Packet-owned bytes"
@@ -310,6 +310,7 @@
 "2.10" = "A count sees repetition that a declaration cannot"
 "2.11" = "The four rules leave 15 columns needing an exception"
 "2.12" = "A sampled build encodes its spike tables for the rows it holds"
+"2.13" = "Choosing an encoding"
 "3" = "Row groups"
 "4" = "The object store"
 "4.1" = "An endpoint plateaus at about 120 requests a second"
@@ -486,21 +487,27 @@ title = "Array asset"
 aliases = []
 
 [anchor.ew-array-axis-coordinates]
-part = "03"
-section = "6.3"
-title = "Axis coordinates"
+part = "02"
+section = "12.11"
+title = "An array's axis coordinates"
 aliases = []
 
 [anchor.ew-array-codecs]
 part = "03"
-section = "6.4"
+section = "6.3"
 title = "Codecs"
 aliases = []
 
 [anchor.ew-array-metadata-placement]
 part = "03"
-section = "6.5"
+section = "6.4"
 title = "What the array declares, and what the tables declare"
+aliases = []
+
+[anchor.ew-array-storage]
+part = "03"
+section = "6"
+title = "Array storage"
 aliases = []
 
 [anchor.ew-array-version]
@@ -671,6 +678,12 @@ section = "4.4"
 title = "When a source's delivery is complete"
 aliases = []
 
+[anchor.ew-descriptor-conformance]
+part = "03"
+section = "2.1"
+title = "Descriptor conformance"
+aliases = []
+
 [anchor.ew-device-concept]
 part = "01"
 section = "3.5"
@@ -681,6 +694,12 @@ aliases = []
 part = "02"
 section = "8.3"
 title = "Discriminator"
+aliases = []
+
+[anchor.ew-encoding-choice]
+part = "10"
+section = "2.13"
+title = "Choosing an encoding"
 aliases = []
 
 [anchor.ew-error-policy]
@@ -1117,14 +1136,14 @@ aliases = []
 
 [anchor.ew-portable-bound-registries]
 part = "03"
-section = "3.3"
+section = "3.2"
 title = "Bound registries"
 aliases = []
 
-[anchor.ew-portable-forbidden-files]
+[anchor.ew-portable-directory-layout]
 part = "03"
-section = "3.2"
-title = "Files that MUST NOT be written"
+section = "3"
+title = "Directory layout"
 aliases = []
 
 [anchor.ew-portable-packet-layout]
@@ -1483,7 +1502,7 @@ aliases = []
 
 [anchor.ew-staging-area]
 part = "03"
-section = "3.4"
+section = "3.3"
 title = "The staging area"
 aliases = []
 

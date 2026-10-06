@@ -48,6 +48,12 @@ SCHEMA_PACKETS = (
         Expected("error", "schema.column_type", registry="dynamic_foraging"),
     ),
     Packet(
+        "unsigned_type",
+        # Part 03 §5.1: a packet-owned int64 is signed, so the unsigned annotation is the wrong type.
+        variant(recast={"core.intervals": retyped("start_tick", pa.uint64())}),
+        Expected("error", "schema.column_type"),
+    ),
+    Packet(
         "missing_column",
         variant(recast={"core.intervals": without_column("clock_id")}),
         Expected("error", "schema.column_absent"),

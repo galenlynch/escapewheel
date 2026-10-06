@@ -44,7 +44,7 @@ class Plan:
         Files no manifest has ever named, outside every build's own paths (Part 03 §9).
         Reported, never removed.
     staged : tuple of Path
-        Files in the staging area (Part 03 §3.4), which the next build or amendment owns.
+        Files in the staging area (Part 03 §3.3), which the next build or amendment owns.
     promoting : tuple of Path
         Files under a path an unpublished promotion record lists (Part 05 §6), which the next
         build or amendment removes.

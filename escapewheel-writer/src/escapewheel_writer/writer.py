@@ -65,7 +65,7 @@ class PacketWriter:
     Parameters
     ----------
     registry : Mapping
-        The registry to write against. The packet binds and stores it (Part 04 §8, Part 03 §3.3), so the packet
+        The registry to write against. The packet binds and stores it (Part 04 §8, Part 03 §3.2), so the packet
         stays readable when the reference registry moves on.
     packet_id : str
         The packet's identifier.
@@ -103,7 +103,7 @@ class PacketWriter:
         #: resource to columns (`encoding.encodings`). Core names no extension table, so this is
         #: how one says what its measurements do without core being edited to know it exists.
         self._encoding_exceptions = dict(encoding_exceptions or {})
-        #: What Part 03 §5.5's rules cost where they guessed wrong, reported at commit. A rule is a
+        #: What Part 10 §2.13's rules cost where they guessed wrong, reported at commit. A rule is a
         #: good guess and an exception is how it is corrected, so a column more than
         #: `encoding.TOLERANCE` off its best is said aloud rather than silently paid for.
         self._encoding_notes: list[str] = []
@@ -419,7 +419,7 @@ class PacketWriter:
         """Add a dense array, to be written into the packet as Zarr v3.
 
         Packet-owned, so `zarr_v3` (Part 03 §6.1) -- v2 is permitted only for a resource the packet
-        references rather than owns. Its own metadata states its codecs (Part 03 §6.4), so a reader
+        references rather than owns. Its own metadata states its codecs (Part 03 §6.3), so a reader
         checks this array's pipeline before opening it and must not refuse the packet over a codec
         used only by something it never touches.
 
@@ -951,7 +951,7 @@ class PacketWriter:
             self._derived,
         )
         say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
-        # Part 03 §5.5's rules are good guesses, and a column one guesses wrong
+        # Part 10 §2.13's rules are good guesses, and a column one guesses wrong
         # about is said aloud rather than silently paid for. A report, not a refusal: every
         # encoding is permitted, so the packet is conforming whichever it got.
         for note in sorted(set(self._encoding_notes)):

@@ -163,7 +163,7 @@ COERCE = {
     "int64": _bounded(-(2**63), 2**63 - 1, "int64"),
 }
 
-#: Registry column type -> the Arrow type a conforming writer emits (Part 03 §5.5).
+#: Registry column type -> the Arrow type a conforming writer emits (Part 03 §5.1).
 #: Every one is a primitive: no struct, map, or list appears anywhere in the registry.
 ARROW: dict[str, pa.DataType] = {
     "string": pa.string(),

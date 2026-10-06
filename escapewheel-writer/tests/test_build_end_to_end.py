@@ -131,12 +131,12 @@ def test_every_session_scoped_table_names_its_session(committed):
 
 
 def test_the_writer_applies_its_own_encoding_rules(committed):
-    """Part 03 §5.5, read off the committed bytes rather than off the writer's intent.
+    """Part 10 §2.13, read off the committed bytes rather than off the writer's intent.
 
     Asserted against `encoding.encodings` rather than against a restatement of the rule, so this
     catches the writer failing to apply what it decided and not a disagreement about the decision.
     `fixtures/build.py` takes none of this path: `core.spike_events.t_tick` is `RLE_DICTIONARY` in
-    every corpus packet, which is what §5.5 tells a writer not to do.
+    every corpus packet, which is what §2.13 advises a writer against.
     """
     root, _ = committed
     from escapewheel_reader import open_packet

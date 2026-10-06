@@ -1,7 +1,7 @@
-"""How a column is encoded in Parquet, and what an extension may say about its own (Part 03 §5.5).
+"""How a column is encoded in Parquet, and what an extension may say about its own (Part 10 §2.13).
 
 - :func:`encodings` -- the columns of a table that take delta, and those that take no dictionary.
-- :func:`choose` -- the encoding one column takes under Part 03 §5.5's four rules.
+- :func:`choose` -- the encoding one column takes under Part 10 §2.13's four rules.
 - :func:`count`, :class:`Counts` -- the counts the rules read from a column's values.
 - :func:`declared_order` -- whether a column's declarations mark it as an integer likely to climb.
 - :func:`leading_identifier` -- the key column whose values ascend across the whole table.
@@ -162,7 +162,7 @@ def declared_order(name: str, column: Mapping[str, Any], leading: str | None) ->
 def choose(field: pa.Field[Any], column: Mapping[str, Any], leading: str | None, counts: Counts | None) -> str | None:
     """Return the encoding one column takes: `"delta"`, `"plain"`, or None for a dictionary.
 
-    Part 03 §5.5's four rules, over what the writer holds when it chooses, the first that applies
+    Part 10 §2.13's four rules, over what the writer holds when it chooses, the first that applies
     deciding. A column they leave well off its best encoding is an exception above or in a recipe.
 
     **No value is plain**: a dictionary page costs 27 bytes before it indexes anything.
@@ -248,7 +248,7 @@ def encodings(
     return delta, plain
 
 
-#: Part 03 §5.5's threshold: a column costing more than this times the smallest encoding the writer
+#: Part 10 §2.13's threshold: a column costing more than this times the smallest encoding the writer
 #: could have chosen for it is reported.
 TOLERANCE = 1.5
 

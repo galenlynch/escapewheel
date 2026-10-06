@@ -25,7 +25,7 @@ R3_COVERED = {
     "parameters",
     "metadata",
 }
-print("=== Part 03 §5.5 compliance: nested-typed columns in 02 ===")
+print("=== Part 03 §5.1 compliance: nested-typed columns in 02 ===")
 miss = []
 for tbl, cols in sorted(T.items()):
     for c, (ty, req) in cols.items():
@@ -36,7 +36,7 @@ for tbl, cols in sorted(T.items()):
             print(f"  {tbl + '.' + c:44s} {ty:34s} req={req}{flag}")
 print(f"\n  unlisted in R3 §2.2: {len(miss)}")
 
-print("\n=== timestamp/date columns (Part 03 §5.5 wall-clock rule) ===")
+print("\n=== timestamp/date columns (Part 03 §5.1 type table) ===")
 for tbl, cols in sorted(T.items()):
     for c, (ty, req) in cols.items():
         if "timestamp" in ty or ty.strip() == "date" or "date" in ty:
@@ -51,7 +51,7 @@ for tbl, cols in sorted(T.items()):
             k = "structural" if c in STRUCT else "source label" if c in LABEL else "UNCLASSIFIED"
             print(f"  {tbl + '.' + c:44s} {k}")
 
-print("\n=== tick columns (Part 03 §5.5 signed int64) ===")
+print("\n=== tick columns (Part 03 §5.1 signed int64) ===")
 bad = []
 for tbl, cols in sorted(T.items()):
     for c, (ty, req) in cols.items():

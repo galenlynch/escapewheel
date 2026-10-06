@@ -8,7 +8,9 @@ Informative. Part version **0.1.0**.
 This part carries what a packet's bytes make true under `escapewheel-portable-v0.1`: what an
 encoding costs, what a row group spans, what an object store answers. A number here supports a
 rule that lives elsewhere and states none of its own; where a measurement justifies a requirement,
-the requirement stays in the part that binds and this part carries the reading.
+the requirement stays in the part that binds and this part carries the reading. It also carries
+guidance a writer may follow and no reader can observe, such as how to choose each column's
+encoding within the Parquet floor ([§2.13](#ew-encoding-choice)).
 
 It does not replace the conformance probes that produced these numbers; it says what they mean.
 
@@ -30,7 +32,7 @@ currency; a number silently missing the field says nothing at all.
 
 Dictionary encoding is what a column declaring nothing else receives, and a monotonic ramp of 7.5 M
 distinct values is its worst case: `pts` is **96.9%** of the table as written. `DELTA_BINARY_PACKED`
-is defined for `INT32` and `INT64` alone, which is what Part 03 §5.5's rule for an ordered integer
+is defined for `INT32` and `INT64` alone, which is what §2.13's rule for an ordered integer
 turns on.
 
 ### 2.2 An integer identifier costs nothing to store and much to read
@@ -149,7 +151,7 @@ Columns 1.15x or more off their best in either packet (2026-09-15; toolchain as 
 | declarations of type, role, identity and vocabulary | 70 | 20 | 4 |
 | those, plus plain under 32 rows, or for one value under 50,000 rows | 34 | 12 | 4 |
 | counts alone | 26 | 11 | 9 |
-| Part 03 §5.5's, declared order then counts | 15 | 3 | 1 |
+| §2.13's, declared order then counts | 15 | 3 | 1 |
 
 The count holds from 50 to 200 rows a run, from 32 to 50 rows a value, and at every one-value
 threshold from 20,000 rows up, where bytes choose 50,000: at 500,000 the rules sit 913 kB over the
@@ -168,6 +170,47 @@ call for, within 1.04x of the best. `core.spike_events.amplitude` does not: each
 plain at 1.56x and 1.60x off its best. Every other column of both sampled packets lies within 1.15x
 of its best, so a sampled packet is encoded for the rows it holds and does not preview the full
 build's layout in the tables a sample shrinks.
+
+<a id="ew-encoding-choice" data-spec-anchor="canonical"></a>
+### 2.13 Choosing an encoding
+
+A packet is conforming whichever encoding within
+[Part 03 §5.5](03_portable_physical_profile.md#ew-parquet-reader-floor)'s floor it uses, and a
+reader decodes each the same way, so what follows is guidance for a writer. A writer that follows
+it chooses the encoding of each integer, float, string, timestamp and date column from the
+column's declarations and from four counts over the rows it holds when it chooses: the rows, nulls
+included; the distinct non-null values; the runs, a run being a maximal sequence of equal values
+once nulls are set aside; and, for an integer, whether its non-null values never decrease. Where a
+writer writes a table whole the rows are the table's; where it streams a table, they are the row
+group it is about to write, or the first row group where the writer keeps one encoding for the
+whole file. The first of the four rules below that applies decides.
+
+1. A column in which every row is null is written plain.
+2. A column holding one distinct non-null value is dictionary-encoded where it holds 50,000 rows or
+   more, and below that is encoded with `DELTA_BINARY_PACKED` where it is an integer and plain
+   otherwise. A dictionary page costs its bytes in every row group, and only a long row group
+   repays them (§2.8).
+3. An integer column is **ordered** where its name ends `_tick`; where it is the first column of its
+   table's sort order other than `session_id` and its role is `identifier`; where its role is
+   `structural_index` or `sequence_position` (Part 02 §8.1); where it is an `assigned` identifier
+   (Part 02 §8.2); or where its non-null values never decrease. An ordered integer is encoded with
+   `DELTA_BINARY_PACKED`, and written plain where it holds at least 50 rows for each run. A
+   declaration states no distribution, but it marks a column likely to climb within groups, which
+   no count over the whole column sees (§2.9).
+4. Any other column, a float included, is dictionary-encoded where it holds at least 50 rows for
+   each distinct non-null value, and written plain otherwise. Repetition is what a dictionary
+   indexes, and no declaration says how often a value repeats (§2.10).
+
+None of the four is the property it stands in for, so a writer following them lets its user
+override each per column, and has every override record what it measured and on what (§2.11). An
+exception recording nothing cannot be re-judged when the data changes. Such a writer refuses an
+exception naming a column no table declares, which is decidable with no packet in hand.
+
+It also reports, at `info`, a column whose encoding costs more than **1.5x** the smallest available
+to it, measured over a sample of the rows it wrote. It measures a column by its own compressed
+chunks rather than by a file carrying it, and judges a string, timestamp or date column between a
+dictionary and plain, the two encodings the rules choose among for it. The rules are good guesses,
+and the report is how the author of a table learns that theirs is one a guess misses.
 
 ## 3. Row groups
 
@@ -236,7 +279,7 @@ v2 array zarrs reports "Non-native byte order not supported", and Zarr.jl raises
 returns values summing to -2,964,480 where the array's sum to -365,664.
 
 A reading of this kind stops being true the moment a library moves, with nothing in the prose
-changing to show it. That is what Part 03 §6.4's per-version reader floor exists to state as a rule,
+changing to show it. That is what Part 03 §6.3's per-version reader floor exists to state as a rule,
 and what this table exists to explain.
 
 <a id="ew-materialization-measurements" data-spec-anchor="canonical"></a>

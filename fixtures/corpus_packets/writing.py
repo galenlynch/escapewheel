@@ -121,7 +121,7 @@ def write_packet(
 
 
 def bind(out, document):
-    """Store a registry as Part 03 §3.3 requires and return its manifest descriptor."""
+    """Store a registry as Part 03 §3.2 requires and return its manifest descriptor."""
     body = (json.dumps(document, indent=2) + "\n").encode()
     relative = f"registries/{document['registry_id']}/{document['registry_version']}.json.gz"
     (out / relative).parent.mkdir(parents=True, exist_ok=True)

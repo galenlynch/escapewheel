@@ -32,7 +32,7 @@ def _floor_level(resource: Any) -> Level:
 
 
 def check_zarr_floor(resource: Any, metadata: Mapping[str, Any], report: Report) -> None:
-    """Report an array whose own metadata places it outside its variant's reader floor (Part 03 §6.4).
+    """Report an array whose own metadata places it outside its variant's reader floor (Part 03 §6.3).
 
     One finding names every member that does so (Part 05 §5.3): the pipeline of a v3 array, and of a
     v2 array `filters` and `compressor`, `dtype`, or all three. An unrecognized codec is valid metadata
@@ -57,7 +57,7 @@ def check_zarr_floor(resource: Any, metadata: Mapping[str, Any], report: Report)
         check_table.PHYSICAL_OUTSIDE_READER_FLOOR.at(_floor_level(resource)),
         f"{resource.resource_id}: zarr {variant} "
         + "; ".join(f"{member} {value}" for member, value in observed)
-        + " is outside the reader floor of Part 03 §6.4",
+        + " is outside the reader floor of Part 03 §6.3",
         observed,
     )
 

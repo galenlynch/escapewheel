@@ -78,7 +78,7 @@ def test_the_array_reads_back_identically(tmp_path, registry, minimal):
 
 
 def test_a_written_array_carries_its_axes_names(tmp_path, registry, minimal):
-    """Part 03 §6.5: the names come from `core.array_dimensions`, so no source has to repeat them."""
+    """Part 03 §6.4: the names come from `core.array_dimensions`, so no source has to repeat them."""
     import zarr
 
     from escapewheel_writer.bindings import StagedArray
@@ -108,7 +108,7 @@ CONTACTS = {0: ("e2", "e3", None), 1: ("e1", None, None)}
 
 
 def _labelled_writer(registry, minimal, contacts=CONTACTS, electrodes=("e1", "e2", "e3")):
-    """A writer holding an array whose channel axis depends on its unit axis (Part 03 §6.3)."""
+    """A writer holding an array whose channel axis depends on its unit axis (Part 02 §12.11)."""
     import numpy as np
 
     from escapewheel_writer.bindings import StagedArray

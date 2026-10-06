@@ -23,7 +23,7 @@ from .manifest import RegistryBinding
 
 
 def gunzip_member(data: bytes) -> bytes:
-    """Decompress exactly one gzip member, ignoring its header fields (Part 03 §3.3).
+    """Decompress exactly one gzip member, ignoring its header fields (Part 03 §3.2).
 
     Parameters
     ----------

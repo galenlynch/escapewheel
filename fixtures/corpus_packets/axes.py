@@ -64,7 +64,7 @@ def label_outside_core(c):
         r["label_id"] = None
 
 
-#: Part 03 §6.3's labelled axes: one packet that pads, and one per rule a label or axis breaks.
+#: Part 02 §12.11's labelled axes: one packet that pads, and one per rule a label or axis breaks.
 AXIS_PACKETS = (
     Packet("padded_labels", with_waveform()),
     Packet(

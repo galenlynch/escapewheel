@@ -198,7 +198,7 @@ A unit's own peak contact needs none of this: `core.unit_electrodes.is_primary` 
 
 Each axis of a dense array declares its coordinates in one of four forms, in the table its
 declaration's `axes_resource` names: ticks on a clock, a numeric origin and step, a 1-D array of
-values, or labels naming rows of a resource (Part 03 §6.3). Reading them by hand has a plausible
+values, or labels naming rows of a resource (Part 02 §12.11). Reading them by hand has a plausible
 wrong answer at every step:
 
 - a label table holds every array's labels, and two arrays may share an `array_asset_id`, so an

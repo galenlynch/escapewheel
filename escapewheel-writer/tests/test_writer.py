@@ -154,7 +154,7 @@ def test_a_naive_timestamp_is_refused(tmp_path, registry, minimal):
 
 
 def test_the_registry_travels_with_the_packet(tmp_path, registry, minimal):
-    """Part 04 §10: the digest covers the serialized bytes, stored as one gzip member (Part 03 §3.3)."""
+    """Part 04 §10: the digest covers the serialized bytes, stored as one gzip member (Part 03 §3.2)."""
     import gzip
     import hashlib
 

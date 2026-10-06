@@ -408,11 +408,11 @@ Each has a proposal in `revisions/proposals/`, named in the table above; decisio
 ### 20. R3 §7.1's byte-order sentence
 
 - **Entry:** E2.
-- **Context:** "arrays MUST be little-endian" contradicts Part 03 §6.4's writer permission and
+- **Context:** "arrays MUST be little-endian" contradicts Part 03 §6.3's writer permission and
   was never in a part. The open draft `the-reader-floor-bounds-an-arrays-byte-order.md` withdraws
   it in terms.
 - **Decision:** none new. Accepting that draft closes the entry; its freshness gate is rerun
-  first, since Part 03 §6.4 gained a sentence on 2026-10-01.
+  first, since Part 03 §6.3 gained a sentence on 2026-10-01.
 
 ## The revision guide
 

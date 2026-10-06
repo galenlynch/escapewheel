@@ -259,7 +259,7 @@ class LickWheelSource:
                 chunks=(min(len(position), 60 * WHEEL_HZ),),
                 codecs=("blosc",),
                 # Stated here because a delivered array is written before any build reads the axes
-                # rows that would otherwise name them (Part 03 §6.5).
+                # rows that would otherwise name them (Part 03 §6.4).
                 dimension_names=("time",),
             )
         ]

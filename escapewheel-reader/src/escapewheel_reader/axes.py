@@ -1,4 +1,4 @@
-"""What a dense array's axes and values mean, read from the packet's tables (Part 03 §6.3).
+"""What a dense array's axes and values mean, read from the packet's tables (Part 02 §12.11).
 
 - :func:`describe` -- an array's :class:`ArrayDescription`, reading no values.
 - :class:`ArrayDescription` -- one :class:`Axis` per dimension, and any :class:`Scaling`.

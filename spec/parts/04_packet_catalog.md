@@ -331,7 +331,7 @@ nonempty segments separated by `/`, with no scheme, no leading `/`, no `\`, and 
 to `.` or `..`. Its `sha256` is the SHA-256 digest of the exact bytes of the registry document,
 without decoding, re-serialization, or any other canonicalization. The packet's physical profile
 owns how those bytes are stored;
-[Part 03 §3.3](03_portable_physical_profile.md#ew-portable-bound-registries) owns the portable
+[Part 03 §3.2](03_portable_physical_profile.md#ew-portable-bound-registries) owns the portable
 profile's storage.
 
 A manifest MUST contain exactly one descriptor with role `core` and MUST NOT give two descriptors

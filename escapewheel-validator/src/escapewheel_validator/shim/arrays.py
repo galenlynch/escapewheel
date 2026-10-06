@@ -101,7 +101,7 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, ArrayAxe
             resource.resource_id,
             check_table.ARRAY_RANK_DISAGREES_WITH_DIMENSIONS,
             f"{resource.resource_id} has rank {rank} but its declaration-selected axes resource "
-            f"gives axis_index {sorted(axes.names) or 'none'}; Part 03 §6.3 requires one row per stored axis",
+            f"gives axis_index {sorted(axes.names) or 'none'}; Part 02 §12.11 requires one row per stored axis",
         )
         return
     _report_axes(resource, shape, axes, _OWNED_AXIS_CHECKS, report)
@@ -111,7 +111,7 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, ArrayAxe
             resource.resource_id,
             check_table.ARRAY_DIMENSION_NAMES,
             f"{resource.resource_id} stores dimension_names {metadata.get('dimension_names')!r} where its axes "
-            f"resource names {names!r}; Part 03 §6.5 requires a packet-owned array to carry them",
+            f"resource names {names!r}; Part 03 §6.4 requires a packet-owned array to carry them",
         )
 
 
@@ -156,7 +156,7 @@ def check_packet_owned_arrays(packet: Packet, report: Report) -> None:
 
 @dataclass
 class ArrayAxes:
-    """What a packet's tables assert about one dense array's axes (Part 03 §6.3).
+    """What a packet's tables assert about one dense array's axes (Part 02 §12.11).
 
     Keyed by stored `axis_index`. `labels` holds each labelled axis's rows as
     (`depends_on_position_index`, `position_index`), and `channels` holds `core.array_channels`
@@ -284,7 +284,7 @@ def declared_axes(packet: Packet) -> dict[str, ArrayAxes]:  # noqa: C901
 
 
 class _AxisFault(Enum):
-    """One way an array's label and channel rows disagree with its shape (Part 03 §6.3)."""
+    """One way an array's label and channel rows disagree with its shape (Part 02 §12.11)."""
 
     LABEL_POSITION = auto()
     DEPENDS_ON_POSITION = auto()
@@ -335,11 +335,11 @@ def _axis_findings(shape: Sequence[int], axes: ArrayAxes) -> dict[_AxisFault, li
 
 
 _AXIS_MESSAGES = {
-    _AxisFault.LABEL_POSITION: "label row(s) name a position_index beyond the axis (Part 03 §6.3)",
+    _AxisFault.LABEL_POSITION: "label row(s) name a position_index beyond the axis (Part 02 §12.11)",
     _AxisFault.DEPENDS_ON_POSITION: (
-        "label row(s) name a depends_on_position_index beyond the axis depended on (Part 03 §6.3)"
+        "label row(s) name a depends_on_position_index beyond the axis depended on (Part 02 §12.11)"
     ),
-    _AxisFault.LABEL_MISSING: "position(s) of a labelled axis have no label row (Part 03 §6.3)",
+    _AxisFault.LABEL_MISSING: "position(s) of a labelled axis have no label row (Part 02 §12.11)",
     _AxisFault.CHANNEL_INDEX: "core.array_channels row(s) name a channel_index beyond their axis (Part 05 §5.3)",
 }
 
@@ -379,7 +379,7 @@ def _report_axes(
 def compare_shape(
     resource: Any, metadata: Mapping[str, Any], declared: Mapping[str, ArrayAxes], report: Report
 ) -> list[str]:
-    """Check an external array's stored shape against what the packet's tables assert (Part 03 §6.3).
+    """Check an external array's stored shape against what the packet's tables assert (Part 02 §12.11).
 
     This is the check that catches a change actually invalidating the packet. A re-generated
     array with a different channel count leaves its label rows naming positions that are not
@@ -397,7 +397,7 @@ def compare_shape(
             resource.resource_id,
             check_table.EXTERNAL_ARRAY_RANK,
             f"{resource.resource_id} is stored with rank {len(shape)} but its declaration-selected "
-            f"axes resource gives axis_index {sorted(axes.names)}; Part 03 §6.3 requires one row per stored axis",
+            f"axes resource gives axis_index {sorted(axes.names)}; Part 02 §12.11 requires one row per stored axis",
         )
         return ["rank"]
     _report_axes(resource, [int(n) for n in shape], axes, _EXTERNAL_AXIS_CHECKS, report)

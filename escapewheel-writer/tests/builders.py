@@ -65,7 +65,7 @@ def waveform_values(units=8, channels=4, samples=10):
 
 
 def array_asset_tables(asset_id: str = "wf") -> dict[str, list[dict]]:
-    """The rows an array must be accompanied by: every axis named, and counted in steps of 1 (Part 03 §6.3)."""
+    """The rows an array must be accompanied by: every axis named, and counted in steps of 1 (Part 02 §12.11)."""
     return {
         "core.array_assets": [
             {

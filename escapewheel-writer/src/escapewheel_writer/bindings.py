@@ -33,7 +33,7 @@ class StagedArray:
     shard: tuple[int, ...] | None = None
     codecs: tuple[str, ...] = ("blosc",)
     fill_value: Any = 0
-    #: Each axis's `dimension_name`, in stored order (Part 03 §6.5). Unset, staging takes them
+    #: Each axis's `dimension_name`, in stored order (Part 03 §6.4). Unset, staging takes them
     #: from the axes records this array's catalog row has.
     dimension_names: tuple[str, ...] | None = None
     #: Where an adapter already wrote this array, for one delivered out of process (Part 03

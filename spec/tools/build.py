@@ -45,7 +45,7 @@ def fill_physical_profile(text: str, descriptor: dict) -> str:
         ],
     )
     tables = descriptor["interfaces"][descriptor["kind_interfaces"]["table"]]
-    return replace_generated_region(
+    text = replace_generated_region(
         text,
         "OVERRIDING ORDERS",
         [
@@ -57,10 +57,34 @@ def fill_physical_profile(text: str, descriptor: dict) -> str:
             ),
         ],
     )
+    arrays = descriptor["interfaces"][descriptor["kind_interfaces"]["dense_array"]]
+    for variant in ZARR_FLOORS:
+        floor = arrays["variants"][variant]["reader_floor"]
+        text = replace_generated_region(text, f"ZARR {variant.upper()} FLOOR", ["```json", _floor_json(floor), "```"])
+    return text
+
+
+#: The Zarr variants whose reader floor Part 02 §12.11 projects, each into its own region.
+ZARR_FLOORS = ("v3", "v2")
+
+
+def _floor_json(value: object, depth: int = 0) -> str:
+    """Exact JSON, one member or sequence a line, so a reader can compare it with Part 03's rules."""
+
+    def inline(item: object) -> str:
+        return json.dumps(item, separators=(", ", ": "), ensure_ascii=False)
+
+    pad = "  " * (depth + 1)
+    if isinstance(value, dict) and depth < 2:
+        members = [f"{pad}{inline(key)}: {_floor_json(item, depth + 1)}" for key, item in value.items()]
+        return "{\n" + ",\n".join(members) + "\n" + "  " * depth + "}"
+    if isinstance(value, list) and depth == 1 and any(isinstance(item, (dict, list)) for item in value):
+        return "[\n" + ",\n".join(pad + inline(item) for item in value) + "\n" + "  " * depth + "]"
+    return inline(value)
 
 
 def render_physical_profile() -> Path:
-    """Refresh Part 03's kind-to-interface and overriding-order projections."""
+    """Refresh Part 03's kind-to-interface, overriding-order and Zarr-floor projections."""
     PART_03.write_text(fill_physical_profile(PART_03.read_text(), json.loads(PROFILE.read_text())))
     return PART_03
 

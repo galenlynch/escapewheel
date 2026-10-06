@@ -86,7 +86,7 @@ them, which costs — so merge once, not per batch.
 
 ## Layout
 
-**A column's encoding follows Part 03 §5.5's four rules**, which `encoding.choose` implements over
+**A column's encoding follows Part 10 §2.13's four rules**, which `encoding.choose` implements over
 counts of the table being written or a stream's first batch: no value is plain, one value takes a
 dictionary from 50,000 rows, an integer declared or observed to climb takes delta unless its runs
 average 50 rows, and anything else takes a dictionary where each value covers 50 rows. The counts

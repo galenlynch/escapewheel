@@ -8,7 +8,7 @@ note = "a column, key or reference the registry declares"
 
 [clause."R6 §2"]
 disposition = "applied"
-where = [{ part = "01", section = "3.9" }, { part = "03", anchor = "ew-parquet-reader-floor" }]
+where = [{ part = "01", section = "3.9" }, { part = "03", anchor = "ew-table-encoding" }]
 note = "restored 2026-09-04; was dropped. restored 2026-10-01; how a bound clock's tick converts to wall-clock time was absent"
 
 [clause."R19 §2.1"]
@@ -365,7 +365,7 @@ note = "restored 2026-09-04; the third presence state, optional, had been droppe
 [clause."R3 §2.1"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-parquet-reader-floor" },
+  { part = "03", anchor = "ew-table-encoding" },
   { part = "02", section = "5.1" },
   { part = "02", section = "5.2" },
   { part = "02", section = "5.3" },
@@ -965,7 +965,7 @@ note = "R147 §§3.4 and 3.7 require exactly one coordinate form and revise its 
 
 [clause."R20 §4"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-array-axis-coordinates" }]
+where = [{ part = "02", anchor = "ew-array-axis-coordinates" }]
 note = "restored 2026-09-04; the rate and a regular tick axis must agree"
 
 [clause."R20 §5.1"]
@@ -975,7 +975,7 @@ note = "R145 §3.4 with R126 §3.2: a canonical resource references only canonic
 
 [clause."R33 §2"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-array-axis-coordinates" }]
+where = [{ part = "02", anchor = "ew-array-axis-coordinates" }]
 note = "restored 2026-09-04; the denominator's positivity and lowest terms were absent"
 
 [clause."R33 §5"]
@@ -2461,9 +2461,9 @@ by = "R118"
 note = "a float is judged by repetition under R118 §3.5, taking a dictionary where each value covers 50 rows"
 
 [clause."R110 §3.3"]
-disposition = "applied"
-where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
-note = "a writer MUST be able to override each rule per column and every override MUST record what it measured and on what; a writer SHOULD refuse an exception naming a column no table declares, which is decidable with no packet in hand"
+disposition = "superseded"
+by = "R174"
+note = "R174 §3.4 moves the encoding-choice rules to Part 10 §2.13 as informative guidance; was Part 03 ew-parquet-reader-floor"
 
 [clause."R110 §3.4"]
 disposition = "applied"
@@ -2471,9 +2471,9 @@ where = [{ part = "05", section = "3.8" }]
 note = "a recipe MAY declare a column's encoding in an [encoding] table keyed resource.column, each entry naming delta, plain or dictionary and carrying a reason. The recipe rather than the extension because a writer requires no code of an extension (R109 §3.1), and rather than the schema because an encoding is a fact about one packet's values"
 
 [clause."R110 §3.5"]
-disposition = "applied"
-where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
-note = "a writer SHOULD report at info a column costing more than 1.5x the smallest encoding available to it, over a sample of the rows it wrote. A report and not a refusal, since every encoding is permitted and a packet is conforming whichever it uses"
+disposition = "superseded"
+by = "R174"
+note = "R174 §3.4 moves the encoding-choice rules to Part 10 §2.13 as informative guidance; was Part 03 ew-parquet-reader-floor"
 
 [clause."R111 §2.1"]
 disposition = "rationale"
@@ -2801,34 +2801,34 @@ where = "R118 §2.7"
 note = "a --sample 2000 build encodes 8 columns differently from its full build, seven within 1.04x of their sampled best and core.spike_events.amplitude plain at 1.56x to 1.60x, every other column staying within 1.15x. Carried to 10 §2.12"
 
 [clause."R118 §3.1"]
-disposition = "applied"
-where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
-note = "a writer SHOULD choose from declarations and four counts over the rows it holds when it chooses, a streamed table's being the row group about to be written or the first where one encoding is kept for the file; the first of four rules that applies decides"
+disposition = "superseded"
+by = "R174"
+note = "R174 §3.4 moves the encoding-choice rules to Part 10 §2.13 as informative guidance; was Part 03 ew-parquet-reader-floor"
 
 [clause."R118 §3.2"]
-disposition = "applied"
-where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
-note = "a column in which every row is null SHOULD be written plain"
+disposition = "superseded"
+by = "R174"
+note = "R174 §3.4 moves the encoding-choice rules to Part 10 §2.13 as informative guidance; was Part 03 ew-parquet-reader-floor"
 
 [clause."R118 §3.3"]
-disposition = "applied"
-where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
-note = "a single-valued column SHOULD take a dictionary from 50,000 rows, and below that delta for an integer and plain otherwise"
+disposition = "superseded"
+by = "R174"
+note = "R174 §3.4 moves the encoding-choice rules to Part 10 §2.13 as informative guidance; was Part 03 ew-parquet-reader-floor"
 
 [clause."R118 §3.4"]
-disposition = "applied"
-where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
-note = "an integer declared ordered by the _tick suffix, the leading identifier, the structural_index or sequence_position role or assigned identity, or observed never to decrease, SHOULD take delta, and plain where it holds 50 rows a run"
+disposition = "superseded"
+by = "R174"
+note = "R174 §3.4 moves the encoding-choice rules to Part 10 §2.13 as informative guidance; was Part 03 ew-parquet-reader-floor"
 
 [clause."R118 §3.5"]
-disposition = "applied"
-where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
-note = "any other column, a float included, SHOULD take a dictionary where it holds 50 rows a distinct value and plain otherwise"
+disposition = "superseded"
+by = "R174"
+note = "R174 §3.4 moves the encoding-choice rules to Part 10 §2.13 as informative guidance; was Part 03 ew-parquet-reader-floor"
 
 [clause."R118 §3.6"]
-disposition = "applied"
-where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
-note = "the report SHOULD measure a column's own chunks and judge a string, timestamp or date column between a dictionary and plain; R110 §3.3's override and R110 §3.4's recipe declaration stand"
+disposition = "superseded"
+by = "R174"
+note = "R174 §3.4 moves the encoding-choice rules to Part 10 §2.13 as informative guidance; was Part 03 ew-parquet-reader-floor"
 
 [clause."R119 §2.1"]
 disposition = "rationale"
@@ -3681,7 +3681,7 @@ note = "a codec matches a pattern by name and stated configuration members; a sh
 [clause."R137 §3.3"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-array-codecs" }]
-note = "the schema defines codec_pattern, codec_sequence, sharding_floor and zarr_v3_floor; R154 §3.5 supersedes the 0.2.0 identifier, now stated at 03 §1. R157 §§3.2 and 3.3 add the byte-order bound `dtype_byte_orders` to the v2 reader floor, whose schema definition `zarr_v2_floor` the table now lists"
+note = "the schema defines codec_pattern, codec_sequence, sharding_floor and zarr_v3_floor; R154 §3.5 supersedes the 0.2.0 identifier, now stated at 03 §1. R157 §§3.2 and 3.3 add the byte-order bound `dtype_byte_orders` to the v2 reader floor and its schema definition `zarr_v2_floor`"
 
 [clause."R137 §3.4"]
 disposition = "applied"
@@ -3995,7 +3995,6 @@ disposition = "applied"
 where = [
   { part = "05", anchor = "ew-reader-registry-independence", note = "a reader offers discriminator resolution" },
   { part = "02", anchor = "ew-coordinate-atlas-annotation", note = "a registry document's atlas columns" },
-  { part = "03", anchor = "ew-portable-forbidden-files", note = "a writer's semantic_version.txt" },
 ]
 
 [clause."R146 §3.8"]
@@ -4024,7 +4023,7 @@ note = "restored 2026-10-02; the validator's obligation to generate each check w
 
 [clause."R147 §3.4"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-array-axis-coordinates" }]
+where = [{ part = "02", anchor = "ew-array-axis-coordinates" }]
 
 [clause."R147 §3.5"]
 disposition = "registry"
@@ -4626,7 +4625,7 @@ where = [{ part = "02", anchor = "ew-null-naming-columns" }]
 
 [clause."R169 §3.2"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-array-axis-coordinates" }]
+where = [{ part = "02", anchor = "ew-array-axis-coordinates" }]
 
 [clause."R169 §3.3"]
 disposition = "registry"
@@ -4677,3 +4676,31 @@ where = [
   { part = "12", anchor = "ew-referenced-resource-delivery" },
   { part = "05", anchor = "ew-amendment-comparison" },
 ]
+
+[clause."R174 §3.1"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-descriptor-conformance" }]
+
+[clause."R174 §3.2"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-portable-directory-layout" }]
+
+[clause."R174 §3.3"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-table-encoding" }, { part = "05", anchor = "ew-validation-shim" }]
+
+[clause."R174 §3.4"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-parquet-reader-floor" }, { part = "10", anchor = "ew-encoding-choice" }]
+
+[clause."R174 §3.5"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-array-axis-coordinates" }]
+
+[clause."R174 §3.6"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-array-codecs" }]
+
+[clause."R174 §3.7"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-array-metadata-placement" }]

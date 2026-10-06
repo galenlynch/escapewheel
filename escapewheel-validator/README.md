@@ -138,7 +138,7 @@ order (R10), column presence and physical type, manifest-internal consistency, a
 packet-owned array against its own Zarr metadata (R15 §4 level 2) — the last needing no Zarr,
 because that metadata is JSON. It compares each Zarr v3 array's pipeline, each Zarr v2 array's
 filters, compressor and byte order, and each Parquet footer's compressions and encodings with the
-portable profile's reader floors (Part 03 §§5.5 and 6.4), and reports a resource outside one as
+portable profile's reader floors (Part 03 §§5.5 and 6.3), and reports a resource outside one as
 `physical.outside_reader_floor`: `warning` for a packet-owned table, `info` for everything else,
 never an error. Parquet data-page types are not assessed, and the report says so. An external
 resource whose metadata was not read is reported, one finding each, as
