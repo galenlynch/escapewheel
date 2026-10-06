@@ -23,3 +23,4 @@ Dependencies run downward, so a document may depend on the ones above it and on 
 
 | order | document | status | placement |
 |---:|---|---|---|
+| 1 | `a-machine-or-folder-says-where-a-source-is.md` | Ready | Part 04 §5.5; `artifacts/sources.schema.json` |
