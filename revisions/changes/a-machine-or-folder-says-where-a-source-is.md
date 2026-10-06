@@ -145,6 +145,8 @@ absolute path, to an entry whose `uri` is the directory or prefix standing for i
 compared without regard to case, and whose path names, decoded as Part 03 §4 decodes a segment, are
 the location's leading path names; or where both are absolute paths and the prefix's names are the
 location's leading names, compared exactly. A trailing separator on a mirror prefix changes nothing.
+Two mirror prefixes are equal where each begins the other, and a reader MUST NOT use a document
+holding two equal mirror prefixes, and MUST report that it did not use it.
 
 Once a reader has an external resource's absolute location, whether from the entry's own `uri` or
 from its source's location, it MUST apply the first ranked document holding a mirror prefix that
@@ -261,7 +263,8 @@ These cases distinguish the new rules from the current ones:
   document's mirror does not apply where a higher-ranked one's does; and a mirror's result is not
   mirrored again;
 - a mirror prefix `S3://bucket/a%2a` begins `s3://bucket/a%2A/x`, and `s3://bucket/a` does not
-  begin `s3://bucket/ab/x`;
+  begin `s3://bucket/ab/x`; and a document holding both `s3://bucket/a/` and `s3://bucket/a` as
+  mirror prefixes is not used and is reported;
 - a bundle's mirror of the store's prefix with an empty `uri` resolves against the bundle's folder;
 - a bundle's mirror of one asset's directory resolves that asset against the bundle's folder, and
   another asset falls to a configured document's mirror;
