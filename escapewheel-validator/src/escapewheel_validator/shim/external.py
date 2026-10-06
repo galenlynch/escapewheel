@@ -69,6 +69,7 @@ def resolve_external(
     compared: Counter[str] = Counter()
     unchecksummed: list[str] = []
     routes: list[tuple[str, str, str]] = []
+    placed: list[tuple[str, str, str]] = []
     # Only read core.array_dimensions where an external array would use it.
     external_arrays = [r for r in packet.resources(kind="dense_array") if r.is_external]
     axes_by_array = declared_axes(packet) if external_arrays else {}
@@ -76,7 +77,7 @@ def resolve_external(
         if not resource.is_external:
             continue
         try:
-            uri = packet.location.resolve(resource.uri, resource.source).uri
+            located = packet.location.locate(resource.uri, resource.source)
         except UnresolvedSource as exc:
             # Which sources resolve is the reader's situation (Part 04 §5.5): unreachable, not wrong.
             report.add_about(
@@ -85,8 +86,26 @@ def resolve_external(
                 f"{resource.resource_id}: {exc}",
             )
             continue
+        for where, prefix in located.unusable:
+            report.add_about(
+                resource.resource_id,
+                check_table.EXTERNAL_MIRROR_UNUSABLE,
+                f"{resource.resource_id}: mirror {prefix!r} in {where} begins its location and names no "
+                "location for this reader (Part 04 §5.5.1)",
+            )
+        if located.source_document is not None or located.mirror_document is not None:
+            placed.append((resource.resource_id, located.source_document or "", located.mirror_document or ""))
         fields = _compare_external(
-            resource, uri, report, checksums, store_digests, axes_by_array, store_checksums, routes, assessed
+            resource,
+            located.location.uri,
+            report,
+            checksums,
+            store_digests,
+            axes_by_array,
+            store_checksums,
+            routes,
+            assessed,
+            located.redirected,
         )
         if fields is None:
             continue
@@ -101,6 +120,15 @@ def resolve_external(
             "was asked for and nothing was compared against (Part 04 §5.2)",
             [(name,) for name in unchecksummed],
             counts={"resolved": checked, "no_digest": len(unchecksummed)},
+        )
+    if placed:
+        # Part 04 §5.3: a report names what placed each resource it verified.
+        report.add(
+            check_table.EXTERNAL_LOCATED,
+            f"{len(placed)} external resource(s) located through a resolution document "
+            "(resource, source document, mirror document)",
+            placed,
+            counts={"located": len(placed)},
         )
     if checked:
         did = ", ".join(f"{count} {field}" for field, count in sorted(compared.items())) or "nothing"
@@ -124,13 +152,15 @@ def _compare_external(
     store_checksums: bool = True,
     routes: list[tuple[str, str, str]] | None = None,
     assessed: set[str] | None = None,
+    redirected: bool = False,
 ) -> list[str] | None:
     """Check one external resource, resolved to `uri`, returning the fields actually compared.
 
     None means the store could not be reached, which is already reported and leaves the resource
     out of every count: nothing about it was established either way. Each digest established is
     appended to `routes` as its resource ID, algorithm, and route, and an array whose metadata was
-    compared with the reader floor is added to `assessed`.
+    compared with the reader floor is added to `assessed`. A `redirected` location's store digests
+    describe other bytes than the recorded ones, so none is compared (Part 04 §5.4).
     """
     entry = resource.entry
     try:
@@ -144,7 +174,7 @@ def _compare_external(
         return None
     fields = []
     if (declared := entry.get("members")) is not None:
-        fields.extend(_compare_members(resource, declared, found, report, store_digests))
+        fields.extend(_compare_members(resource, declared, found, report, store_digests, redirected))
     if (claimed := entry.get("size_bytes")) is not None:
         fields.append("size_bytes")
         if found.size_bytes != claimed:
@@ -183,7 +213,9 @@ def _compare_external(
     return fields
 
 
-def _compare_members(resource: Any, declared: Any, found: Any, report: Report, store_digests: bool) -> list[str]:
+def _compare_members(
+    resource: Any, declared: Any, found: Any, report: Report, store_digests: bool, redirected: bool = False
+) -> list[str]:
     """Check a declared member list against what the store holds (Part 04 §5.4).
 
     This is what makes level 3a per-member rather than aggregate: `size_bytes` on the resource is
@@ -225,6 +257,18 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
             counts={"size_differs": len(sized)},
         )
     if not store_digests:
+        return fields
+    if redirected:
+        # A store reports its own entity tags, so a mirror's or another copy's never match the
+        # recorded ones and a mismatch would say nothing about the bytes.
+        report.add_about(
+            resource.resource_id,
+            check_table.EXTERNAL_NO_STORE_DIGEST,
+            f"{resource.resource_id}: {len(claimed)} of {len(claimed)} member(s) not checked -- its "
+            "location is redirected, so recorded store digests do not describe it (Part 04 §5.4)",
+            ((key,) for key in sorted(claimed)),
+            counts={"unchecked": len(claimed), "declared": len(claimed)},
+        )
         return fields
     compared, skipped, changed = 0, [], []
     for key in sorted(claimed.keys() & held.keys()):

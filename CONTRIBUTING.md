@@ -268,7 +268,7 @@ the revision is cited for its *other* clauses. `revisions/ledger.py` is what see
 accepted clause has no entry. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 920 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 924 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 8. What each check is for

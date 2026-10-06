@@ -80,7 +80,9 @@ def test_a_referenced_source_reaches_the_default_document(tmp_path, registry, mi
 
     document = json.loads((root / "sources.json").read_text())
     assert not check_sources(document)
-    assert document["sources_standard_version"] == "escapewheel-sources-v0.1"
+    # Part 04 §5.5: a writer writes v0.2.
+    assert document["sources_standard_version"] == "escapewheel-sources-v0.2"
+    assert document["$schema"] == "https://escapewheel.org/schemas/sources/0.2.0"
     assert document["sources"]["raw_nwb"]["uri"] == "file:///mnt/Data/ephys/session.nwb"
 
     manifest = json.loads((root / "packet.json").read_text())

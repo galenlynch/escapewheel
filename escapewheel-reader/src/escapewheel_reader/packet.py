@@ -18,7 +18,7 @@ import pyarrow.dataset as pads
 
 from . import clocks, duck
 from .errors import RegistryFault, RegistryUnavailable, ResourceNotFoundError
-from .location import Location, Rewrite, Sources, resolve_sources
+from .location import Located, Location, Resolution, Rewrite, Sources, resolve_sources
 from .manifest import Manifest, Resource
 from .predicates import Predicate, both, expression, on_clock_constraints
 from .protocols import Memo
@@ -72,6 +72,24 @@ class Packet:
     def location(self) -> Location:
         """Where the packet is, local or in a store."""
         return self._root
+
+    @property
+    def resolution(self) -> Resolution:
+        """The resolution documents ranked for this packet, and those not used (Part 04 §5.5)."""
+        return self._root.resolution
+
+    def locate(self, resource_id: str) -> Located:
+        """Where one resource's bytes are, and the documents whose source and mirror placed them.
+
+        Raises
+        ------
+        ResourceNotFoundError
+            If the manifest declares no such resource.
+        UnresolvedSource
+            If it names a source no ranked document locates for this reader.
+        """
+        resource = self.resource(resource_id)
+        return self._root.locate(resource.uri, resource.source)
 
     @property
     def manifest(self) -> Manifest:
@@ -616,25 +634,24 @@ def open_packet(
         Packet root: a local directory, or a store prefix such as ``s3://bucket/prefix``.
         Part 00 §3.3 admits both, and an object store is where a shared dataset lives.
     rewrite : Mapping, optional
-        Declared-URI prefix to replacement, applied to every resource before it is resolved.
-        A committed packet records where its writer reached each resource, so this is how the
-        same bytes are reached from somewhere else without editing the packet. Longest prefix
-        wins.
+        The caller's mirrors (Part 04 §5.5.1): mirror prefix to the location standing for it,
+        ranked before every document. A committed packet records where its writer reached each
+        resource, so this is how the same bytes are reached from somewhere else without editing
+        the packet. The longest prefix wins, and a location relative to the root is never mirrored.
     sources : iterable, optional
-        Source resolution documents, as mappings or as paths to read. Consulted
-        before the packet root's own `sources.json`, in the order given; a path whose document
-        fails the schema or declares an unknown version is refused.
+        Source resolution documents, as mappings of source name to URI or as locations to read,
+        ranked after `rewrite` in the order given and before the configuration's
+        (:data:`~escapewheel_reader.location.SOURCES_ENVIRONMENT`) and the packet root's own
+        `sources.json`. A location whose document is absent, fails the schema or declares an
+        unknown version is refused.
 
     Returns
     -------
     Packet
         The opened packet.
     """
-    root = Location.of(path, rewrite)
-    return Packet(
-        Location.of(root, rewrite, resolve_sources(root, sources)),
-        Manifest.load(root),
-    )
+    root = Location.of(path)
+    return Packet(Location.of(root, resolve_sources(root, sources, rewrite)), Manifest.load(root))
 
 
 if TYPE_CHECKING:  # pragma: no cover

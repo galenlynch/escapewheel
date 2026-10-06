@@ -192,3 +192,94 @@ def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypat
     )
     assert not changed.passed
     assert "external.store_digest" in {f.check for f in changed.findings}
+
+
+# -- Part 04 §§5.3, 5.4: located as a reader locates, and a redirected store digest is not compared --
+
+
+def _stamped(monkeypatch):
+    """Have the store report an entity tag per member, as an object store would."""
+    from escapewheel_validator import stores as module
+    from escapewheel_validator.stores import Listing, Member, StoreDigest, listing
+
+    def stamped(uri, **kwargs):
+        found = listing(uri, **kwargs)
+        members = (Member(m.key, m.size_bytes, StoreDigest("etag", f'"{i:032x}"')) for i, m in enumerate(found.members))
+        return Listing(tuple(members), found.size_bytes)
+
+    monkeypatch.setattr(module, "listing", stamped)
+
+
+def _recorded(root):
+    """Record the tags `_stamped` reports, so a comparison that runs agrees."""
+
+    def record(entry):
+        for i, member in enumerate(entry["members"]):
+            member["store_digest"] = {"algorithm": "etag", "value": f'"{i:032x}"'}
+
+    return _with_members(root, mutate=record)
+
+
+def _document(path, sources=None, mirrors=None):
+    body = {"sources_standard_version": "escapewheel-sources-v0.2"}
+    if sources is not None:
+        body["sources"] = {name: {"uri": uri} for name, uri in sources.items()}
+    if mirrors is not None:
+        body["mirrors"] = {prefix: {"uri": uri} for prefix, uri in mirrors.items()}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(body))
+    return path
+
+
+def _mirrored(packet_root, tmp_path):
+    """Move the external array to a copy, and return a document mirroring its old place to the copy."""
+    import shutil
+
+    original = packet_root.parent / "external.zarr"
+    copy = tmp_path / "copy"
+    copy.mkdir()
+    shutil.move(original, copy / "external.zarr")
+    return _document(tmp_path / "machine.json", mirrors={original.parent.resolve().as_uri(): str(copy)})
+
+
+def test_a_mirrored_resource_is_read_at_the_mirror_and_its_document_named(packet_root, tmp_path):
+    root = _with_members(external_array(packet_root))
+    machine = _mirrored(packet_root, tmp_path)
+    report = validate(open_packet(root, sources=[machine]), verification=Verification(external=True))
+    assert report.passed
+    assert "external.unreachable" not in {f.check for f in report.findings}
+    [located] = [f for f in report.findings if f.check == "external.located"]
+    assert located.rows == (("core.waveform_mean", "", str(machine)),)
+
+
+def test_verifying_without_reading_checks_no_member_of_a_mirrored_resource(packet_root, tmp_path, monkeypatch):
+    root = _recorded(external_array(packet_root))
+    machine = _mirrored(packet_root, tmp_path)
+    _stamped(monkeypatch)
+    report = validate(
+        open_packet(root, sources=[machine]), verification=Verification(store_digests=True, external=True)
+    )
+    [unchecked] = [f for f in report.findings if f.check == "external.no_store_digest"]
+    assert "redirected" in unchecked.message
+    assert unchecked.counts["unchecked"] == unchecked.counts["declared"] == 2
+    assert "store_digest" not in next(f for f in report.findings if f.check == "external.verified").message
+
+
+@pytest.mark.parametrize("through", ["default", "configured"])
+def test_store_digests_are_compared_only_for_a_source_the_default_resolves(packet_root, tmp_path, monkeypatch, through):
+    root = _recorded(external_array(packet_root))
+    manifest = json.loads((root / "packet.json").read_text())
+    next(r for r in manifest["resources"] if r.get("external")).update(uri="external.zarr", source="raw")
+    (root / "packet.json").write_text(json.dumps(manifest))
+
+    located = {"raw": str(packet_root.parent.resolve())}
+    if through == "default":
+        _document(packet_root / "sources.json", located)
+    else:
+        monkeypatch.setenv("ESCAPEWHEEL_SOURCES", str(_document(tmp_path / "machine.json", located)))
+    _stamped(monkeypatch)
+    report = validate(open_packet(root), verification=Verification(store_digests=True, external=True))
+    assert report.passed
+    compared = "store_digest" in next(f for f in report.findings if f.check == "external.verified").message
+    assert compared is (through == "default")
+    assert ("external.no_store_digest" in {f.check for f in report.findings}) is (through == "configured")

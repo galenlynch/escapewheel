@@ -1,6 +1,6 @@
 {
-  "$schema": "https://escapewheel.org/schemas/sources/0.1.0",
-  "sources_standard_version": "escapewheel-sources-v0.1",
+  "$schema": "https://escapewheel.org/schemas/sources/0.2.0",
+  "sources_standard_version": "escapewheel-sources-v0.2",
   "description": "Where an on-prem reader finds the assets the two demonstration packets reference.",
   "sources": {
     "ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31": {
@@ -13,6 +13,12 @@
     "ecephys_786867_2025-09-25_12-43-56_behavior_videos": {
       "uri": "/scratch/staged/ecephys_786867_2025-09-25_12-43-56/behavior-videos",
       "description": "Staged onto a compute node's local disk, which is why this one is a path."
+    }
+  },
+  "mirrors": {
+    "s3://aind-open-data/": {
+      "uri": "/mnt/aind-open-data",
+      "description": "This machine's read-only mount of the bucket, so every source in it is read locally."
     }
   }
 }

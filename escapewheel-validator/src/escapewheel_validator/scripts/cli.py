@@ -39,13 +39,15 @@ def _validate(args: argparse.Namespace) -> int:
 def _report(args: argparse.Namespace) -> int:
     """Validate a packet against the registries it binds and print its report."""
     try:
-        packet = open_packet(args.packet)
+        packet = open_packet(args.packet, sources=args.sources)
     except ManifestError:
         # A manifest the reader refuses still gets Part 04 §10's findings, from its bytes alone.
         report, _ = check_packet_manifest(args.packet, advisory=args.advisory)
         packet_id = str(args.packet)
     else:
         packet_id = packet.manifest.packet_id
+        for where, why in packet.resolution.unused:
+            print(f"  not used: {where}: {why}", file=sys.stderr)
         replaced = [path for path in args.replaced if not (path.is_file() or (path / MANIFEST_FILENAME).is_file())]
         if replaced:
             print(f"error: no published manifest at {replaced[0]}")
@@ -96,6 +98,14 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     parser = subcommands.add_parser("validate", help="validate a packet against the registries it binds")
     parser.add_argument("packet", type=Path, help="packet root directory")
     parser.add_argument("--report", type=Path, default=None, help="write a JSON report here")
+    parser.add_argument(
+        "--sources",
+        action="append",
+        default=[],
+        metavar="DOCUMENT",
+        help="a source resolution document to rank first (Part 04 §5.5), before ESCAPEWHEEL_SOURCES "
+        "and the packet's own sources.json; repeatable, earlier wins",
+    )
     parser.add_argument(
         "--advisory",
         action="store_true",

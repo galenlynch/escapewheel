@@ -106,7 +106,7 @@ from .errors import (
     UnsupportedCodecError,
 )
 from .gathering import ragged
-from .location import Location, check_sources, read_sources
+from .location import Located, Location, Resolution, SourcesDocument, check_sources, read_document, read_sources
 from .manifest import Manifest, RegistryBinding, Resource
 from .observation import (
     clock_windows,
@@ -142,6 +142,7 @@ __all__ = [
     "EscapewheelError",
     "IrregularAxis",
     "LabelledAxis",
+    "Located",
     "Location",
     "Manifest",
     "ManifestError",
@@ -158,12 +159,14 @@ __all__ = [
     "RegistryBinding",
     "RegistryFault",
     "RegistryUnavailable",
+    "Resolution",
     "Resource",
     "ResourceError",
     "ResourceNotFoundError",
     "ResourceUnreadableError",
     "Scaling",
     "Session",
+    "SourcesDocument",
     "SourcesError",
     "StaleSupport",
     "TableResource",
@@ -202,6 +205,7 @@ __all__ = [
     "ragged",
     "rate",
     "rate_of",
+    "read_document",
     "read_pool",
     "read_sources",
     "reference_clock",

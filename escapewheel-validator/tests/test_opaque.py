@@ -348,3 +348,21 @@ def test_an_unresolved_source_is_unreachable_not_wrong(packet_root):
     assert [(f.level, f.check) for f in report.findings if f.check.startswith("external.")] == [
         ("warning", "external.unreachable")
     ]
+
+
+def test_a_source_a_bundle_states_relatively_is_verified_against_its_digest(packet_root, tmp_path):
+    """Part 04 §5.5.2: a relative `uri` resolves against the folder holding its document."""
+    source = tmp_path / "bundle" / "session.nwb"
+    (source / "videos").mkdir(parents=True)
+    (source / "videos/cam 1.mp4").write_bytes(b"camera one")
+    bundle = tmp_path / "bundle" / "sources.json"
+    bundle.write_text(
+        json.dumps({"sources_standard_version": "escapewheel-sources-v0.2", "sources": {"raw": {"uri": "session.nwb"}}})
+    )
+    _referenced(packet_root, "videos/cam%201.mp4", b"camera one", source="raw")
+    report = validate(
+        open_packet(packet_root, sources=[bundle]), verification=Verification(external=True, checksums=True)
+    )
+    assert report.passed
+    verified = next(f for f in report.findings if f.check == "external.verified")
+    assert verified.message.startswith("1 external resource(s) resolved; compared 1 digest, 1 size_bytes")

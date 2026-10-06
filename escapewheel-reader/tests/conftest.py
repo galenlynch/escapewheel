@@ -481,3 +481,10 @@ def array_packet(tmp_path, packet_root):
         return _array_packet(tmp_path, packet_root if base is None else base, edit, arrays)
 
     return build
+
+
+@pytest.fixture(autouse=True)
+def _no_configured_sources(monkeypatch, tmp_path_factory):
+    """Keep a developer's own resolution documents (Part 04 §5.5's second rank) out of every test."""
+    monkeypatch.delenv("ESCAPEWHEEL_SOURCES", raising=False)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path_factory.mktemp("config")))

@@ -1,0 +1,323 @@
+{
+  "version": 1,
+  "revision": "R175",
+  "based_on": "fcc03a5164a894f684c0f53ffd66054c351a13dd",
+  "clauses": {
+    "R175 \u00a73.1": {
+      "owners": [
+        {
+          "path": "spec/parts/04_packet_catalog.md",
+          "anchor": "ew-source-resolution"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_configured_copy_outranks_the_default_and_a_caller_outranks_both"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_the_environment_and_the_user_file_configure_documents"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_document_above_the_packet_root_is_not_read"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_configured_pattern_names_no_document"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_an_unusable_configured_document_is_reported_and_the_next_place_tried[unknown-version]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_an_unusable_configured_document_is_reported_and_the_next_place_tried[unparsable]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-reader/src/escapewheel_reader/location.py",
+          "escapewheel-reader/src/escapewheel_reader/packet.py",
+          "escapewheel-reader/src/escapewheel_reader/scripts/cli.py",
+          "escapewheel-validator/src/escapewheel_validator/scripts/cli.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-reader/README.md"
+        ]
+      }
+    },
+    "R175 \u00a73.2": {
+      "owners": [
+        {
+          "path": "spec/parts/04_packet_catalog.md",
+          "anchor": "ew-source-resolution"
+        },
+        {
+          "path": "spec/parts/04_packet_catalog.md",
+          "anchor": "ew-source-mirrors"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_mirror_only_document_redirects_absolute_and_default_resolved_locations"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_the_longest_prefix_in_the_first_document_applies_once"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_names_are_compared_decoded_and_whole"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_document_with_equal_prefixes_is_not_used[slash]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_document_with_equal_prefixes_is_not_used[file]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_file_uri_is_compared_as_the_path_it_names[posix]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_file_uri_is_compared_as_the_path_it_names[drive]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_file_uri_is_compared_as_the_path_it_names[unc]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_an_unusable_mirror_is_passed_over_and_reported[unstored]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_an_unusable_mirror_is_passed_over_and_reported[other-platform]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_mirror_to_a_missing_directory_does_not_fall_back"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_location.py::test_a_relative_uri_is_never_mirrored"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-reader/src/escapewheel_reader/location.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-reader/README.md"
+        ]
+      }
+    },
+    "R175 \u00a73.3": {
+      "owners": [
+        {
+          "path": "spec/parts/04_packet_catalog.md",
+          "anchor": "ew-source-resolution"
+        },
+        {
+          "path": "spec/parts/04_packet_catalog.md",
+          "anchor": "ew-source-document-locations"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-reader/src/escapewheel_reader/schemas/sources.schema.json",
+          "spec/informative/sources.example.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_bundle_mirror_with_an_empty_uri_is_the_bundle_folder"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_bundle_mirrors_one_asset_and_another_falls_to_the_configured_mirror"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_relative_source_in_a_document_stored_nowhere_is_unresolved"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_relative_source_resolves_against_its_document"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_device_path_names_no_location[verbatim]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_device_path_names_no_location[device]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_windows_location_satisfies_v0_2_only[backslash]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_windows_location_satisfies_v0_2_only[slash]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_windows_location_satisfies_v0_2_only[unc]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_windows_location_names_none_elsewhere"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_windows_reader_resolves_either_separator[backslash]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_windows_reader_resolves_either_separator[slash]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_linux_entry_reaches_a_windows_reader_through_a_unc_mirror"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sources.py::test_a_v0_1_document_resolves_and_cannot_state_v0_2_forms"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_documents.py::test_a_referenced_source_reaches_the_default_document"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/artifacts/sources.schema.json",
+          "escapewheel-reader/src/escapewheel_reader/location.py",
+          "escapewheel-writer/src/escapewheel_writer/documents.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-reader/README.md"
+        ]
+      }
+    },
+    "R175 \u00a73.4": {
+      "owners": [
+        {
+          "path": "spec/parts/04_packet_catalog.md",
+          "anchor": "ew-external-resource-verification"
+        },
+        {
+          "path": "spec/parts/04_packet_catalog.md",
+          "anchor": "ew-prefix-resources"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_external.py::test_a_mirrored_resource_is_read_at_the_mirror_and_its_document_named"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_external.py::test_verifying_without_reading_checks_no_member_of_a_mirrored_resource"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_external.py::test_store_digests_are_compared_only_for_a_source_the_default_resolves[default]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_external.py::test_store_digests_are_compared_only_for_a_source_the_default_resolves[configured]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_opaque.py::test_a_source_a_bundle_states_relatively_is_verified_against_its_digest"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/shim/external.py",
+          "escapewheel-validator/src/escapewheel_validator/check_table.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "No validator guide describes how an external resource is located."
+      }
+    }
+  }
+}

@@ -1,12 +1,23 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/sources/0.1.0",
+  "$id": "https://escapewheel.org/schemas/sources/0.2.0",
   "title": "Escapewheel source resolution document",
-  "description": "Shape of sources.json. Maps a source name declared by an external resource entry to where that body of data is, for one reader in one situation. It is not a packet resource, so packet immutability does not reach it; a location can be corrected when a mirror moves.",
+  "description": "Shape of sources.json. Maps a source name declared by an external resource entry to where that body of data is, and a location prefix to the one standing for it, for one reader in one situation. It is not a packet resource, so packet immutability does not reach it; a location can be corrected when a mirror moves.",
   "type": "object",
   "required": [
-    "sources_standard_version",
-    "sources"
+    "sources_standard_version"
+  ],
+  "anyOf": [
+    {
+      "required": [
+        "sources"
+      ]
+    },
+    {
+      "required": [
+        "mirrors"
+      ]
+    }
   ],
   "properties": {
     "$schema": {
@@ -15,8 +26,11 @@
     },
     "sources_standard_version": {
       "type": "string",
-      "const": "escapewheel-sources-v0.1",
-      "description": "Which version of this document format is in use, so a reader refuses a future one rather than misreading it."
+      "enum": [
+        "escapewheel-sources-v0.2",
+        "escapewheel-sources-v0.1"
+      ],
+      "description": "Which version of this document format is in use, so a reader refuses a future one rather than misreading it. A v0.1 document states only absolute URIs and POSIX paths, and no mirror."
     },
     "description": {
       "type": "string",
@@ -36,8 +50,15 @@
         "properties": {
           "uri": {
             "type": "string",
-            "pattern": "^([A-Za-z][A-Za-z0-9+.-]+:|/)",
-            "description": "Where this source is: an absolute URI, or an absolute filesystem path for data staged locally. A resource's own `uri` is a path relative to this."
+            "anyOf": [
+              {
+                "pattern": "^([A-Za-z][A-Za-z0-9+.-]+:|/|[A-Za-z]:[\\\\/]|\\\\\\\\(?![?.][\\\\/]))"
+              },
+              {
+                "pattern": "^(?![A-Za-z][A-Za-z0-9+.-]*:)(?![/\\\\])(?!\\.{1,2}(?:/|$))(?!.*/\\.{1,2}(?:/|$))[^/\\\\]+(?:/[^/\\\\]+)*$"
+              }
+            ],
+            "description": "Where this source is: an absolute URI, a POSIX or Windows absolute path, or a relative reference resolved against the directory or prefix holding this document. A resource's own `uri` is a path relative to this."
           },
           "description": {
             "type": "string",
@@ -45,6 +66,65 @@
           }
         },
         "additionalProperties": false
+      }
+    },
+    "mirrors": {
+      "type": "object",
+      "description": "Location prefix to the directory or prefix standing for it, matched by decoded names.",
+      "propertyNames": {
+        "pattern": "^([A-Za-z][A-Za-z0-9+.-]+:|/|[A-Za-z]:[\\\\/]|\\\\\\\\(?![?.][\\\\/]))"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "uri"
+        ],
+        "properties": {
+          "uri": {
+            "type": "string",
+            "anyOf": [
+              {
+                "pattern": "^([A-Za-z][A-Za-z0-9+.-]+:|/|[A-Za-z]:[\\\\/]|\\\\\\\\(?![?.][\\\\/]))"
+              },
+              {
+                "pattern": "^(?![A-Za-z][A-Za-z0-9+.-]*:)(?![/\\\\])(?!\\.{1,2}(?:/|$))(?!.*/\\.{1,2}(?:/|$))[^/\\\\]+(?:/[^/\\\\]+)*$"
+              },
+              {
+                "const": ""
+              }
+            ],
+            "description": "What stands for the prefix: an absolute URI, a POSIX or Windows absolute path, a relative reference resolved against the directory or prefix holding this document, or empty for that directory or prefix itself."
+          },
+          "description": {
+            "type": "string",
+            "description": "Human context for this one mirror. Read by nothing."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "if": {
+    "properties": {
+      "sources_standard_version": {
+        "const": "escapewheel-sources-v0.1"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "sources"
+    ],
+    "properties": {
+      "mirrors": false,
+      "sources": {
+        "additionalProperties": {
+          "properties": {
+            "uri": {
+              "pattern": "^([A-Za-z][A-Za-z0-9+.-]+:|/)"
+            }
+          }
+        }
       }
     }
   },

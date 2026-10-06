@@ -2982,8 +2982,9 @@ incorporated schema makes the specification candidate internally inconsistent. T
 
 Its requirements directly invoke the shared JSON, URI, JSON Schema, and RFC 1952 authorities
 identified in [Part 00 §9](../parts/00_architecture.md#ew-normative-references) and the SHA-256, CRC64NVME,
-and CRC32C authorities identified in [Part 04 §11](#ew-packet-catalog-normative-references). The
-application columns in those sections state their extent.
+CRC32C and `file:` URI authorities identified in
+[Part 04 §11](#ew-packet-catalog-normative-references). The application columns in those sections
+state their extent.
 
 <a id="ew-packet-catalog-principles" data-spec-anchor="canonical"></a>
 ## 2. Principles
@@ -3190,6 +3191,11 @@ When an external resource is unavailable, its physical version, codec pipeline, 
 encoding, dtype, shape, and chunking are unassessed; a validator MUST NOT infer them from its URI,
 the packet, an adapter claim, or a stand-in.
 
+A validator that locates an external resource, to verify it at any level, MUST locate it as
+[§5.5](#ew-source-resolution) binds a reader, and its report MUST name, for each resource it
+verified, the document through which its source resolved and the document whose mirror it applied,
+where either did.
+
 <a id="ew-prefix-resources" data-spec-anchor="canonical"></a>
 ### 5.4 Prefix resources
 
@@ -3209,6 +3215,12 @@ Where a validator is asked to verify content **without reading**, it compares ea
 
 A store digest answers whether anything changed in place. It never establishes that a `digest` holds, and it is unstable across a copy. A validator MUST report what a verification pass skipped, and **MUST NOT** report a store-digest pass as a checksum verification: it establishes something weaker and store-specific, so it gets its own finding.
 
+A resource's location is **redirected** where a mirror produced it, or where its source resolved
+through a document other than the packet's default ([§5.5](#ew-source-resolution)). Where a
+validator verifies content without reading and a resource's location is redirected, it MUST report
+each of that resource's members as not checked, and MUST NOT compare its recorded `store_digest`. A
+verification that reads the bytes is unaffected.
+
 <a id="ew-source-resolution" data-spec-anchor="canonical"></a>
 ### 5.5 Source resolution
 
@@ -3220,29 +3232,49 @@ entry carrying no `source` keeps the meaning §5.1 gives it.
 
 Where a source is, is stated by a **source resolution document**: a JSON document, conventionally
 `sources.json`, carrying `sources_standard_version` and a `sources` object mapping each source name
-to an entry with a required `uri`. This section incorporates `artifacts/sources.schema.json`, whose
-`$id` is `https://escapewheel.org/schemas/sources/0.1.0`, as the exact shape of a source resolution
-document. The schema owns member names, JSON types, required members, closure, patterns, and the
-version constant; this prose owns what each member means. The schema's descriptions are
-informative. A source name is any string an external resource entry's `source` can hold. A writer
-SHOULD choose a source name that is unique beyond the packet, so that one resolution document
-serves many packets.
+to an entry with a required `uri`, a `mirrors` object (§5.5.1), or both. This section incorporates
+`artifacts/sources.schema.json`, whose `$id` is `https://escapewheel.org/schemas/sources/0.2.0`, as
+the exact shape of a source resolution document. The schema owns member names, JSON types, required
+members, closure, patterns, and the version constant; this prose owns what each member means. The
+schema's descriptions are informative. A source name is any string an external resource entry's
+`source` can hold. A writer SHOULD choose a source name that is unique beyond the packet, so that
+one resolution document serves many packets.
 
 A resolution document MUST NOT be a packet resource. Immutability (§5.1) does not reach
 it, which is what lets a location be corrected when a mirror moves without rebuilding the packet.
 
-A reader MUST accept one or more resolution documents from its caller, and resolves a `source` in
-this order: the documents the caller supplied, in the order supplied; then `sources.json` at the
-packet root if it is there; then the source is unresolved. A writer SHOULD write that default, naming every source the packet
-references and where the writer read each one. The packet's recorded digests do not cover the
-default, and a reader MUST NOT infer that the packet vouches for what it says. No checker verifies
-this.
+A reader MUST accept one or more resolution documents from its caller, and MUST rank resolution
+documents in this order:
+
+1. each resolution document its caller supplies, in the order supplied;
+2. each document the reader's own configuration names, in the order the reader documents; and
+3. `sources.json` at the packet root, the packet's **default**.
+
+How a reader's configuration names documents, whether by an environment variable, a file or a
+setting, is the reader's own, and a reader MUST document it, which no checker verifies. A
+configuration names each document by its location, and a reader MUST NOT treat a pattern or a
+search as naming one. A document absent from the second or third place is skipped. A reader MUST
+NOT use a document it cannot read, one that fails the schema where the reader validates it, or one
+whose `sources_standard_version` it does not know, and MUST report that it did not use that
+document. A reader MUST NOT look for a resolution document anywhere else. The default comes last so
+that a document stated anywhere else overrides the locations the writer recorded.
+
+A reader MUST resolve a `source` through the first ranked document whose `sources` names it, and
+report it unresolved where none does. A writer SHOULD write the default, naming every source the
+packet references and where the writer read each one. The packet's recorded digests do not cover
+the default, and a reader MUST NOT infer that the packet vouches for what it says. No checker
+verifies this.
 
 A writer that writes a resolution document MUST write one that satisfies the schema. A reader MAY
 validate a resolution document against the schema, and need not. A resolution document's
 `$schema`, where present, names its meta-schema by `$id`: it is identity, not a fetch instruction,
-and a reader MUST NOT dereference it, which no checker verifies. A reader MUST NOT resolve a source
-through a document whose `sources_standard_version` it does not know.
+and a reader MUST NOT dereference it, which no checker verifies.
+
+The schema's `sources_standard_version` admits `escapewheel-sources-v0.2` and
+`escapewheel-sources-v0.1`, and `mirrors`, a relative `uri` and a Windows path (§5.5.2) only at
+v0.2, so that a reader knowing only v0.1 refuses a document it would misread. A reader that knows
+v0.2 MUST also read a v0.1 document, whose locations are all absolute URIs or POSIX paths and which
+states no mirror. A writer MUST write v0.2.
 
 A reader MUST report an unresolved `source` as unresolved, and a validator MUST NOT fail structural validation for one:
 which mirrors a reader can reach is a property of the reader. Structural validation MUST NOT
@@ -3252,6 +3284,59 @@ A consumer MUST NOT read resolution through a different document as invalidating
 `size_bytes` or `members`. Where a reader verifies a resolved source and finds a mismatch, it MUST
 report it against the resource entry, and MUST NOT silently prefer either the recorded digest or
 the bytes it found.
+
+<a id="ew-source-mirrors" data-spec-anchor="canonical"></a>
+#### 5.5.1 Mirrors
+
+A resolution document MAY carry `mirrors`, which maps a **mirror prefix**, an absolute URI or an
+absolute path, to an entry whose `uri` is the directory or prefix standing for it. A mirror prefix
+**begins** a location where both are absolute URIs whose schemes and authorities are equal,
+compared without regard to case, and whose path names, decoded as
+[Part 03 §4](../parts/03_portable_physical_profile.md#ew-portable-uri-rules) decodes a segment, are the
+location's leading path names; or where both are absolute paths and the prefix's names are the
+location's leading names, compared exactly except that a Windows drive letter and a UNC server's
+name are compared without regard to case. A trailing separator on a mirror prefix changes nothing.
+Two mirror prefixes are equal where each begins the other, and a reader MUST NOT use a document
+holding two equal mirror prefixes, and MUST report that it did not use it.
+
+For that comparison, a `file:` URI is the absolute path it names, by the reading
+[RFC 8089](#ew-packet-catalog-normative-references) Section 2 and Appendix E describe: with an
+empty or `localhost` authority, the path its decoded path names form, a Windows path where the
+first name is a drive letter and a POSIX path otherwise; with any other authority, the Windows UNC
+path on that server. Appendix E is informative in RFC 8089; this section adopts the reading it
+describes.
+
+Once a reader has an external resource's absolute location, whether from the entry's own absolute
+`uri` or from its source's location, it MUST apply the first ranked document holding a usable
+mirror whose prefix begins the location, and within that document the usable mirror whose prefix
+has the most names. A mirror is **usable** where its `uri` names a location for this reader under
+§5.5.2, and a reader MUST report each mirror whose prefix begins the location but that is not
+usable. The reader replaces the prefix by the mirror's location and appends the location's
+remaining names, as Part 03 §4 appends a relative reference's names. A reader MUST apply mirrors
+once, not to the location a mirror produced, and a location that no usable mirror's prefix begins
+stands. A location relative to the packet root is never mirrored.
+
+A reader MUST NOT test whether a location exists in order to choose among documents or mirrors,
+which no checker verifies. A reader MUST report, for each external resource, the document through
+which its source resolved and the document whose mirror it applied, where either did.
+
+<a id="ew-source-document-locations" data-spec-anchor="canonical"></a>
+#### 5.5.2 Locations a resolution document states
+
+A `uri` in a resolution document's `sources` or `mirrors` MAY be a relative reference in the form
+of Part 03 §4, and a mirror's `uri` MAY also be empty; it is otherwise an absolute URI or an
+absolute path. A reader MUST resolve a relative `uri` by appending its decoded names, in order, to
+the directory or prefix holding the document, as Part 03 §4 resolves a relative reference against
+a packet root, and an empty `uri` names that directory or prefix itself. A relative or empty `uri`
+in a document that is not stored at a location names no location, and a reader MUST report a source
+it would resolve through one as unresolved.
+
+An **absolute path** in a resolution document is a POSIX path, beginning with `/`, or a Windows
+path, beginning either with a drive letter, `:` and a separator, or, as a UNC path, with `\\` and
+a server's name. A path beginning with `\\?\` or `\\.\` is neither, and names no location. In a
+Windows path both `\` and `/` separate names. Either kind MAY be a mirror prefix on any platform,
+so that a machine can mirror a location another platform recorded. As a location, a POSIX path
+names none for a reader on Windows, and a Windows path names none for a reader elsewhere.
 
 <a id="ew-packet-codecs" data-spec-anchor="canonical"></a>
 ## 6. Physical metadata is not projected
@@ -3434,6 +3519,7 @@ The application column states the extent to which this part invokes each externa
 | [NVM Express NVM Command Set Specification, Revision 1.2](https://nvmexpress.org/specifications/) | exact | CRC64NVME (§5.3.1.3) |
 | [RFC 9260](https://www.rfc-editor.org/info/rfc9260) | exact | CRC32C (Appendix A) |
 | [RFC 8785](https://www.rfc-editor.org/info/rfc8785) | exact | the serialization of a prefix listing's keys (§4.3), Section 3.2.2.2 |
+| [RFC 8089](https://www.rfc-editor.org/info/rfc8089) | exact | the reading of a `file:` URI as a path (§5.5.1), Section 2 and Appendix E |
 
 <!-- END 04_packet_catalog.md -->
 

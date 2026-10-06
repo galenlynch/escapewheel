@@ -187,6 +187,15 @@ def test_a_rewrite_reaches_bytes_the_manifest_names_elsewhere(packet_root, tmp_p
     assert packet.table("core.intervals").num_rows == 2
 
 
+def _named(packet):
+    """Each source name to the URI the first ranked document naming it states."""
+    named = {}
+    for document in packet.resolution.documents:
+        for name, uri in document.sources:
+            named.setdefault(name, uri)
+    return named
+
+
 def test_the_packet_roots_default_document_is_read(packet_root):
     """Part 04 §5.5: under the root so a copy carries it, outside the manifest so it may be edited."""
     import json
@@ -197,7 +206,7 @@ def test_the_packet_roots_default_document_is_read(packet_root):
         )
     )
     packet = open_packet(packet_root)
-    assert dict(packet.location.sources) == {"raw": "s3://bucket/raw"}
+    assert _named(packet) == {"raw": "s3://bucket/raw"}
 
 
 def test_a_caller_document_wins_over_the_packets_own(packet_root):
@@ -210,7 +219,7 @@ def test_a_caller_document_wins_over_the_packets_own(packet_root):
         )
     )
     packet = open_packet(packet_root, sources=[{"raw": "/scratch/staged"}])
-    assert dict(packet.location.sources)["raw"] == "/scratch/staged"
+    assert _named(packet)["raw"] == "/scratch/staged"
 
 
 def _sources_document(path, version="escapewheel-sources-v0.1", **sources):
@@ -240,7 +249,9 @@ def test_a_reader_opens_a_packet_whose_own_document_is_of_an_unknown_version(pac
     """The default is optional, so one this reader cannot read resolves nothing and stops nothing."""
     _sources_document(packet_root / "sources.json", "escapewheel-sources-v9", raw={"uri": "s3://bucket/raw"})
     packet = open_packet(packet_root)
-    assert dict(packet.location.sources) == {}
+    assert _named(packet) == {}
+    # Part 04 §5.5: a document not used is reported, not passed over silently.
+    assert [where for where, _ in packet.resolution.unused] == [str(packet_root / "sources.json")]
     assert packet.table("core.intervals").num_rows == 2
 
 

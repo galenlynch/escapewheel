@@ -58,6 +58,7 @@ REFERENCE_MARKERS = {
     "NVM Command Set": "NVM Express NVM Command Set Specification, Revision 1.2",
     "RFC 9260": "https://www.rfc-editor.org/info/rfc9260",
     "RFC 8785": "https://www.rfc-editor.org/info/rfc8785",
+    "RFC 8089": "https://www.rfc-editor.org/info/rfc8089",
     "Unicode 15.0.0": "https://www.unicode.org/versions/Unicode15.0.0/",
     "ISO/IEC 9075-1:2023": "https://www.iso.org/standard/76583.html",
     "ISO/IEC 9075-1:2023/Cor 1:2026": "https://www.iso.org/standard/93690.html",
@@ -102,6 +103,7 @@ REFERENCE_OWNERS = {
     "NVM Command Set": "04",
     "RFC 9260": "04",
     "RFC 8785": "04",
+    "RFC 8089": "04",
     "Unicode 15.0.0": "05",
     "ISO/IEC 9075-1:2023": "11",
     "ISO/IEC 9075-1:2023/Cor 1:2026": "11",
@@ -248,6 +250,11 @@ REFERENCE_ROWS = {
             "[RFC 8785](https://www.rfc-editor.org/info/rfc8785)",
             "exact",
             "the serialization of a prefix listing's keys (§4.3), Section 3.2.2.2",
+        ),
+        (
+            "[RFC 8089](https://www.rfc-editor.org/info/rfc8089)",
+            "exact",
+            "the reading of a `file:` URI as a path (§5.5.1), Section 2 and Appendix E",
         ),
     ),
     "11": (

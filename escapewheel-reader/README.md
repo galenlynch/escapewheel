@@ -237,6 +237,33 @@ readable with no SQL engine. Each extra adds a capability:
 read it: `Packet.table` and `Packet.duckdb` go through the first, and `Packet.array_resource`
 returns the second.
 
+## Where external data is
+
+An external resource names its bytes by an absolute URI, or by a `source` and a path under it. A
+source resolution document (Part 04 §5.5) says where each source is and, under `mirrors`, which
+location stands for a prefix on this machine. The reader ranks documents in this order and reads
+no others:
+
+1. those passed to `open_packet(..., sources=[...])` or `--sources`, in the order given, with
+   `rewrite={prefix: location}` ranked before them as a document holding only mirrors;
+2. each location in `ESCAPEWHEEL_SOURCES`, separated as `PATH` is, then the per-user file
+   `$XDG_CONFIG_HOME/escapewheel/sources.json` (`~/.config/escapewheel/sources.json` by default,
+   `%APPDATA%\escapewheel\sources.json` on Windows);
+3. `sources.json` at the packet root, which the writer leaves.
+
+A source resolves through the first document naming it. The location found, or an entry's own
+absolute URI, then takes the longest mirror prefix in the first document holding one that begins
+it, matched by whole decoded names, with a `file:` URI matched as the path it names. A mirror
+applies once, and never to a resource under the packet root. A relative `uri` in a document is
+under the folder holding that document, and an empty mirror `uri` is that folder, so a bundle of
+packets and copies carries one document at its top and is passed it once. Nothing checks whether a
+location exists before choosing it, so a mirror naming a missing directory fails the read rather
+than falling back.
+
+`Packet.locate(resource_id)` says which document resolved a resource's source and whose mirror
+applied, and `Packet.resolution.unused` lists each configured or default document that could not
+be used, and why.
+
 ## Installation
 
 Nothing is published to an index; install from a clone of the monorepo. `uv sync` in this

@@ -15,7 +15,7 @@ from importlib.metadata import entry_points
 from pathlib import Path
 
 from ..errors import EscapewheelError, PacketError
-from ..packet import open_packet
+from ..packet import Packet, open_packet
 
 #: Entry-point group later packages register their subcommands under.
 COMMAND_GROUP = "escapewheel.commands"
@@ -27,9 +27,17 @@ EXTENSIONS = {
 }
 
 
+def _open(args: argparse.Namespace) -> Packet:
+    """Open the named packet, reporting each resolution document not used (Part 04 §5.5)."""
+    packet = open_packet(args.packet, sources=args.sources)
+    for where, why in packet.resolution.unused:
+        print(f"not used: {where}: {why}", file=sys.stderr)
+    return packet
+
+
 def _ls(args: argparse.Namespace) -> int:
     """List the resources a packet declares."""
-    packet = open_packet(args.packet)
+    packet = _open(args)
     manifest = packet.manifest
     core = manifest.core
     print(f"{manifest.packet_id}  profile={manifest.profile_id}  registry={core.version if core else 'unbound'}")
@@ -48,7 +56,7 @@ def _ls(args: argparse.Namespace) -> int:
 
 def _sql(args: argparse.Namespace) -> int:
     """Run a query against a packet's tables."""
-    packet = open_packet(args.packet)
+    packet = _open(args)
     # `for_query` so only the tables the query names are registered -- over an object store
     # the others would each cost a round trip to bind a view nothing reads.
     result = packet.duckdb(for_query=args.query).sql(args.query)
@@ -70,10 +78,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     ls = subcommands.add_parser("ls", help="list the resources a packet declares")
     ls.add_argument("packet", type=Path, help="packet root directory")
+    ls.add_argument(
+        "--sources",
+        action="append",
+        default=[],
+        metavar="DOCUMENT",
+        help="a source resolution document to rank first (Part 04 §5.5), before ESCAPEWHEEL_SOURCES "
+        "and the packet's own sources.json; repeatable, earlier wins",
+    )
     ls.set_defaults(func=_ls)
 
     sql = subcommands.add_parser("sql", help="run a query against a packet's tables")
     sql.add_argument("packet", type=Path, help="packet root directory")
+    sql.add_argument(
+        "--sources",
+        action="append",
+        default=[],
+        metavar="DOCUMENT",
+        help="a source resolution document to rank first (Part 04 §5.5), before ESCAPEWHEEL_SOURCES "
+        "and the packet's own sources.json; repeatable, earlier wins",
+    )
     sql.add_argument("query", help="SQL, referring to resources by their flattened names")
     sql.set_defaults(func=_sql)
 

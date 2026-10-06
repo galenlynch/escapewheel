@@ -265,7 +265,7 @@ def check_sources(packet: Packet, report: Report) -> None:
             )
     if not named:
         return
-    located = dict(packet.location.sources)
+    located = {name for document in packet.location.resolution.documents for name, _ in document.sources}
     unresolved = sorted(name for name in named if name not in located)
     report.add(
         check_table.SOURCES_DECLARED_COUNT,

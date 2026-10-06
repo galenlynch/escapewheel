@@ -186,6 +186,8 @@
 "5.3" = "Verification levels"
 "5.4" = "Prefix resources"
 "5.5" = "Source resolution"
+"5.5.1" = "Mirrors"
+"5.5.2" = "Locations a resolution document states"
 "6" = "Physical metadata is not projected"
 "7" = "Resource lineage"
 "8" = "Registry bindings"
@@ -1462,6 +1464,18 @@ aliases = []
 part = "05"
 section = "3.4"
 title = "What a source can produce"
+aliases = []
+
+[anchor.ew-source-document-locations]
+part = "04"
+section = "5.5.2"
+title = "Locations a resolution document states"
+aliases = []
+
+[anchor.ew-source-mirrors]
+part = "04"
+section = "5.5.1"
+title = "Mirrors"
 aliases = []
 
 [anchor.ew-source-resolution]

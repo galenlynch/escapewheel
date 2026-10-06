@@ -4704,3 +4704,19 @@ where = [{ part = "03", anchor = "ew-array-codecs" }]
 [clause."R174 §3.7"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-array-metadata-placement" }]
+
+[clause."R175 §3.1"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-source-resolution" }]
+
+[clause."R175 §3.2"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-source-resolution" }, { part = "04", anchor = "ew-source-mirrors" }]
+
+[clause."R175 §3.3"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-source-resolution" }, { part = "04", anchor = "ew-source-document-locations" }]
+
+[clause."R175 §3.4"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-external-resource-verification" }, { part = "04", anchor = "ew-prefix-resources" }]

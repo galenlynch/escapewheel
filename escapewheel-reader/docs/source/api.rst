@@ -133,6 +133,10 @@ Manifest, resources and locations
    ArrayResource
    read_pool
    Location
+   Resolution
+   SourcesDocument
+   Located
+   read_document
    read_sources
    check_sources
 
@@ -233,8 +237,13 @@ the module that defines it.
    uri.in_one_form
    uri.is_absolute
    uri.representable
+   location.SOURCES_ENVIRONMENT
    location.SOURCES_FILENAME
    location.SOURCES_VERSION
+   location.SOURCES_VERSIONS
+   location.configured_sources
+   location.resolve_sources
+   location.user_sources
    manifest.MANIFEST_FILENAME
    manifest.MANIFESTS_DIRNAME
    resources.ZARR_METADATA_FILENAMES

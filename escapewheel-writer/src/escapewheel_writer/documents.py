@@ -206,7 +206,7 @@ def sources_document(
     if not located:
         return None
     document = {
-        "$schema": "https://escapewheel.org/schemas/sources/0.1.0",
+        "$schema": "https://escapewheel.org/schemas/sources/0.2.0",
         "sources_standard_version": SOURCES_VERSION,
         "description": f"Where {packet_id} read its referenced data. Editable: not a packet resource.",
         "sources": dict(sorted(located.items())),

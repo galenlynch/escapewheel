@@ -163,6 +163,8 @@ EXTERNAL_STORE_DIGEST = _unnamed("external.store_digest", _ERROR, _RESOURCE)
 EXTERNAL_NO_STORE_DIGEST = _unnamed("external.no_store_digest", _WARNING, _RESOURCE)
 EXTERNAL_NO_CHECKSUM = _unnamed("external.no_checksum", _WARNING, _PACKET)
 EXTERNAL_VERIFIED = _unnamed("external.verified", _INFO, _PACKET)
+EXTERNAL_LOCATED = _unnamed("external.located", _INFO, _PACKET)
+EXTERNAL_MIRROR_UNUSABLE = _unnamed("external.mirror_unusable", _WARNING, _RESOURCE)
 
 # A packet-owned array against its own Zarr metadata, and its axes against its shape.
 ARRAY_NO_ARRAY_DIMENSIONS_TABLE = _unnamed("array.no_array_dimensions_table", _ERROR, _PACKET)
@@ -380,7 +382,9 @@ __all__ = [
     "EXTERNAL_ARRAY_LABEL_POSITION_OUT_OF_RANGE",
     "EXTERNAL_ARRAY_RANK",
     "EXTERNAL_DIGEST",
+    "EXTERNAL_LOCATED",
     "EXTERNAL_MEMBERS",
+    "EXTERNAL_MIRROR_UNUSABLE",
     "EXTERNAL_NO_CHECKSUM",
     "EXTERNAL_NO_STORE_DIGEST",
     "EXTERNAL_PHYSICAL_UNASSESSED",
