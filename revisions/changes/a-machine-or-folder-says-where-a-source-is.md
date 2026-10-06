@@ -17,12 +17,12 @@ Normative keywords follow BCP 14.
 
 ## 1. Problem
 
-An external resource entry can name a `source`, a body of data such as one session's raw
-recording, and give its `uri` relative to wherever that source is. Part 04 §5.5 has a **source
-resolution document**, conventionally `sources.json`, map each source name to an absolute URI or an
-absolute path. A reader tries the documents its caller supplies, in order, and then the `sources.json`
-at the packet root, which the writer writes naming where it read each source. The design is meant
-to let the same packet find its data at a different place on each machine without being rebuilt.
+An external resource entry can name a `source`, a body of data such as one session's raw recording,
+and give its `uri` relative to wherever that source is. Part 04 §5.5 has a **source resolution
+document**, conventionally `sources.json`, map each source name to an absolute URI or an absolute
+path. A reader tries the documents its caller supplies, in order, and then the `sources.json` at the
+packet root, which the writer writes naming where it read each source. The design is meant to let
+the same packet find its data at a different place on each machine without being rebuilt.
 
 It does that only for a caller who passes a document every time, and only for entries that name a
 source. Three arrangements it is meant for fail:
@@ -39,9 +39,9 @@ source. Three arrangements it is meant for fail:
   schema admits only absolute locations.
 
 This change adds three places a reader looks: the folders above the packet, a variable naming
-documents, and a per-user machine document. It also lets a document state a **mirror**, one
-location prefix standing for another, and lets a document locate a source or a mirror relative to
-itself. What a resolution document means, that one is never a packet resource, that an unresolved
+documents, and a reader's own per-user machine document. It also lets a document state a **mirror**,
+one location prefix standing for another, and lets a document locate a source or a mirror relative
+to itself. What a resolution document means, that one is never a packet resource, that an unresolved
 source is a fact rather than a defect, and how a resolved source is verified against its recorded
 digest are unchanged.
 
@@ -85,8 +85,9 @@ Alternatives:
 - **The variable alone, without a machine document.** A Jupyter kernel started from a launcher, a
   desktop application or a scheduled job often does not inherit the shell's environment, so the
   machine's statement is lost exactly where notebooks run.
-- **A machine document wherever the platform's configuration library puts one.** That folder differs
-  by library on macOS; naming the path in the specification lets every language compute it.
+- **A machine document at a path the specification names for each platform.** Two readers on one
+  machine would find the same file, which the variable already achieves, at the cost of binding the
+  specification to platform conventions that differ by library and change over time.
 - **Fall through to the next document where a location is missing.** A reader would probe the
   filesystem or store for each candidate, so where a read lands would depend on what happened to be
   reachable, and a partial copy would silently mix with the original.
@@ -113,17 +114,15 @@ A reader MUST rank resolution documents in this order:
 3. each file named by the environment variable `ESCAPEWHEEL_SOURCES`, in the order named, which
    lists filesystem paths separated by the platform's path-list separator, `:` on POSIX systems and
    `;` on Windows, an empty entry naming nothing;
-4. the **machine document**: on Windows, `escapewheel\sources.json` under the directory named by
-   `APPDATA`; elsewhere, `escapewheel/sources.json` under the directory named by `XDG_CONFIG_HOME`,
-   or under `.config` in the directory named by `HOME` where `XDG_CONFIG_HOME` is unset or empty;
-   and none where the variable that would name its directory is unset or empty; and
+4. the reader's **machine document**, where it has one; and
 5. `sources.json` at the packet root.
 
-A document absent from a place in the second to fifth items is skipped. A reader MUST NOT use a
-document it cannot read, one that fails the schema where the reader validates it, or one whose
-`sources_standard_version` it does not know, and MUST report that it did not use that document. A
-reader MUST NOT look for a resolution document anywhere else, and MUST NOT search above a packet
-root that is a URI with a scheme.
+A reader MAY have a machine document, a per-user file at a location the reader chooses, and where it
+has one MUST document that location, which no checker verifies. A document absent from a place in
+the second to fifth items is skipped. A reader MUST NOT use a document it cannot read, one that
+fails the schema where the reader validates it, or one whose `sources_standard_version` it does not
+know, and MUST report that it did not use that document. A reader MUST NOT look for a resolution
+document anywhere else, and MUST NOT search above a packet root that is a URI with a scheme.
 
 The packet's own default comes last so that a document stated anywhere else overrides the locations
 the writer recorded. A folder's document comes before the variable's and the machine's because it
@@ -176,10 +175,11 @@ v0.2.
    **Answered 2026-10-06:** Last, after the folder documents, the variable and the machine
    document, as rutter ranks a configuration's own value, so a location stated anywhere else
    overrides what the writer recorded.
-3. Does the specification name a per-machine document?
-   **Answered 2026-10-06:** Yes, at a path the specification states for Windows and for every other
-   platform, so that a process not inheriting the shell's environment still finds it, and every
-   language computes the same path.
+3. Does the specification name where a per-machine document is?
+   **Answered 2026-10-06:** No. A reader may have one, ranked after the variable, at a location its
+   documentation states. Where a configuration file belongs is a platform convention, and differs
+   on macOS between libraries; `ESCAPEWHEEL_SOURCES` is the portable way to point every reader at
+   one file.
 4. Does a mirror reach an entry that names no source?
    **Answered 2026-10-06:** Yes. A mirror applies to an external resource's absolute location
    however the reader came by it, so a machine mount redirects every entry in the store with one
@@ -193,10 +193,11 @@ variable set, no machine document and no `sources.json` above it. Every document
 v0.1 refuses a v0.2 document, so a packet written after the change shows that reader its sources as
 unresolved until the reader is updated.
 
-A machine states a mount once, as one mirror in its machine document. A bundle states its copies in
-a `sources.json` at its top, by source name or, where it keeps the store's layout, by a mirror whose
-`uri` is empty; a mirror prefix naming one asset's directory redirects that asset alone, so a
-partial copy sends what it lacks to the next document's mirror.
+A machine states a mount once, as one mirror in a document `ESCAPEWHEEL_SOURCES` names, or in a
+reader's machine document where the variable does not reach that reader's process. A bundle states
+its copies in a `sources.json` at its top, by source name or, where it keeps the store's layout, by
+a mirror whose `uri` is empty; a mirror prefix naming one asset's directory redirects that asset
+alone, so a partial copy sends what it lacks to the next document's mirror.
 
 A `sources.json` above a packet or a machine document now changes where that packet's resources
 resolve, which is the point of the change and also a way for a stray document to redirect a read.
@@ -213,7 +214,7 @@ what lets a reader see a redirect it did not intend.
 | packet manifest and JSON Schemas | Part 04 §5.5's resolution order, the schema's `mirrors` member, `uri` pattern, `$id` and version constant change under §§3.1 to 3.3. | The schema and `spec/tools` checks. |
 | validation and import | Unchanged: structural validation still needs no resolution document. | None required. |
 | extensions | Unchanged. | None required. |
-| reader, writer, validator, adapters | The reader ranks documents in the new order, applies mirrors, resolves a relative location against its document, and reports the document and mirror that placed each resource and each document it did not use. The reader's `rewrite` becomes a caller-supplied mirror. The reader's and validator's command lines accept resolution documents. The writer writes the new version. | The reader, validator and writer suites. |
+| reader, writer, validator, adapters | The reader ranks documents in the new order, documents where its machine document is, applies mirrors, resolves a relative location against its document, and reports the document and mirror that placed each resource and each document it did not use. The reader's `rewrite` becomes a caller-supplied mirror. The reader's and validator's command lines accept resolution documents. The writer writes the new version. | The reader, validator and writer suites. |
 | conformance fixtures and tests | §6's cases. | Reader tests. |
 | revision process and tooling | The ledger places §§3.1 to 3.3. | `ledger.py`, `evidence.py`. |
 | generated publications and developer documentation | The combined specification regenerates. The reader's documentation describes where it looks and how a mirror applies. | `verify.py`. |
@@ -224,9 +225,9 @@ These cases distinguish the new rules from the current ones:
 
 - a packet whose default names a store, under a folder whose `sources.json` names a local copy,
   resolves to the copy;
-- the same packet, with a machine document and a document named by `ESCAPEWHEEL_SOURCES` each
-  naming a different location, resolves to the folder's copy, without the folder's document to the
-  variable's location, and without both to the machine document's;
+- the same packet, with the reader's machine document and a document named by `ESCAPEWHEEL_SOURCES`
+  each naming a different location, resolves to the folder's copy, without the folder's document to
+  the variable's location, and without both to the machine document's;
 - a caller-supplied document outranks all three;
 - a `sources.json` above a packet root on an object store is not read;
 - a machine document whose only member is a mirror redirects an entry with an absolute `uri` and an
