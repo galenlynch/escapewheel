@@ -169,8 +169,10 @@ it would resolve through one as unresolved, and MUST NOT apply a mirror holding 
 
 An **absolute path** in a resolution document is a POSIX path, beginning with `/`, or a Windows
 path, beginning with a drive letter, `:` and a separator, or with `\\` and a server's name. In a
-Windows path both `\` and `/` separate names. A reader on Windows MUST treat a POSIX path as naming
-no location, and a reader elsewhere MUST treat a Windows path as naming none.
+Windows path both `\` and `/` separate names. Either form MAY be a mirror prefix on any platform,
+so that a machine can mirror a location another platform recorded. Once mirrors have applied, a
+reader on Windows MUST treat a POSIX path as naming no location, and a reader elsewhere MUST treat a
+Windows path as naming none.
 
 `artifacts/sources.schema.json` admits `mirrors`, the relative and empty forms and Windows paths,
 and its `$id` becomes `https://escapewheel.org/schemas/sources/0.2.0`. A document carries `sources`,
@@ -264,7 +266,8 @@ These cases distinguish the new rules from the current ones:
 - a bundle's mirror of one asset's directory resolves that asset against the bundle's folder, and
   another asset falls to a configured document's mirror;
 - a drive-letter or UNC location satisfies the schema at v0.2 and fails it at v0.1, resolves on a
-  Windows reader with either separator, and names no location elsewhere;
+  Windows reader with either separator, and names no location elsewhere; and a POSIX location a
+  Linux writer recorded resolves on a Windows reader through a mirror to a UNC path;
 - a location reached through a mirror is reported with the document holding that mirror, and a
   source resolved through a relative `uri` opens with its recorded digest verified;
 - a location whose mirror names a missing directory fails to open and is not read from the original
