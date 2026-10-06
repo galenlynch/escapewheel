@@ -85,9 +85,9 @@ Alternatives:
 - **The variable alone, without a machine document.** A Jupyter kernel started from a launcher, a
   desktop application or a scheduled job often does not inherit the shell's environment, so the
   machine's statement is lost exactly where notebooks run.
-- **A machine document at a path the specification names for each platform.** Two readers on one
-  machine would find the same file, which the variable already achieves, at the cost of binding the
-  specification to platform conventions that differ by library and change over time.
+- **A machine document at a path the specification names for each platform.** Where a reader keeps
+  its configuration is the reader's concern, not a property of a packet or a resolution document,
+  and naming it would bind the specification to platform conventions that differ by library.
 - **Fall through to the next document where a location is missing.** A reader would probe the
   filesystem or store for each candidate, so where a read lands would depend on what happened to be
   reachable, and a partial copy would silently mix with the original.
@@ -177,9 +177,7 @@ v0.2.
    overrides what the writer recorded.
 3. Does the specification name where a per-machine document is?
    **Answered 2026-10-06:** No. A reader may have one, ranked after the variable, at a location its
-   documentation states. Where a configuration file belongs is a platform convention, and differs
-   on macOS between libraries; `ESCAPEWHEEL_SOURCES` is the portable way to point every reader at
-   one file.
+   documentation states. Where a reader keeps its configuration is the reader's concern.
 4. Does a mirror reach an entry that names no source?
    **Answered 2026-10-06:** Yes. A mirror applies to an external resource's absolute location
    however the reader came by it, so a machine mount redirects every entry in the store with one
