@@ -166,14 +166,14 @@ form, a Windows path where the first name is a drive letter and a POSIX path oth
 other authority, the Windows UNC path on that server.
 
 Once a reader has an external resource's absolute location, whether from the entry's own absolute
-`uri` or from its source's location, it MUST apply the first ranked document holding a usable mirror whose
-prefix begins the location, and within that document the usable mirror whose prefix has the most
-names. A mirror is **usable** where its `uri` names a location for this reader under §3.3, and a
-reader MUST report each mirror whose prefix begins the location but that is not usable. The reader
+`uri` or from its source's location, it MUST apply the first ranked document holding a usable mirror
+whose prefix begins the location, and within that document the usable mirror whose prefix has the
+most names. A mirror is **usable** where its `uri` names a location for this reader under §3.3, and
+a reader MUST report each mirror whose prefix begins the location but that is not usable. The reader
 replaces the prefix by the mirror's location and appends the location's remaining names, as Part 03
 §4 appends a relative reference's names. A reader MUST apply mirrors once, not to the location a
-mirror produced, and a location that no usable mirror's prefix begins stands. A location relative
-to the packet root is never mirrored.
+mirror produced, and a location that no usable mirror's prefix begins stands. A location relative to
+the packet root is never mirrored.
 
 A reader MUST NOT test whether a location exists in order to choose among documents or mirrors,
 which no checker verifies. A reader MUST report, for each external resource, the document through
