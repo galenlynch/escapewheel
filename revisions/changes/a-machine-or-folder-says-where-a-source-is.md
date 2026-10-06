@@ -121,10 +121,12 @@ in order, to the directory or prefix holding the document, as Part 03 §4 resolv
 reference against a packet root. A relative `uri` in a document that is not stored at a location
 names no location, and a reader MUST report a source it would resolve through one as unresolved.
 
-`artifacts/sources.schema.json` admits the relative form, its `$id` becomes
-`https://escapewheel.org/schemas/sources/0.2.0`, and the constant `sources_standard_version` becomes
-`escapewheel-sources-v0.2`, so that a reader knowing only the first version refuses a document that
-may hold a relative location rather than misreading it.
+`artifacts/sources.schema.json` admits the relative form, and its `$id` becomes
+`https://escapewheel.org/schemas/sources/0.2.0`. Its `sources_standard_version` admits
+`escapewheel-sources-v0.2` and `escapewheel-sources-v0.1`, and a relative `uri` only at v0.2, so
+that a reader knowing only v0.1 refuses a document that may hold a relative location rather than
+misreading it. A reader that knows v0.2 MUST also read a v0.1 document, whose locations are all
+absolute. A writer MUST write v0.2.
 
 ## 4. Questions
 
@@ -142,10 +144,10 @@ may hold a relative location rather than misreading it.
 ## 5. Consequence
 
 No packet changes and no registry changes. A packet whose default names its sources resolves as it
-does now on a machine with no variable set and no `sources.json` above it. A document an
-implementation wrote at version `escapewheel-sources-v0.1` is refused by a reader knowing only the
-new version. A v0.1 document holds only absolute locations, so changing its version string makes it
-a valid v0.2 one; a packet's default is otherwise rewritten by rebuilding or amending the packet.
+does now on a machine with no variable set and no `sources.json` above it. Every document written
+at `escapewheel-sources-v0.1`, a packet's default among them, still resolves. A reader that knows
+only v0.1 refuses a v0.2 document, so a packet written after the change shows that reader its
+sources as unresolved until the reader is updated.
 
 A `sources.json` placed above a packet now changes where that packet's sources resolve, which is
 the point of the change and also a way for a stray document to redirect a read. Verification
@@ -178,4 +180,5 @@ These cases distinguish the new rules from the current ones:
   through it opens with its recorded digest verified;
 - a document of an unknown version, or one that cannot be read, is not used and is reported, and
   the next place is tried; and
-- a v0.1 document is refused, and the writer's default is written at v0.2.
+- a v0.1 document resolves its sources, a v0.1 document holding a relative `uri` fails the
+  schema, and the writer's default is written at v0.2.
