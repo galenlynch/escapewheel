@@ -6,7 +6,7 @@
 | **Opened** | 2026-10-06 |
 | **Based on** | `fcc03a5164a894f684c0f53ffd66054c351a13dd` |
 | **Change form** | ordinary |
-| **Amends** | Part 04 §5.4; Part 04 §5.5; Part 04 §11; `artifacts/sources.schema.json` |
+| **Amends** | Part 04 §5.3; Part 04 §5.4; Part 04 §5.5; Part 04 §11; `artifacts/sources.schema.json` |
 | **Depends on** | None |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4 |
@@ -121,8 +121,9 @@ Alternatives:
 ## 3. Decision
 
 Three subsections replace parts of Part 04 §5.5: where a reader looks, how a location resolves
-through what it finds, and what a document's locations may be. A fourth adds to Part 04 §5.4 what a
-store-digest comparison does with a redirected location.
+through what it finds, and what a document's locations may be. A fourth adds to Part 04 §§5.3 and
+5.4 how a validator locates a resource, and what a store-digest comparison does with a redirected
+location.
 
 ### 3.1 Where a reader looks for a resolution document
 
@@ -133,7 +134,9 @@ A reader MUST rank resolution documents in this order:
 3. `sources.json` at the packet root.
 
 How a reader's configuration names documents, whether by an environment variable, a file or a
-setting, is the reader's own, and a reader MUST document it, which no checker verifies. A document
+setting, is the reader's own, and a reader MUST document it, which no checker verifies. A
+configuration names each document by its location, and a reader MUST NOT treat a pattern or a
+search as naming one. A document
 absent from a place in the second or third item is skipped. A reader MUST NOT use a document it
 cannot read, one that fails the schema where the reader validates it, or one whose
 `sources_standard_version` it does not know, and MUST report that it did not use that document. A
@@ -162,14 +165,15 @@ and Appendix E describe: with an empty or `localhost` authority, the path its de
 form, a Windows path where the first name is a drive letter and a POSIX path otherwise; with any
 other authority, the Windows UNC path on that server.
 
-Once a reader has an external resource's absolute location, whether from the entry's own `uri` or
-from its source's location, it MUST apply the first ranked document holding a usable mirror whose
+Once a reader has an external resource's absolute location, whether from the entry's own absolute
+`uri` or from its source's location, it MUST apply the first ranked document holding a usable mirror whose
 prefix begins the location, and within that document the usable mirror whose prefix has the most
 names. A mirror is **usable** where its `uri` names a location for this reader under §3.3, and a
 reader MUST report each mirror whose prefix begins the location but that is not usable. The reader
 replaces the prefix by the mirror's location and appends the location's remaining names, as Part 03
 §4 appends a relative reference's names. A reader MUST apply mirrors once, not to the location a
-mirror produced, and a location that no usable mirror's prefix begins stands.
+mirror produced, and a location that no usable mirror's prefix begins stands. A location relative
+to the packet root is never mirrored.
 
 A reader MUST NOT test whether a location exists in order to choose among documents or mirrors,
 which no checker verifies. A reader MUST report, for each external resource, the document through
@@ -204,7 +208,12 @@ a reader knowing only v0.1 refuses a document it would misread. A reader that kn
 read a v0.1 document, whose locations are all absolute URIs or POSIX paths and which states no
 mirror. A writer MUST write v0.2.
 
-### 3.4 A store digest is not compared across a redirect
+### 3.4 A validator locates a resource as a reader does
+
+A validator that locates an external resource, to verify it at any level of Part 04 §5.3, MUST
+locate it as §§3.1 to 3.3 bind a reader, and its report MUST name, for each resource it verified,
+the document through which its source resolved and the document whose mirror it applied, where
+either did.
 
 A resource's location is **redirected** where a mirror produced it, or where its source resolved
 through a document other than the packet's default. Where a validator verifies content without
@@ -271,10 +280,10 @@ resource, since a store digest does not survive a copy; verifying one takes read
 | semantic prose | Unchanged: no concept's meaning moves. | None required. |
 | logical prose and registry | Unchanged: a source is not a logical resource. | None required. |
 | physical profiles | Unchanged: Part 03 §4's relative-reference form and segment decoding are cited, not changed. | None required. |
-| packet manifest and JSON Schemas | Part 04 §5.5's resolution order, the schema's `mirrors` member, `uri` pattern, `$id` and version constant change under §§3.1 to 3.3, Part 04 §5.4 gains §3.4's rule, and Part 04 §11 gains RFC 8089. | The schema and `spec/tools` checks. |
+| packet manifest and JSON Schemas | Part 04 §5.5's resolution order, the schema's `mirrors` member, `uri` pattern, `$id` and version constant change under §§3.1 to 3.3, Part 04 §§5.3 and 5.4 gain §3.4's rules, and Part 04 §11 gains RFC 8089. | The schema and `spec/tools` checks. |
 | validation and import | Unchanged: structural validation still needs no resolution document. | None required. |
 | extensions | Unchanged. | None required. |
-| reader, writer, validator, adapters | The reader ranks documents in the new order, takes its configured documents from `ESCAPEWHEEL_SOURCES` and a per-user file and documents both, matches and applies mirrors by decoded names with `file:` URIs read as paths, passes over and reports a mirror that is not usable, reads Windows paths, resolves a relative location against its document, and reports the document and mirror that placed each resource and each document it did not use. The reader's `rewrite` becomes a caller-supplied mirror. The validator reports a redirected resource's members as not checked when verifying without reading. The reader's and validator's command lines accept resolution documents. The writer writes the new version. | The reader, validator and writer suites. |
+| reader, writer, validator, adapters | The reader ranks documents in the new order, takes its configured documents from `ESCAPEWHEEL_SOURCES` and a per-user file and documents both, matches and applies mirrors by decoded names with `file:` URIs read as paths, passes over and reports a mirror that is not usable, reads Windows paths, resolves a relative location against its document, and reports the document and mirror that placed each resource and each document it did not use. The reader's `rewrite` becomes a caller-supplied mirror. The validator locates external resources through the reader's resolution, names the document and mirror that placed each verified resource, and reports a redirected resource's members as not checked when verifying without reading. The reader's and validator's command lines accept resolution documents. The writer writes the new version. | The reader, validator and writer suites. |
 | conformance fixtures and tests | §6's cases. | Reader tests. |
 | revision process and tooling | The ledger places §§3.1 to 3.4. | `ledger.py`, `evidence.py`. |
 | generated publications and developer documentation | The combined specification regenerates. The reader's documentation describes how it is configured, where it looks and how a mirror applies. | `verify.py`. |
@@ -285,7 +294,12 @@ These cases distinguish the new rules from the current ones:
 
 - a packet whose default names a store, with a configured document naming a local copy, resolves
   to the copy, and a caller-supplied document naming a third location outranks it;
-- a `sources.json` in a folder above a packet root is not read;
+- a `sources.json` in a folder above a packet root is not read, and a configuration naming a
+  pattern or a search names no document;
+- an external entry relative to the packet root is not mirrored by a mirror whose prefix begins the
+  packet root;
+- a validator verifying a mirrored resource reads the mirror's location and names the document
+  holding the mirror in its report;
 - a configured document whose only member is a mirror redirects an entry with an absolute `uri` and
   an entry resolved through the packet's default, and leaves a location it does not begin
   unchanged;
