@@ -990,6 +990,8 @@ class PacketWriter:
             target.describe(entries, registries)
             say(f"staged {len(restaged)} derived or updated resource(s) in {time.perf_counter() - clock:.1f} s")
             clock = time.perf_counter()
+        for registry_id in self._declarations.unused(str(e.get("declaration_id", e["resource_id"])) for e in entries):
+            say(f"  registry: {registry_id} is bound and declares none of the packet's resources")
         # Scan the order of everything except what `write_stream` compared on the way in.
         # Not a shortcut around the check: the same comparison ran, over the same rows, from
         # the same code, one step earlier.

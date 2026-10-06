@@ -143,6 +143,29 @@ def test_the_packet_declares_the_extension_and_carries_its_registry(tmp_path, re
     assert open_packet(root).extensions()["task"]["extension_id"] == "task"
 
 
+def test_an_extension_the_packet_does_not_use_is_reported(tmp_path, registry, minimal):
+    """Bound with no `task.*` table written, so the extension declares none of the packet's resources."""
+    writer = PacketWriter(registry, packet_id="s001", extensions=[EXTENSION])
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    said: list[str] = []
+    assert writer.commit(tmp_path / "s001", say=said.append).passed
+    assert "  registry: task is bound and declares none of the packet's resources" in said
+
+
+def test_an_extension_the_packet_uses_is_not_reported(tmp_path, registry, minimal):
+    said: list[str] = []
+    writer = PacketWriter(registry, packet_id="s001", extensions=[EXTENSION])
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    writer.add("core.intervals", TRIALS)
+    writer.add(
+        "task.trials", [{"session_id": r["session_id"], "trial_id": r["interval_id"], "choice": "left"} for r in TRIALS]
+    )
+    assert writer.commit(tmp_path / "s001", say=said.append).passed
+    assert not [line for line in said if line.startswith("  registry:")]
+
+
 def test_the_entry_binds_the_extension_declaration(tmp_path, registry, minimal):
     """The declaration binding selects the sole owning extension registry."""
     root = tmp_path / "s001"
@@ -551,9 +574,10 @@ def test_a_block_is_an_interval_its_trials_fall_in(tmp_path, registry, minimal):
     report = _foraging(root, registry, minimal, [(0, 299), (300, 599)], [((0, 99), 0), ((300, 399), 1)])
     assert report.passed, [f.check for f in report.findings]
     intervals = open_packet(root).table("core.intervals")
-    assert intervals.column("interval_kind").to_pylist() == ["dynamic_foraging.blocks"] * 2 + [
-        "dynamic_foraging.trials"
-    ] * 2
+    assert (
+        intervals.column("interval_kind").to_pylist()
+        == ["dynamic_foraging.blocks"] * 2 + ["dynamic_foraging.trials"] * 2
+    )
     assert open_packet(root).table("dynamic_foraging.trials").column("block_id").to_pylist() == [0, 1]
 
 

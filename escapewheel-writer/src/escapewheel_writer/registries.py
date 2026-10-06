@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from escapewheel_validator import CheckedRegistryContext, RegistryRejected, RegistryState, check_registry_context
@@ -89,6 +89,15 @@ class Declarations:
     def documents(self) -> tuple[Mapping[str, Any], ...]:
         """Core, then each extension in the order given."""
         return (self.core, *self.extensions.values())
+
+    def unused(self, declaration_ids: Iterable[str]) -> list[str]:
+        """Each extension declaring none of `declaration_ids`, by registry ID.
+
+        Part 04 §8 requires binding every extension that declares a resource and permits binding
+        others, so one a recipe lists needlessly validates while telling a consumer the packet uses it.
+        """
+        used = set(declaration_ids)
+        return sorted(str(d["registry_id"]) for d in self.extensions.values() if used.isdisjoint(d["resources"]))
 
     def declaration(self, declaration_id: str) -> Mapping[str, Any] | None:
         """Return one logical declaration from core or the owning extension."""
