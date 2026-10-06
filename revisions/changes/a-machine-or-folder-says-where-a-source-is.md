@@ -6,10 +6,10 @@
 | **Opened** | 2026-10-06 |
 | **Based on** | `fcc03a5164a894f684c0f53ffd66054c351a13dd` |
 | **Change form** | ordinary |
-| **Amends** | Part 04 §5.5; Part 04 §11; `artifacts/sources.schema.json` |
+| **Amends** | Part 04 §5.4; Part 04 §5.5; Part 04 §11; `artifacts/sources.schema.json` |
 | **Depends on** | None |
 | **Profile** | all |
-| **Decision clauses** | §3.1; §3.2; §3.3 |
+| **Decision clauses** | §3.1; §3.2; §3.3; §3.4 |
 
 Section 3 is normative. Sections 1, 2, 4, 5 and 6 are informative.
 
@@ -110,6 +110,9 @@ Alternatives:
 - **Windows locations as `file:` URIs only.** A resolution document is mostly written by hand on the
   machine it describes, and `file:///D:/data/` or `file://server/share/` is easy to write wrong in
   a way that silently matches nothing.
+- **Compare store digests wherever a location came from.** Part 04 §5.4 already says a store digest
+  is unstable across a copy, and a mirror to another bucket or a bundle reaches exactly a copy, so
+  every member would report a change that did not happen in place.
 - **Dot segments, so the packet's own default can reach data beside the packet.** Part 03 §4 keeps
   `.` and `..` out of every relative reference, and on an object store they have no meaning except
   a lexical one this specification would have to define. A document in a folder above both the
@@ -118,7 +121,8 @@ Alternatives:
 ## 3. Decision
 
 Three subsections replace parts of Part 04 §5.5: where a reader looks, how a location resolves
-through what it finds, and what a document's locations may be.
+through what it finds, and what a document's locations may be. A fourth adds to Part 04 §5.4 what a
+store-digest comparison does with a redirected location.
 
 ### 3.1 Where a reader looks for a resolution document
 
@@ -148,30 +152,32 @@ absolute path, to an entry whose `uri` is the directory or prefix standing for i
 **begins** a location where both are absolute URIs whose schemes and authorities are equal,
 compared without regard to case, and whose path names, decoded as Part 03 §4 decodes a segment, are
 the location's leading path names; or where both are absolute paths and the prefix's names are the
-location's leading names, compared exactly except that a Windows drive letter is compared without
-regard to case. A trailing separator on a mirror prefix changes nothing. Two mirror prefixes are
-equal where each begins the other, and a reader MUST NOT use a document holding two equal mirror
-prefixes, and MUST report that it did not use it.
+location's leading names, compared exactly except that a Windows drive letter and a UNC server's
+name are compared without regard to case. A trailing separator on a mirror prefix changes nothing.
+Two mirror prefixes are equal where each begins the other, and a reader MUST NOT use a document
+holding two equal mirror prefixes, and MUST report that it did not use it.
 
-For that comparison, a `file:` URI is the absolute path it names under RFC 8089: with an empty or
-`localhost` authority, the path its decoded path names form, a Windows path where the first name is
-a drive letter (Appendix E.2) and a POSIX path otherwise; with any other authority, the Windows UNC
-path on that server (Appendix E.3).
+For that comparison, a `file:` URI is the absolute path it names, by the reading RFC 8089 Section 2
+and Appendix E describe: with an empty or `localhost` authority, the path its decoded path names
+form, a Windows path where the first name is a drive letter and a POSIX path otherwise; with any
+other authority, the Windows UNC path on that server.
 
 Once a reader has an external resource's absolute location, whether from the entry's own `uri` or
-from its source's location, it MUST apply the first ranked document holding a usable mirror prefix
-that begins the location, and within that document the prefix with the most names. The reader
+from its source's location, it MUST apply the first ranked document holding a usable mirror whose
+prefix begins the location, and within that document the usable mirror whose prefix has the most
+names. A mirror is **usable** where its `uri` names a location for this reader under §3.3, and a
+reader MUST report each mirror whose prefix begins the location but that is not usable. The reader
 replaces the prefix by the mirror's location and appends the location's remaining names, as Part 03
-§4 appends a relative reference's names. A mirror is **unusable** where its `uri` names no location
-for this reader under §3.3; a reader MUST skip an unusable mirror as though it were absent, and MUST
-report that it skipped it. A reader MUST apply mirrors once, not to the location a mirror produced,
-and a location that no usable mirror prefix begins stands.
+§4 appends a relative reference's names. A reader MUST apply mirrors once, not to the location a
+mirror produced, and a location that no usable mirror's prefix begins stands.
 
 A reader MUST NOT test whether a location exists in order to choose among documents or mirrors,
 which no checker verifies. A reader MUST report, for each external resource, the document through
 which its source resolved and the document whose mirror it applied, where either did.
 
-Part 04's normative references gain RFC 8089, exact, applied to reading a `file:` URI as a path.
+Part 04's normative references gain RFC 8089, exact, applied to the reading of a `file:` URI as a
+path, Section 2 and Appendix E. Appendix E is informative in RFC 8089; this section adopts the
+reading it describes.
 
 ### 3.3 A document's locations may be relative to the document
 
@@ -184,8 +190,9 @@ in a document that is not stored at a location names no location, and a reader M
 it would resolve through one as unresolved.
 
 An **absolute path** in a resolution document is a POSIX path, beginning with `/`, or a Windows
-path, beginning with a drive letter, `:` and a separator, or with `\\` and a server's name. In a
-Windows path both `\` and `/` separate names. Either form MAY be a mirror prefix on any platform,
+path, beginning either with a drive letter, `:` and a separator, or, as a UNC path, with `\\` and
+a server's name. A path beginning with `\\?\` or `\\.\` is neither, and names no location. In a
+Windows path both `\` and `/` separate names. Either kind MAY be a mirror prefix on any platform,
 so that a machine can mirror a location another platform recorded. As a location, a POSIX path
 names none for a reader on Windows, and a Windows path names none for a reader elsewhere.
 
@@ -196,6 +203,14 @@ and its `$id` becomes `https://escapewheel.org/schemas/sources/0.2.0`. A documen
 a reader knowing only v0.1 refuses a document it would misread. A reader that knows v0.2 MUST also
 read a v0.1 document, whose locations are all absolute URIs or POSIX paths and which states no
 mirror. A writer MUST write v0.2.
+
+### 3.4 A store digest is not compared across a redirect
+
+A resource's location is **redirected** where a mirror produced it, or where its source resolved
+through a document other than the packet's default. Where a validator verifies content without
+reading (Part 04 §5.4) and a resource's location is redirected, it MUST report each of that
+resource's members as not checked, and MUST NOT compare its recorded `store_digest`. A
+verification that reads the bytes is unaffected.
 
 ## 4. Questions
 
@@ -234,7 +249,8 @@ default among them, still resolves. A reader that knows only v0.1 refuses a v0.2
 packet written after the change shows that reader its sources as unresolved until the reader is
 updated.
 
-A machine states a mount once, as one mirror in a document its readers are configured with. A
+A machine states a mount once, as one mirror in a document its readers are configured with, and
+a folder of packets shares one document the same way, configured or passed once for all of them. A
 bundle carries a document at its top stating its copies, by source name or, where it keeps the
 store's layout, by a mirror whose `uri` is empty; a mirror prefix naming one asset's directory
 redirects that asset alone, so a partial copy sends what it lacks to the next document's mirror.
@@ -247,19 +263,20 @@ change and also a way for a stale document to redirect a read. Verification agai
 digests catches a redirect to the wrong bytes only where a digest was recorded, and many external
 entries carry none: a video records its size at most, and a Zarr v2 store often has no store
 digest. The report of which document and mirror placed each resource is what lets a reader see a
-redirect it did not intend.
+redirect it did not intend. A validator that verifies without reading checks nothing on a redirected
+resource, since a store digest does not survive a copy; verifying one takes reading it.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged: no concept's meaning moves. | None required. |
 | logical prose and registry | Unchanged: a source is not a logical resource. | None required. |
 | physical profiles | Unchanged: Part 03 §4's relative-reference form and segment decoding are cited, not changed. | None required. |
-| packet manifest and JSON Schemas | Part 04 §5.5's resolution order, the schema's `mirrors` member, `uri` pattern, `$id` and version constant change under §§3.1 to 3.3, and Part 04 §11 gains RFC 8089. | The schema and `spec/tools` checks. |
+| packet manifest and JSON Schemas | Part 04 §5.5's resolution order, the schema's `mirrors` member, `uri` pattern, `$id` and version constant change under §§3.1 to 3.3, Part 04 §5.4 gains §3.4's rule, and Part 04 §11 gains RFC 8089. | The schema and `spec/tools` checks. |
 | validation and import | Unchanged: structural validation still needs no resolution document. | None required. |
 | extensions | Unchanged. | None required. |
-| reader, writer, validator, adapters | The reader ranks documents in the new order, takes its configured documents from `ESCAPEWHEEL_SOURCES` and a per-user file and documents both, matches and applies mirrors by decoded names with `file:` URIs read as paths, skips and reports an unusable mirror, reads Windows paths, resolves a relative location against its document, and reports the document and mirror that placed each resource and each document it did not use. The reader's `rewrite` becomes a caller-supplied mirror. The reader's and validator's command lines accept resolution documents. The writer writes the new version. | The reader, validator and writer suites. |
+| reader, writer, validator, adapters | The reader ranks documents in the new order, takes its configured documents from `ESCAPEWHEEL_SOURCES` and a per-user file and documents both, matches and applies mirrors by decoded names with `file:` URIs read as paths, passes over and reports a mirror that is not usable, reads Windows paths, resolves a relative location against its document, and reports the document and mirror that placed each resource and each document it did not use. The reader's `rewrite` becomes a caller-supplied mirror. The validator reports a redirected resource's members as not checked when verifying without reading. The reader's and validator's command lines accept resolution documents. The writer writes the new version. | The reader, validator and writer suites. |
 | conformance fixtures and tests | §6's cases. | Reader tests. |
-| revision process and tooling | The ledger places §§3.1 to 3.3. | `ledger.py`, `evidence.py`. |
+| revision process and tooling | The ledger places §§3.1 to 3.4. | `ledger.py`, `evidence.py`. |
 | generated publications and developer documentation | The combined specification regenerates. The reader's documentation describes how it is configured, where it looks and how a mirror applies. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
@@ -279,13 +296,16 @@ These cases distinguish the new rules from the current ones:
   begin `s3://bucket/ab/x`; and a document holding both `s3://bucket/a/` and `s3://bucket/a` as
   mirror prefixes is not used and is reported;
 - a mirror prefix `/allen/programs/` begins an entry recorded as `file:///allen/programs/x`,
-  `d:\data` begins `file:///D:/data/x`, and `\\server\share` begins `file://server/share/x`;
+  `d:\data` begins `file:///D:/data/x`, and `\\server\share` begins `file://SERVER/share/x`; and a
+  document holding both `/allen/` and `file:///allen/` as mirror prefixes is not used and is
+  reported;
+- `\\?\D:\data` and `\\.\pipe\x` name no location;
 - a bundle's document, passed by the caller, resolves a mirror of the store's prefix with an empty
   `uri` against the bundle's folder;
 - a bundle's mirror of one asset's directory resolves that asset against the bundle's folder, and
   another asset falls to a configured document's mirror;
 - a mirror whose `uri` is relative in a document not stored at a location, or names the other
-  platform's path, is skipped and reported, and the next document's mirror applies;
+  platform's path, is passed over and reported, and the next document's mirror applies;
 - a drive-letter or UNC location satisfies the schema at v0.2 and fails it at v0.1, resolves on a
   Windows reader with either separator, and names no location elsewhere; and an entry a Linux
   writer recorded as `file:///allen/programs/x` resolves on a Windows reader through a mirror to a
@@ -294,6 +314,9 @@ These cases distinguish the new rules from the current ones:
   source resolved through a relative `uri` opens with its recorded digest verified;
 - a location whose mirror names a missing directory fails to open and is not read from the original
   location;
+- verifying without reading reports every member of a mirrored resource, and of a source resolved
+  through a configured document, as not checked, and compares store digests for a source resolved
+  through the packet's default;
 - a document of an unknown version, or one that cannot be read, is not used and is reported, and
   the next place is tried; and
 - a v0.1 document resolves its sources, a v0.1 document holding a relative `uri` or `mirrors` fails
