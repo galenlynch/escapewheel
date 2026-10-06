@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "revision": "R173",
+  "based_on": "8e218b9193592bf69634bed803cbb95d52016ac6",
+  "clauses": {
+    "R173 \u00a73.1": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-absence"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_optional.py::test_an_absent_column_reads_as_nulls_beside_the_present_ones"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-aind",
+            "nodeid": "tests/test_unit_qc.py::test_a_metric_keeps_its_name_except_num_spikes_and_a_nan_is_null"
+          }
+        ]
+      },
+      "implementations": {
+        "unchanged": "The reader's optional-table read already exposes an omitted column as null, and the reference adapters already write null for a source NaN."
+      },
+      "documentation": {
+        "paths": [
+          "extensions/AUTHORING.md"
+        ]
+      }
+    },
+    "R173 \u00a73.2": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-finite-values"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_a_finished_draft_with_float_columns_passes_the_registry_check"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/scaffold.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "extensions/AUTHORING.md"
+        ]
+      }
+    },
+    "R173 \u00a73.3": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-absence"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "The rule forbids nothing a packet can hold, so no packet distinguishes it."
+      },
+      "implementations": {
+        "unchanged": "No implementation reads a NaN or fill value of an array as absent."
+      },
+      "documentation": {
+        "paths": [
+          "extensions/AUTHORING.md"
+        ]
+      }
+    },
+    "R173 \u00a73.4": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-table-storage"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "The clause removes a section whose rules moved under \u00a73.1."
+      },
+      "implementations": {
+        "unchanged": "No implementation depends on where the rule is stated."
+      },
+      "documentation": {
+        "unchanged": "No guide outside the specification cites the removed section."
+      }
+    },
+    "R173 \u00a73.5": {
+      "owners": [
+        {
+          "path": "spec/parts/12_adapter_interface.md",
+          "anchor": "ew-referenced-resource-delivery"
+        },
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-amendment-comparison"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "The clause changes citations only."
+      },
+      "implementations": {
+        "unchanged": "A citation changes no behaviour."
+      },
+      "documentation": {
+        "unchanged": "No guide restates either citation."
+      }
+    }
+  }
+}

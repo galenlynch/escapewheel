@@ -166,6 +166,7 @@ A packet root MAY itself be an object-store prefix rather than a directory, in w
 relative URI resolves under that prefix
 ([Part 00 §3.3](00_architecture.md#ew-packet)).
 
+<a id="ew-table-storage" data-spec-anchor="canonical"></a>
 ## 5. Table storage
 
 <a id="ew-table-encoding" data-spec-anchor="canonical"></a>
@@ -299,15 +300,6 @@ packet is conforming whichever it uses.
 
 Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
 precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
-
-<a id="ew-one-null" data-spec-anchor="canonical"></a>
-### 5.6 One null
-
-Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker. Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive as the same null.
-
-NaN is not the exception it looks like. It is a value of a float column rather than an absent one, so it reaches only a float column declaring `finite: false` under [Part 02 §5.4](02_core_logical_schemas.md#ew-finite-values), and Parquet's statistics exclude it from a page's bounds — a page holding only NaN publishes no minimum and no maximum.
-
-A writer MUST NOT adopt a sentinel value meaning absent; an absent value is null. Where the reason for the absence matters, core records the fact that distinguishes it rather than encoding the reason in the value: a run's `scope` distinguishes an undeterminable scope from an unambiguous one, and `normalized_label` is null where a source's label has no honest projection.
 
 ## 6. Array storage
 

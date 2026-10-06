@@ -2096,7 +2096,7 @@ note = "enum male/female/hermaphrodite/other with FHIR as authority, unknown car
 
 [clause."R101 §3.10"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-one-null" }]
+where = [{ part = "02", anchor = "ew-absence" }]
 note = "one null and no second marker, NaN a value rather than an absence on 30 of 330 columns, and no sentinel meaning absent; R139 §3.1 narrows NaN to a float column declaring finite: false"
 
 [clause."R101 §3.11"]
@@ -3713,7 +3713,7 @@ disposition = "applied"
 where = [
   { part = "02", anchor = "ew-finite-values" },
   { part = "02", anchor = "ew-column-declaration" },
-  { part = "03", anchor = "ew-one-null" },
+  { part = "02", anchor = "ew-absence" },
 ]
 note = "every float32 or float64 column declares a boolean finite and no other column does; finite: true forbids NaN and both infinities, and an absent value stays null"
 
@@ -4654,3 +4654,26 @@ where = [{ part = "05", anchor = "ew-source-route" }]
 [clause."R172 §3.2"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-source-route" }]
+
+[clause."R173 §3.1"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-absence" }]
+
+[clause."R173 §3.2"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-finite-values" }]
+
+[clause."R173 §3.3"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-absence" }]
+
+[clause."R173 §3.4"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-table-storage" }]
+
+[clause."R173 §3.5"]
+disposition = "applied"
+where = [
+  { part = "12", anchor = "ew-referenced-resource-delivery" },
+  { part = "05", anchor = "ew-amendment-comparison" },
+]

@@ -229,7 +229,7 @@ def test_a_subjects_sex_lands_inside_the_closed_vocabulary(source):
         "hermaphrodite",
         "other",
     ]
-    # `U` is unknown, and Part 03 §5.6 makes that a null rather than `other`: recording it as `other`
+    # `U` is unknown, and Part 02 §6.3 makes that a null rather than `other`: recording it as `other`
     # asserts a sex the source never claimed, where a null says the source did not say.
     assert [sex(v) for v in ("U", "unknown", "", None)] == [None, None, None, None]
 

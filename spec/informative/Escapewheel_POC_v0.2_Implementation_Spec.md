@@ -1330,9 +1330,12 @@ rather than a claim.
 - `finite: false` admits non-finite values. A Tier 2 rule reading such a column sees them in the
   order [Part 11 §5](../parts/11_tier_2_rule_language.md#ew-tier-2-deterministic-semantics) defines.
 
-A NaN is therefore a value only of a float column declaring `finite: false`. An absent value remains
-null under [Part 03 §5.6](../parts/03_portable_physical_profile.md#ew-one-null), so a source's NaN or
-infinity meaning that a value was not recorded or not computable becomes null in any float column.
+A column declares `finite: false` only where a non-finite value carries a meaning no finite value
+can, such as an interval with no end, and the column's `description` MUST state what each
+non-finite value it admits means. No checker verifies this, since a description is prose. A
+computation whose result is non-finite where the column gives that result no meaning has computed
+nothing, and its value is null under [§6.3](#ew-absence); a non-finite value in a column is
+therefore always one its description gives a meaning.
 
 <a id="ew-column-presence" data-spec-anchor="canonical"></a>
 ## 6. Presence
@@ -1383,6 +1386,33 @@ numbered part attaches to a row that names nothing, such as an undeterminable di
 ([§8.3](#ew-discriminator-semantics)), an undeterminable run scope (Part 01 §2.6) or an unrecorded media device
 ([Part 01 §3.18](../parts/01_semantic_standard.md#ew-media-asset-concept)), is not another reading and
 stands.
+
+<a id="ew-one-null" data-spec-anchor="alias"></a>
+<a id="ew-absence" data-spec-anchor="canonical"></a>
+### 6.3 Absence
+
+A column value is present or null; there is no second marker. A value that is inapplicable, one
+that was never recorded, one a source recorded as unknown and one that could not be computed, such
+as a ratio of zero to zero or the mean of no values, are each null. A writer MUST NOT adopt a
+sentinel value meaning absent. Where the reason for an absence matters, a registry records the fact
+that distinguishes it in a column of its own rather than encoding the reason in the value: a run's
+`scope` distinguishes an undeterminable scope from an unambiguous one, and `normalized_label` is
+null where a source's label has no honest projection.
+
+A table whose file omits an `optional` column holds null in that column in every row. A reader
+need not expose the omitted column, and one that does MUST expose it as null in every row.
+[Part 11 §3](../parts/11_tier_2_rule_language.md#ew-tier-2-relation-environment) still exposes no omitted
+column to a rule, which [§10.2](#ew-tier-2-rules) keeps from naming one.
+
+Where a writer cannot tell whether a source's non-finite value is a value or an absence, it MUST
+write null. One null merges every reason a value is absent, so the conversion states nothing the
+source did not. No checker verifies this, since a packet does not hold what the source meant.
+
+Every element of a dense array is a value, an element of a chunk the array does not store
+included, and this specification defines no marker of an absent element. A NaN or a `fill_value`
+in an array is therefore a value, whose meaning the array's data type states where it states one.
+A data type that needs to say a stretch or a channel holds no observation states it as rows, such
+as an interval of a kind it specialises or a status of the channel.
 
 <a id="ew-logical-references" data-spec-anchor="canonical"></a>
 ## 7. References
@@ -2515,6 +2545,7 @@ A packet root MAY itself be an object-store prefix rather than a directory, in w
 relative URI resolves under that prefix
 ([Part 00 §3.3](../parts/00_architecture.md#ew-packet)).
 
+<a id="ew-table-storage" data-spec-anchor="canonical"></a>
 ## 5. Table storage
 
 <a id="ew-table-encoding" data-spec-anchor="canonical"></a>
@@ -2648,15 +2679,6 @@ packet is conforming whichever it uses.
 
 Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
 precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
-
-<a id="ew-one-null" data-spec-anchor="canonical"></a>
-### 5.6 One null
-
-Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker. Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive as the same null.
-
-NaN is not the exception it looks like. It is a value of a float column rather than an absent one, so it reaches only a float column declaring `finite: false` under [Part 02 §5.4](../parts/02_core_logical_schemas.md#ew-finite-values), and Parquet's statistics exclude it from a page's bounds — a page holding only NaN publishes no minimum and no maximum.
-
-A writer MUST NOT adopt a sentinel value meaning absent; an absent value is null. Where the reason for the absence matters, core records the fact that distinguishes it rather than encoding the reason in the value: a run's `scope` distinguishes an undeterminable scope from an unambiguous one, and `normalized_label` is null where a source's label has no honest projection.
 
 ## 6. Array storage
 
@@ -4729,7 +4751,8 @@ of these at `error`:
 | `amendment.derived_resource_stale` | an analysis or compatibility-projection resource both manifests name at the same `uri`, whose `derived_from` chain in either manifest reaches a canonical table the amendment wrote other than the three provenance tables |
 
 A table's rows are compared as a multiset over the columns the amended manifest's registry declares,
-matched by name: an `optional` column a file omits reads as null, and values compare as
+matched by name: an `optional` column a file omits holds null under
+[Part 02 §6.3](../parts/02_core_logical_schemas.md#ew-absence), and values compare as
 [Part 11 §5](../parts/11_tier_2_rule_language.md#ew-tier-2-deterministic-semantics) compares them, a null
 equal to a null. Neither `amendment.row_changed` nor `amendment.group_grown` reports a replaced
 preference: a `core.preferred_runs` row of the superseded version and the current version's row
@@ -5935,7 +5958,7 @@ Where a recipe states a local `root` relative to itself, a build MUST resolve it
 <a id="ew-referenced-resource-delivery" data-spec-anchor="canonical"></a>
 ## 5. What a delivery states
 
-A delivery carries one table per resource asked for. Which columns that table holds is a statement: an adapter MUST deliver a column wherever any row of that resource carries a value, and an absent column says the source produced no value for it in any row, which is Part 02 §5's presence and nothing else. A build MUST NOT read an absent column as saying anything more.
+A delivery carries one table per resource asked for. Which columns that table holds is a statement: an adapter MUST deliver a column wherever any row of that resource carries a value, and an absent column says the source produced no value for it in any row, which is [Part 02 §6](../parts/02_core_logical_schemas.md#ew-column-presence)'s presence and nothing else. A build MUST NOT read an absent column as saying anything more.
 
 An adapter MUST hand over identifiers as the names its source used and never as numbers, because a writer mints every assigned identifier packet-wide and the numbers do not exist until it has (Part 05 §4.3). Types, column order, numbering and the declared sort are the build's: it holds the registry and settles all four on arrival.
 

@@ -108,7 +108,7 @@ Where a recipe states a local `root` relative to itself, a build MUST resolve it
 <a id="ew-referenced-resource-delivery" data-spec-anchor="canonical"></a>
 ## 5. What a delivery states
 
-A delivery carries one table per resource asked for. Which columns that table holds is a statement: an adapter MUST deliver a column wherever any row of that resource carries a value, and an absent column says the source produced no value for it in any row, which is Part 02 §5's presence and nothing else. A build MUST NOT read an absent column as saying anything more.
+A delivery carries one table per resource asked for. Which columns that table holds is a statement: an adapter MUST deliver a column wherever any row of that resource carries a value, and an absent column says the source produced no value for it in any row, which is [Part 02 §6](02_core_logical_schemas.md#ew-column-presence)'s presence and nothing else. A build MUST NOT read an absent column as saying anything more.
 
 An adapter MUST hand over identifiers as the names its source used and never as numbers, because a writer mints every assigned identifier packet-wide and the numbers do not exist until it has (Part 05 §4.3). Types, column order, numbering and the declared sort are the build's: it holds the registry and settles all four on arrival.
 

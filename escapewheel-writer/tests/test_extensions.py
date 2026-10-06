@@ -361,11 +361,11 @@ def test_a_finished_draft_with_float_columns_passes_the_registry_check(tmp_path)
     drafted = draft("vrf", {"doses": path})
     table = drafted.document["resources"]["vrf.doses"]["table"]
     columns = {c["name"]: c for c in table["columns"]}
-    assert (columns["volume"]["finite"], columns["rate"]["finite"]) == (False, False)
+    assert (columns["volume"]["finite"], columns["rate"]["finite"]) == (True, True)
     assert "finite" not in columns["dose_id"]
     reported = " ".join(drafted.decisions)
-    assert "vrf.doses.volume: finite is false" in reported
-    assert "vrf.doses.rate: finite is false" in reported and "this data holds 1 non-finite" in reported
+    assert "vrf.doses.volume: finite is true" in reported
+    assert "vrf.doses.rate: finite is true" in reported and "this data holds 1 non-finite" in reported
 
     columns["dose_id"].update(role="identifier", identity="carried")
     for column in table["columns"]:

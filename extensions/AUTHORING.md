@@ -48,6 +48,13 @@ Every column declares a name, a type, a presence and a role (Part 02 §3, §6, �
   `data`. A role has no default, so a forgotten classification cannot pass for a decision.
 - **Identity**, on an identifier, says whether the value is `carried` from the source unchanged or
   `assigned` by the writer, which numbers it packet-wide (Part 02 §8.2).
+- **Finite**, on a float column, is `true` unless a NaN or infinity carries a meaning, which the
+  column's description then states (Part 02 §5.4). A value that was not recorded or could not be
+  computed is null, and so is a source NaN whose meaning the adapter cannot tell (Part 02 §6.3).
+
+An array element is always a value: no NaN or fill value in an array marks it missing. A stretch of
+time or a channel without an observation is stated as rows, such as an interval of a kind the
+extension specialises or a status on the channel (Part 02 §6.3).
 
 A table reachable from `core.sessions` leads with the required int32 assigned `session_id`
 (Part 02 §7.1). A trial table specialises `core.intervals` by declaring its key as a reference

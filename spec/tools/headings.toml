@@ -96,6 +96,7 @@
 "6" = "Presence"
 "6.1" = "Undeclared columns"
 "6.2" = "Nulls in naming columns"
+"6.3" = "Absence"
 "7" = "References"
 "7.1" = "Session scope"
 "8" = "Column semantics"
@@ -156,7 +157,6 @@
 "5.3" = "Ordering"
 "5.4" = "The overriding orders"
 "5.5" = "The Parquet floor"
-"5.6" = "One null"
 "6" = "Array storage"
 "6.1" = "Version"
 "6.2" = "Axis order"
@@ -340,6 +340,12 @@
 "9" = "What an adapter may state about its own run"
 "10" = "The source cache"
 "11" = "Normative references"
+
+[anchor.ew-absence]
+part = "02"
+section = "6.3"
+title = "Absence"
+aliases = ["ew-one-null"]
 
 [anchor.ew-abstraction-levels]
 part = "00"
@@ -971,12 +977,6 @@ section = "8"
 title = "Part subjects and normative status"
 aliases = []
 
-[anchor.ew-one-null]
-part = "03"
-section = "5.6"
-title = "One null"
-aliases = []
-
 [anchor.ew-opaque-storage]
 part = "03"
 section = "11"
@@ -1515,6 +1515,12 @@ aliases = []
 part = "02"
 section = "2"
 title = "Logical resource declarations"
+aliases = []
+
+[anchor.ew-table-storage]
+part = "03"
+section = "5"
+title = "Table storage"
 aliases = []
 
 [anchor.ew-tier-1-rules]

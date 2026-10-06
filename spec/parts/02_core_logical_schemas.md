@@ -336,9 +336,12 @@ rather than a claim.
 - `finite: false` admits non-finite values. A Tier 2 rule reading such a column sees them in the
   order [Part 11 §5](11_tier_2_rule_language.md#ew-tier-2-deterministic-semantics) defines.
 
-A NaN is therefore a value only of a float column declaring `finite: false`. An absent value remains
-null under [Part 03 §5.6](03_portable_physical_profile.md#ew-one-null), so a source's NaN or
-infinity meaning that a value was not recorded or not computable becomes null in any float column.
+A column declares `finite: false` only where a non-finite value carries a meaning no finite value
+can, such as an interval with no end, and the column's `description` MUST state what each
+non-finite value it admits means. No checker verifies this, since a description is prose. A
+computation whose result is non-finite where the column gives that result no meaning has computed
+nothing, and its value is null under [§6.3](#ew-absence); a non-finite value in a column is
+therefore always one its description gives a meaning.
 
 <a id="ew-column-presence" data-spec-anchor="canonical"></a>
 ## 6. Presence
@@ -389,6 +392,33 @@ numbered part attaches to a row that names nothing, such as an undeterminable di
 ([§8.3](#ew-discriminator-semantics)), an undeterminable run scope (Part 01 §2.6) or an unrecorded media device
 ([Part 01 §3.18](01_semantic_standard.md#ew-media-asset-concept)), is not another reading and
 stands.
+
+<a id="ew-one-null" data-spec-anchor="alias"></a>
+<a id="ew-absence" data-spec-anchor="canonical"></a>
+### 6.3 Absence
+
+A column value is present or null; there is no second marker. A value that is inapplicable, one
+that was never recorded, one a source recorded as unknown and one that could not be computed, such
+as a ratio of zero to zero or the mean of no values, are each null. A writer MUST NOT adopt a
+sentinel value meaning absent. Where the reason for an absence matters, a registry records the fact
+that distinguishes it in a column of its own rather than encoding the reason in the value: a run's
+`scope` distinguishes an undeterminable scope from an unambiguous one, and `normalized_label` is
+null where a source's label has no honest projection.
+
+A table whose file omits an `optional` column holds null in that column in every row. A reader
+need not expose the omitted column, and one that does MUST expose it as null in every row.
+[Part 11 §3](11_tier_2_rule_language.md#ew-tier-2-relation-environment) still exposes no omitted
+column to a rule, which [§10.2](#ew-tier-2-rules) keeps from naming one.
+
+Where a writer cannot tell whether a source's non-finite value is a value or an absence, it MUST
+write null. One null merges every reason a value is absent, so the conversion states nothing the
+source did not. No checker verifies this, since a packet does not hold what the source meant.
+
+Every element of a dense array is a value, an element of a chunk the array does not store
+included, and this specification defines no marker of an absent element. A NaN or a `fill_value`
+in an array is therefore a value, whose meaning the array's data type states where it states one.
+A data type that needs to say a stretch or a channel holds no observation states it as rows, such
+as an interval of a kind it specialises or a status of the channel.
 
 <a id="ew-logical-references" data-spec-anchor="canonical"></a>
 ## 7. References

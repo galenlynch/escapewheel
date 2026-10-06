@@ -86,14 +86,15 @@ def _column(table: pa.Table, name: str, resource: str, decisions: list[str]) -> 
         "description": "",
     }
     if declared in ("float32", "float64"):
-        # Part 02 §5.4 gives `finite` no default. `false` claims nothing, as the null key does: a
-        # column free of NaN in one session need not be in the next, and `true` is enforced.
-        entry["finite"] = False
+        # Part 02 §5.4 gives `finite` no default. `false` is a claim that a non-finite value means
+        # something, which the data cannot show, so the draft says `true` and the report asks.
+        entry["finite"] = True
         values = table.column(name)
         non_finite = pc.count(values.filter(pc.invert(pc.is_finite(values)))).as_py()
         decisions.append(
-            f"{resource}.{name}: finite is false, admitting NaN and infinities; declare true if it never "
-            f"holds one (Part 02 §5.4); this data holds {non_finite} non-finite value(s)"
+            f"{resource}.{name}: finite is true, so a NaN or infinity meaning no value is written as null "
+            f"(Part 02 §6.3); declare false only if one carries a meaning, and state it in the description "
+            f"(Part 02 §5.4); this data holds {non_finite} non-finite value(s)"
         )
     if declared == "string":
         # Part 02 §9.3 gives `vocabulary` no default either, and the meta-schema requires one as

@@ -1293,7 +1293,8 @@ of these at `error`:
 | `amendment.derived_resource_stale` | an analysis or compatibility-projection resource both manifests name at the same `uri`, whose `derived_from` chain in either manifest reaches a canonical table the amendment wrote other than the three provenance tables |
 
 A table's rows are compared as a multiset over the columns the amended manifest's registry declares,
-matched by name: an `optional` column a file omits reads as null, and values compare as
+matched by name: an `optional` column a file omits holds null under
+[Part 02 §6.3](02_core_logical_schemas.md#ew-absence), and values compare as
 [Part 11 §5](11_tier_2_rule_language.md#ew-tier-2-deterministic-semantics) compares them, a null
 equal to a null. Neither `amendment.row_changed` nor `amendment.group_grown` reports a replaced
 preference: a `core.preferred_runs` row of the superseded version and the current version's row
