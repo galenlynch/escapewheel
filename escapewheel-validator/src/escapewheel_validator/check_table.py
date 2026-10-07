@@ -128,6 +128,7 @@ PACKET_REPLACES_MISMATCH = _named("packet.replaces.mismatch", _WARNING, _PACKET)
 
 # The `declaration` phase: each entry against the declaration it names.
 PACKET_RESOURCE_DECLARATION_UNKNOWN = _named("packet.resource.declaration_unknown", _ERROR, _RESOURCE)
+PACKET_REGISTRY_UNUSED = _named("packet.registry.unused", _WARNING, _REGISTRY)
 PACKET_RESOURCE_SINGLETON_IDENTITY = _named("packet.resource.singleton_identity", _ERROR, _RESOURCE)
 PACKET_RESOURCE_FAMILY_NAMESPACE = _named("packet.resource.family_namespace", _ERROR, _RESOURCE)
 PACKET_RESOURCE_DEPENDENCY_MISSING = _named("packet.resource.dependency_missing", _ERROR, _RESOURCE)
@@ -405,6 +406,7 @@ __all__ = [
     "PACKET_REGISTRY_ROLE",
     "PACKET_REGISTRY_STANDARD",
     "PACKET_REGISTRY_UNREADABLE",
+    "PACKET_REGISTRY_UNUSED",
     "PACKET_REGISTRY_VERSION",
     "PACKET_REPLACES_MAJOR_VERSION",
     "PACKET_REPLACES_MISMATCH",

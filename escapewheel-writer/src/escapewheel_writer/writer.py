@@ -141,8 +141,10 @@ class PacketWriter:
         #: The packet version this writer amends, whose numbers seed `keys` and against whose rows
         #: every table settles, or None for a new packet.
         self._held: Held | None = None
+        #: The registries an amending build binds only because the held packet does (Part 05 §15.1).
+        self._unnamed: frozenset[str] = frozenset()
 
-    def amending(self, held: Held, *, prevail: bool = False) -> None:
+    def amending(self, held: Held, *, prevail: bool = False, unnamed: Collection[str] = ()) -> None:
         """Amend `held` rather than build a new packet (Part 05 §15).
 
         Its numbers are held before any is assigned, so a held name keeps its identifier and an
@@ -156,6 +158,9 @@ class PacketWriter:
         prevail : bool, default False
             Keep the packet's session and subject rows whatever a source delivers, as an amending
             build does (Part 05 §3.6), rather than settling them like any other row.
+        unnamed : collection of str, default ()
+            Registry IDs bound only because `held` binds them, each left out at commit where it has no
+            required singleton and the amended packet uses none of it (Part 05 §15.1).
 
         Raises
         ------
@@ -171,6 +176,7 @@ class PacketWriter:
         held.prevail = prevail
         held.seed(self.keys)
         self._held = held
+        self._unnamed = frozenset(unnamed)
 
     def name_apart(self, kind: str, name: str) -> str:
         """Return a name the packet this writer amends does not hold, `name` itself where it holds none."""
@@ -990,8 +996,20 @@ class PacketWriter:
             target.describe(entries, registries)
             say(f"staged {len(restaged)} derived or updated resource(s) in {time.perf_counter() - clock:.1f} s")
             clock = time.perf_counter()
-        for registry_id in self._declarations.unused(str(e.get("declaration_id", e["resource_id"])) for e in entries):
-            say(f"  registry: {registry_id} is bound and declares none of the packet's resources")
+        bound = entries
+        if isinstance(target, Amendment):
+            bound = list(target.resources())
+            declared = [str(e.get("declaration_id", e["resource_id"])) for e in bound]
+            if left := self._declarations.left_out(self._unnamed, declared):
+                registries = target.bind_registries(
+                    d for d in self._declarations.documents if str(d["registry_id"]) not in left
+                )
+                target.describe(entries, registries)
+                for registry_id in left:
+                    say(f"  registry: {registry_id} is left out, since the amended packet uses none of it")
+        for registry_id in self._declarations.unused(str(e.get("declaration_id", e["resource_id"])) for e in bound):
+            if registry_id in registries:
+                say(f"  registry: {registry_id} is bound and declares none of the packet's resources")
         # Scan the order of everything except what `write_stream` compared on the way in.
         # Not a shortcut around the check: the same comparison ran, over the same rows, from
         # the same code, one step earlier.

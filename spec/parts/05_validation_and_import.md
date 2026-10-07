@@ -1166,8 +1166,11 @@ A build whose recipe gives `[packet].amends` (§3.1) is an **amending build**. I
 amendment of the packet at the root the build writes, and it is bound as an amendment wherever this
 part binds a build and an amendment differently. `amends` is the `packet_version` of the packet's
 current manifest. An amending build binds each registry its recipe names, and each registry the
-packet's current manifest binds under an ID for which the recipe names none. The amended manifest
-keeps the packet's `description` unless `[packet].description` gives one. §§3.3, 3.5, 3.6, 4.3, 7,
+packet's current manifest binds under an ID for which the recipe names none, unless that registry
+is an extension registry that has no required singleton and declares none of the amended
+manifest's resources ([Part 04 §8](04_packet_catalog.md#ew-packet-registry-bindings)). Its writer
+MUST report each registry it leaves out this way, naming its ID, which no checker verifies. The
+amended manifest keeps the packet's `description` unless `[packet].description` gives one. §§3.3, 3.5, 3.6, 4.3, 7,
 8 and 12 state where an amending build differs from a build of a new packet.
 
 <a id="ew-amendment-scope" data-spec-anchor="canonical"></a>

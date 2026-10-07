@@ -264,6 +264,11 @@ the held run automatically, with the reason naming Part 05 §12. A `[[preferred_
 a different choice, naming the run by `processing_run_name` among the packet's runs and this
 build's.
 
+The build binds each registry the recipe names, and each the packet binds under an ID the recipe
+names none (Part 05 §15.1). One of the packet's extensions that the amended packet no longer uses,
+because it never did or because the amendment removed its last resource, is left out unless it has
+a required singleton, and the build says so; the retained manifest still binds it.
+
 A held table whose file holds a column its bound declaration does not declare, as one written under
 an earlier registry may, refuses the build before any source opens, unless a `[[materialize]]` entry
 derives that table again (Part 05 §3.5). The refusal names the remedies: a `[drop]` entry keyed

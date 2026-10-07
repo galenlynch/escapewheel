@@ -93,11 +93,30 @@ class Declarations:
     def unused(self, declaration_ids: Iterable[str]) -> list[str]:
         """Each extension declaring none of `declaration_ids`, by registry ID.
 
-        Part 04 §8 requires binding every extension that declares a resource and permits binding
-        others, so one a recipe lists needlessly validates while telling a consumer the packet uses it.
+        Part 04 §8 requires binding every extension that declares a resource and advises against
+        binding others, so one a recipe lists needlessly validates with a warning.
         """
         used = set(declaration_ids)
         return sorted(str(d["registry_id"]) for d in self.extensions.values() if used.isdisjoint(d["resources"]))
+
+    def left_out(self, registry_ids: Iterable[str], declaration_ids: Iterable[str]) -> list[str]:
+        """Each of `registry_ids` an amending build leaves out, by registry ID (Part 05 §15.1).
+
+        An extension declaring none of `declaration_ids` and no required singleton; one with a required
+        singleton is kept, so that removing that singleton still fails validation.
+        """
+        named = set(registry_ids)
+        return [
+            registry_id
+            for registry_id in self.unused(declaration_ids)
+            if registry_id in named
+            and not any(
+                declaration["instances"] == {"mode": "singleton", "presence": "required"}
+                for document in self.extensions.values()
+                if document["registry_id"] == registry_id
+                for declaration in document["resources"].values()
+            )
+        ]
 
     def declaration(self, declaration_id: str) -> Mapping[str, Any] | None:
         """Return one logical declaration from core or the owning extension."""

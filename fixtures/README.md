@@ -41,7 +41,9 @@ not carry every table; `validate.py` checks what the manifest declares.
 The packet carries one extension, `dynamic_foraging`, holding the two rows its `trials` table
 contributes. Not decoration: R54 §2.4a makes an `interval_kind` naming a resource the packet does
 not declare an error, and no core table specialises an interval, so a packet with intervals in it
-carries an extension by construction.
+carries an extension by construction. A packet binds only the extensions whose namespace holds one
+of its resources ([Part 04 §8](../spec/parts/04_packet_catalog.md#ew-packet-registry-bindings)), so
+one without trials binds none.
 
 `corpus_packets/` declares the packets, and its `PACKETS` is the full list: one record per packet,
 carrying how it is written and what a validator must report of it. `build.py` writes each record's
@@ -256,6 +258,10 @@ recording modality ([Part 00 §1](../spec/parts/00_architecture.md#ew-architectu
 `one_clock` is `no_extracellular` reduced to its behavior clock, with no reference clock named, and
 is clean because a session must name its reference only where it declares more than one clock
 ([Part 01 §3.3](../spec/parts/01_semantic_standard.md#ew-session-concept)).
+`unused_extension` is `sessions_only` binding `dynamic_foraging` all the same, and draws one
+`packet.registry.unused` warning while passing; none of the extension's rules, four of which read
+`core.intervals`, finds a row
+([Part 02 §10.2](../spec/parts/02_core_logical_schemas.md#ew-tier-2-rules)).
 
 `bad_vocabulary` uses `good` deliberately: it is Phy's label for a single unit, and the
 one an importer most plausibly forgets to map to `sua` (R11 §3).

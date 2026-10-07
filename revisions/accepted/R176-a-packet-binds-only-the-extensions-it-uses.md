@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Ready** |
+| **Status** | **Accepted** 2026-10-06 |
 | **Opened** | 2026-10-06 |
 | **Based on** | `8cf4dd3df52bd7bd258b5903271c0df43a41432d` |
 | **Change form** | ordinary |
@@ -139,8 +139,9 @@ under the cleanup rules Part 03 §3.2 and Part 05 §15 apply to a descriptor's `
 
 A bound extension with a required singleton is never reported unused or left out: it either
 declares a resource of the packet or fails `packet.resource.required_missing`, which already names
-the fault. An amendment removing such an extension's last resource, which Part 05 §15.2 permits only for an
-analysis, compatibility-projection or documentation singleton, therefore still fails that check.
+the fault. No amendment removes such a singleton: Part 05 §15.2 lets an amendment remove only an
+analysis, compatibility-projection or documentation resource, and Part 02 §2.5 makes every
+singleton of those classes optional.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
@@ -151,7 +152,7 @@ analysis, compatibility-projection or documentation singleton, therefore still f
 | validation and import | Part 05 §15.1's amending-build binding rule changes under §3.4. | The writer suite. |
 | extensions | Unchanged: an extension document's shape is unchanged, and its rules already comply with §3.2. | None required. |
 | reader, writer, validator, adapters | The validator reports `packet.registry.unused`. The writer's amending build leaves out an unused held extension and reports it. The reader is unchanged, since it resolves only declarations a resource names. | The validator and writer suites. |
-| conformance fixtures and tests | `sessions_only` stops binding `dynamic_foraging`, so it stays clean, which the corpus judges as passing with no warning. A new corpus packet binding an unused extension expects the warning. | The corpus stage of `verify.py`. |
+| conformance fixtures and tests | The corpus's packets bind only the extensions they use, so `sessions_only` stops binding `dynamic_foraging` and stays clean, which the corpus judges as passing with no warning. A new corpus packet binding an unused extension expects the warning. | The corpus stage of `verify.py`. |
 | revision process and tooling | The ledger places §§3.1 to 3.4. | `ledger.py`, `evidence.py`. |
 | generated publications and developer documentation | The combined specification regenerates. | `verify.py`. |
 
@@ -170,8 +171,7 @@ These cases distinguish the new rules from the current ones:
 - an amending build of a packet binding an unused extension, and one removing the last analysis
   resource an extension declares, each write a manifest that does not bind that extension, and the
   writer reports the registry left out;
-- an amending build that removes the last resource of an extension with a required singleton keeps
-  that binding, and the amended packet fails `packet.resource.required_missing`;
+- an extension with a required singleton is never left out by an amending build;
 - an amending build keeps a held extension that declares a resource of the amended manifest, and
   binds an unused extension its recipe names, which validation then warns of; and
 - the stored copy of a registry left out of an amendment remains readable through the retained

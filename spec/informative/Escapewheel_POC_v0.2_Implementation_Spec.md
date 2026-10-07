@@ -2037,6 +2037,10 @@ identifier containing no dot.
 
 A rule's SQL MUST NOT reference a column whose presence is `optional`. A rule is executed against the file, and `optional` permits the column to be absent from it (§6), so a rule naming one does not miss a check — the query fails to parse, and the run meant to find defects reports an error of its own. A constraint that wants an optional column either makes it `nullable`, which declares it always present and sometimes empty, or moves to the shim of §10.3.
 
+An extension rule MUST return no row where every resource of its own registry binds as an empty
+relation, which no checker verifies, so that binding an extension whose resources a packet does not
+carry adds no finding ([Part 04 §8](../parts/04_packet_catalog.md#ew-packet-registry-bindings)).
+
 The language contract determines the result relation. A completed empty result passes; a completed
 non-empty result produces the declared finding. Invalid, unsupported, and incomplete evaluation
 are not findings and cannot establish a pass (Part 11 §8).
@@ -3391,8 +3395,10 @@ the same `path`. The document at a descriptor's path MUST:
 - carry `logical_standard_version` equal to the manifest's, and, for the core registry,
   `semantic_standard_version` equal to the manifest's.
 
-A packet MUST bind the core registry and every extension registry that declares one of its
-resources. Binding an extension registry activates its required declarations under
+An extension registry **declares** a resource of a packet where the resource's `declaration_id`
+names a declaration in that registry. A packet MUST bind the core registry and every extension
+registry that declares one of its resources, and SHOULD NOT bind an extension registry that
+declares none of them. Binding an extension registry activates its required declarations under
 [Part 02 §2.5](../parts/02_core_logical_schemas.md#ew-resource-presence). Every `declaration_id` resolves
 only in the bound registries.
 
@@ -3430,8 +3436,9 @@ A checker evaluates manifest conformance in these phases, in order:
 A checker MUST NOT run a later phase over a manifest with a finding in `json`, `shape`, or
 `entries`. A checker evaluating manifest shape MUST assert the `date-time` format that JSON Schema
 Validation Draft 2020-12 defines. A shape finding carries the check ID `packet.manifest.schema`
-and the schema-location pointer. Every finding in the table below is at `error` and names the
-owning resource ID or registry ID where one applies.
+and the schema-location pointer. Every finding in the table below is at `error`, except
+`packet.registry.unused` at `warning`, and names the owning resource ID or registry ID where one
+applies.
 
 | check ID | phase | a finding exists when |
 |---|---|---|
@@ -3455,6 +3462,7 @@ owning resource ID or registry ID where one applies.
 | `packet.registry.version` | registry_binding | the document's `registry_version` differs from `version` |
 | `packet.registry.standard` | registry_binding | a standard identifier differs from the manifest's under §8 |
 | `packet.resource.declaration_unknown` | declaration | `declaration_id` names no declaration in a bound registry |
+| `packet.registry.unused` | declaration | a bound extension registry that passed binding declares none of the packet's resources and has no required singleton, naming that registry; the finding belongs to the packet under [Part 05 §9.5](../parts/05_validation_and_import.md#ew-verdict-composition) |
 | `packet.resource.singleton_identity` | declaration | a singleton entry's `resource_id` differs from its declaration ID |
 | `packet.resource.family_namespace` | declaration | a family entry's `resource_id` lies outside its declaration's namespace |
 | `packet.resource.required_missing` | declaration | an active required singleton has no entry |
@@ -4693,8 +4701,11 @@ A build whose recipe gives `[packet].amends` (§3.1) is an **amending build**. I
 amendment of the packet at the root the build writes, and it is bound as an amendment wherever this
 part binds a build and an amendment differently. `amends` is the `packet_version` of the packet's
 current manifest. An amending build binds each registry its recipe names, and each registry the
-packet's current manifest binds under an ID for which the recipe names none. The amended manifest
-keeps the packet's `description` unless `[packet].description` gives one. §§3.3, 3.5, 3.6, 4.3, 7,
+packet's current manifest binds under an ID for which the recipe names none, unless that registry
+is an extension registry that has no required singleton and declares none of the amended
+manifest's resources ([Part 04 §8](../parts/04_packet_catalog.md#ew-packet-registry-bindings)). Its writer
+MUST report each registry it leaves out this way, naming its ID, which no checker verifies. The
+amended manifest keeps the packet's `description` unless `[packet].description` gives one. §§3.3, 3.5, 3.6, 4.3, 7,
 8 and 12 state where an amending build differs from a build of a new packet.
 
 <a id="ew-amendment-scope" data-spec-anchor="canonical"></a>

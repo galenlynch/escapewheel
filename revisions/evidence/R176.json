@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "revision": "R176",
+  "based_on": "8cf4dd3df52bd7bd258b5903271c0df43a41432d",
+  "clauses": {
+    "R176 \u00a73.1": {
+      "owners": [
+        {
+          "path": "spec/parts/04_packet_catalog.md",
+          "anchor": "ew-packet-registry-bindings"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "unused_extension",
+            "finding": "packet.registry.unused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validator.py::test_an_extension_declaring_none_of_the_packet_s_resources_is_warned_of"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validator.py::test_an_extension_declaring_a_resource_is_not_warned_of_and_neither_is_core"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/declarations.py",
+          "fixtures/corpus_packets/writing.py",
+          "fixtures/corpus_packets/amendments.py",
+          "fixtures/corpus_packets/opaque.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R176 \u00a73.2": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-tier-2-rules"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "unused_extension",
+            "finding": "packet.registry.unused"
+          }
+        ]
+      },
+      "implementations": {
+        "unchanged": "No checker verifies the rule, and every extension rule in the tree already returns no row where its extension's resources are empty."
+      },
+      "documentation": {
+        "unchanged": "No guide describes what an extension rule may return."
+      }
+    },
+    "R176 \u00a73.3": {
+      "owners": [
+        {
+          "path": "spec/parts/04_packet_catalog.md",
+          "anchor": "ew-packet-manifest-conformance"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "unused_extension",
+            "finding": "packet.registry.unused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validator.py::test_an_extension_declaring_none_of_the_packet_s_resources_is_warned_of"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validator.py::test_an_extension_declaring_a_resource_is_not_warned_of_and_neither_is_core"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validator.py::test_an_extension_that_fails_binding_is_not_warned_of"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validator.py::test_an_absent_required_singleton_is_reported_and_not_an_unused_binding"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/check_table.py",
+          "escapewheel-validator/src/escapewheel_validator/declarations.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R176 \u00a73.4": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-amendment-definition"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_bindings.py::test_an_amendment_leaves_out_a_held_extension_the_packet_does_not_use"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_bindings.py::test_an_amendment_keeps_a_held_extension_the_packet_uses"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_bindings.py::test_an_amendment_binds_an_unused_extension_its_caller_names"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_bindings.py::test_an_amendment_removing_an_extension_s_last_resource_leaves_it_out"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_bindings.py::test_an_extension_with_a_required_singleton_is_never_left_out"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_build.py::test_every_entry_point_leaves_out_a_held_extension_the_packet_does_not_use"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/registries.py",
+          "escapewheel-writer/src/escapewheel_writer/publication.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    }
+  }
+}

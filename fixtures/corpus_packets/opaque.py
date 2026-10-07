@@ -85,7 +85,7 @@ def owned_opaque(
 
 def publish(out: Path, *payloads, extensions=()) -> list[dict]:
     """Write `valid` plus each `(resource_id, name, payload, options)` payload, and return their entries."""
-    write_packet(out, content(), extensions=extensions)
+    write_packet(out, content(), extensions=extensions, added=tuple(rid for rid, *_ in payloads))
     entries = [owned_opaque(out, rid, file, body, **options) for rid, file, body, options in payloads]
     edit_manifest(out, lambda m: m["resources"].extend(entries))
     return entries

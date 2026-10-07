@@ -48,6 +48,8 @@ def write_packet(
     unsorted: frozenset = frozenset(),
     algorithm: str = "sha256",
     extensions: tuple = (),
+    added: tuple = (),
+    unused: tuple = (),
     numbers: dict[str, dict[str, int]] | None = None,
 ) -> Numbering:
     """Write a packet in 03's portable layout, and return the numbering of its names.
@@ -55,9 +57,11 @@ def write_packet(
     `recast` maps a resource to a function from its Arrow table to the one written, for
     variants that must violate the registry's own schema; `unsorted` names resources
     written in insertion order, for variants that must violate Part 03 §5.3. Every resource
-    records its `digest` under `algorithm`. `extensions` are registry documents bound beside
-    core and `dynamic_foraging`. `numbers` replaces the numbering of each identifier it names,
-    for variants that must number one otherwise."""
+    records its `digest` under `algorithm`. `extensions` are registry documents beside core and
+    `dynamic_foraging`, each bound where its namespace holds one of `tables` or of `added`, the
+    resource IDs a caller adds to the manifest afterwards (Part 04 §8); `unused` are bound
+    regardless, for variants that must bind an extension they do not use. `numbers` replaces the
+    numbering of each identifier it names, for variants that must number one otherwise."""
     if out.exists():
         shutil.rmtree(out)
     documents = (REGISTRY, EXTENSION, *extensions)
@@ -90,7 +94,10 @@ def write_packet(
             }
         )
 
-    registries = {document["registry_id"]: bind(out, document) for document in documents}
+    namespaces = {resource.split(".", 1)[0] for resource in (*tables, *added)}
+    used = [document for document in documents[1:] if document["registry_id"] in namespaces]
+    bound = (REGISTRY, *used, *unused)
+    registries = {document["registry_id"]: bind(out, document) for document in bound}
 
     sessions = sorted({r["session_id"] for r in tables["core.sessions"]})
     (out / "packet.json").write_text(

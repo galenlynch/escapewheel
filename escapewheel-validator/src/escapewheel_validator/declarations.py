@@ -116,6 +116,20 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                 resource=declaration_id,
             )
 
+    # Part 04 §8. One with a required singleton is left to `required_missing`, which names the fault.
+    declared = {entry.declaration_id for entry in packet.resources()}
+    for registry_id, document in sorted(extensions.items()):
+        resources = document["resources"]
+        required = any(
+            declaration["instances"]["mode"] == "singleton" and declaration["instances"]["presence"] == "required"
+            for declaration in (visible[declaration_id] for declaration_id in resources if declaration_id in visible)
+        )
+        if declared.isdisjoint(resources) and not required:
+            report.add(
+                check_table.PACKET_REGISTRY_UNUSED,
+                f"{registry_id}: bound, and declares none of the packet's resources",
+            )
+
     for declaration_id, declaration in visible.items():
         if declaration["kind"] != "table" or declaration_id not in by_id:
             continue

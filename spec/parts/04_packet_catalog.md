@@ -428,8 +428,10 @@ the same `path`. The document at a descriptor's path MUST:
 - carry `logical_standard_version` equal to the manifest's, and, for the core registry,
   `semantic_standard_version` equal to the manifest's.
 
-A packet MUST bind the core registry and every extension registry that declares one of its
-resources. Binding an extension registry activates its required declarations under
+An extension registry **declares** a resource of a packet where the resource's `declaration_id`
+names a declaration in that registry. A packet MUST bind the core registry and every extension
+registry that declares one of its resources, and SHOULD NOT bind an extension registry that
+declares none of them. Binding an extension registry activates its required declarations under
 [Part 02 §2.5](02_core_logical_schemas.md#ew-resource-presence). Every `declaration_id` resolves
 only in the bound registries.
 
@@ -467,8 +469,9 @@ A checker evaluates manifest conformance in these phases, in order:
 A checker MUST NOT run a later phase over a manifest with a finding in `json`, `shape`, or
 `entries`. A checker evaluating manifest shape MUST assert the `date-time` format that JSON Schema
 Validation Draft 2020-12 defines. A shape finding carries the check ID `packet.manifest.schema`
-and the schema-location pointer. Every finding in the table below is at `error` and names the
-owning resource ID or registry ID where one applies.
+and the schema-location pointer. Every finding in the table below is at `error`, except
+`packet.registry.unused` at `warning`, and names the owning resource ID or registry ID where one
+applies.
 
 | check ID | phase | a finding exists when |
 |---|---|---|
@@ -492,6 +495,7 @@ owning resource ID or registry ID where one applies.
 | `packet.registry.version` | registry_binding | the document's `registry_version` differs from `version` |
 | `packet.registry.standard` | registry_binding | a standard identifier differs from the manifest's under §8 |
 | `packet.resource.declaration_unknown` | declaration | `declaration_id` names no declaration in a bound registry |
+| `packet.registry.unused` | declaration | a bound extension registry that passed binding declares none of the packet's resources and has no required singleton, naming that registry; the finding belongs to the packet under [Part 05 §9.5](05_validation_and_import.md#ew-verdict-composition) |
 | `packet.resource.singleton_identity` | declaration | a singleton entry's `resource_id` differs from its declaration ID |
 | `packet.resource.family_namespace` | declaration | a family entry's `resource_id` lies outside its declaration's namespace |
 | `packet.resource.required_missing` | declaration | an active required singleton has no entry |

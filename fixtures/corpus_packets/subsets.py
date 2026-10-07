@@ -1,6 +1,7 @@
 """Packets that carry some of the valid session's tables."""
 
-from .record import Packet
+from .record import Expected, Packet
+from .registry import EXTENSION
 from .session import EXTRACELLULAR, variant
 
 
@@ -35,4 +36,11 @@ SUBSET_PACKETS = (
     # Part 01 §3.3: a session declaring one clock needs no reference to name it.
     Packet("one_clock", variant(behavior_clock_only)),
     Packet("sessions_only", variant(sessions_and_subjects_only)),
+    # Part 04 §8: an extension declaring none of the packet's resources is bound, which a validator
+    # warns of and which leaves the packet conforming.
+    Packet(
+        "unused_extension",
+        variant(sessions_and_subjects_only, unused=(EXTENSION,)),
+        Expected("warning", "packet.registry.unused", count=1, conforming=True),
+    ),
 )

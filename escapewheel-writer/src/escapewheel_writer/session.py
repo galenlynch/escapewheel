@@ -409,12 +409,15 @@ class Prepared:
         The packet an amending recipe amends, opened; None where the recipe amends none.
     problems : tuple of Problem
         Everything the recipe's check reports, warnings included.
+    unnamed : tuple of str
+        The registry IDs among `extensions` bound only because the held packet binds them.
     """
 
     registry: CheckedRegistryContext
     extensions: tuple[CheckedRegistryContext, ...]
     held: Held | None
     problems: tuple[Problem, ...]
+    unnamed: tuple[str, ...] = ()
 
     @property
     def errors(self) -> list[Problem]:
@@ -461,17 +464,19 @@ def prepare(
         ]
     extension_contexts = list(extension_contexts)
     held = Held.open(recipe.out) if recipe.amends is not None else None
+    unnamed: tuple[str, ...] = ()
     if held is not None:
-        # Part 05 §15.1: the build also binds each registry the packet binds under an ID it names none.
+        # Part 05 §15.1: the build also binds each registry the packet binds under an ID it names none,
+        # and the writer leaves out at commit one the amended packet does not use.
         named = {"core"} | {
             str(context.document.get("registry_id"))
             for context in extension_contexts
             if isinstance(context.document, Mapping)
         }
+        held_bytes = held.registry_bytes()
+        unnamed = tuple(registry_id for registry_id in sorted(held_bytes) if registry_id not in named)
         extension_contexts += [
-            check_registry_context_bytes(body, core=registry_context)
-            for registry_id, body in sorted(held.registry_bytes().items())
-            if registry_id not in named
+            check_registry_context_bytes(held_bytes[registry_id], core=registry_context) for registry_id in unnamed
         ]
     for extension_context in extension_contexts:
         if extension_context.result.state != RegistryState.VALID:
@@ -488,7 +493,7 @@ def prepare(
         problems += held_column_problems(
             recipe, held, [checked_registry, *(extension.document for extension in extension_contexts)]
         )
-    return Prepared(registry_context, tuple(extension_contexts), held, tuple(problems))
+    return Prepared(registry_context, tuple(extension_contexts), held, tuple(problems), unnamed)
 
 
 def held_column_problems(recipe: Recipe, held: Held, documents: Sequence[Mapping[str, Any]]) -> list[Problem]:
@@ -657,7 +662,7 @@ def build(  # noqa: C901
     )
     if held is not None:
         try:
-            writer.amending(held, prevail=True)
+            writer.amending(held, prevail=True, unnamed=prepared.unnamed)
         except AmendmentRefused as exc:
             raise refusal(recipe, "refused: ", [_amendment_refused(exc)]) from exc
         _from_packet(context, held, writer, session_id)

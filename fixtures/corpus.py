@@ -145,6 +145,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "no_extracellular": None,
     "one_clock": None,
     "sessions_only": None,
+    "unused_extension": ("warning", "packet.registry.unused"),
     "owned_opaque_object": None,
     "owned_opaque_prefix": None,
     "owned_opaque_singleton": None,

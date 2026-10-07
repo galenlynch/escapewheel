@@ -141,16 +141,19 @@ def test_a_source_naming_another_subject_refuses_the_amendment():
 
 
 def _binding_the_task_extension(root: Path, sorted_root: Path) -> None:
-    """Amend the packet with a recipe naming the task extension, so the packet then binds it."""
+    """Amend the packet with a recipe naming the task extension, so the packet then binds it unused."""
     (root / "task.json").write_text(json.dumps(EXTENSION))
     path = amending_recipe(root, sorted_root)
     path.write_text(path.read_text().replace('amends = "0.1.0"\n', 'amends = "0.1.0"\nextensions = ["task.json"]\n'))
     recipe = Recipe.load(path)
-    assert build(recipe, REGISTRY).amend(recipe.out).passed
+    report = build(recipe, REGISTRY).amend(recipe.out)
+    assert report.passed
+    # Part 05 §3.1 binds an extension the recipe names, used or not, and Part 04 §8 warns of it.
+    assert [f.message.split(":")[0] for f in report.findings if f.check == "packet.registry.unused"] == ["task"]
 
 
-def test_every_entry_point_binds_the_registries_the_packet_binds(packet):
-    """Part 05 §15.1: a recipe naming no extension still binds the one the packet binds."""
+def test_every_entry_point_leaves_out_a_held_extension_the_packet_does_not_use(packet, capsys):
+    """Part 05 §15.1: a recipe naming no extension binds the packet's core, and not its unused extension."""
     root, sorted_root = packet
     _binding_the_task_extension(root, sorted_root)
     bound = {}
@@ -166,5 +169,10 @@ def test_every_entry_point_binds_the_registries_the_packet_binds(packet):
         else:
             assert import_packet(Recipe.load(path), REGISTRY).passed
         bound[entry] = json.loads((root / entry / "packet" / "packet.json").read_text())["registries"]
-    assert set(bound["command"]) == {"core", "task"}
+    assert set(bound["command"]) == {"core"}
     assert bound["build"] == bound["command"] == bound["import_packet"]
+    assert "registry: task is left out" in capsys.readouterr().out
+    # The retained manifest that binds it still names the stored copy.
+    out = root / "build" / "packet"
+    retained = json.loads((out / "manifests" / "0.1.1.json").read_text())
+    assert (out / retained["registries"]["task"]["path"]).is_file()

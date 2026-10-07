@@ -221,10 +221,14 @@ class Amendment:
         """Open the amended packet, each written resource read from staging/."""
         return Packet(self.root, Manifest.from_dict(self._candidate()))
 
+    def resources(self) -> list[Mapping[str, Any]]:
+        """Return the amended manifest's entries: the held ones not rewritten or stale, then those written."""
+        return self.held.without_stale(self._candidate()["resources"], self._entries)
+
     def validate(self, *, limits: Mapping[str, Any] | None, scan: Collection[str]) -> Report:
         """Validate the whole amended packet, against the superseded version too (Part 05 §15.6)."""
         amended = self._candidate()
-        amended["resources"] = self.held.without_stale(amended["resources"], self._entries)
+        amended["resources"] = self.resources()
         self._amended = amended
         return validate(
             Packet(self.root, Manifest.from_dict(amended)),

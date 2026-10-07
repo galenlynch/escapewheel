@@ -1043,6 +1043,10 @@ identifier containing no dot.
 
 A rule's SQL MUST NOT reference a column whose presence is `optional`. A rule is executed against the file, and `optional` permits the column to be absent from it (§6), so a rule naming one does not miss a check — the query fails to parse, and the run meant to find defects reports an error of its own. A constraint that wants an optional column either makes it `nullable`, which declares it always present and sometimes empty, or moves to the shim of §10.3.
 
+An extension rule MUST return no row where every resource of its own registry binds as an empty
+relation, which no checker verifies, so that binding an extension whose resources a packet does not
+carry adds no finding ([Part 04 §8](04_packet_catalog.md#ew-packet-registry-bindings)).
+
 The language contract determines the result relation. A completed empty result passes; a completed
 non-empty result produces the declared finding. Invalid, unsupported, and incomplete evaluation
 are not findings and cannot establish a pass (Part 11 §8).

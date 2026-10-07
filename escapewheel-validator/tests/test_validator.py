@@ -9,7 +9,7 @@ import pytest
 from escapewheel_reader import RegistryFault, RegistryUnavailable, open_packet
 from packet_fixture import install_registry, read_registry
 
-from escapewheel_validator import Verification, validate
+from escapewheel_validator import Level, Verification, validate
 from escapewheel_validator.validator import check_packet_manifest
 
 from .builders import add_array, add_extension, external_array, rewrite_table, verdicts_of, zarr_v3_metadata
@@ -275,3 +275,41 @@ def test_two_bound_extensions_pass_and_activate_their_required_singletons(packet
     report = validate(open_packet(root))
     missing = [f for f in report.findings if f.check == "packet.resource.required_missing"]
     assert [f.message for f in missing] == ["required singleton lick.marks is absent"]
+
+
+def _without_entry(root, resource_id):
+    """Drop one entry from the manifest, leaving its registry bound."""
+    manifest = json.loads((root / "packet.json").read_text())
+    manifest["resources"] = [r for r in manifest["resources"] if r["resource_id"] != resource_id]
+    (root / "packet.json").write_text(json.dumps(manifest))
+    return root
+
+
+def test_an_extension_declaring_none_of_the_packet_s_resources_is_warned_of(packet_root):
+    """Part 04 §8: the packet still passes, with one warning naming the extension and belonging to the packet."""
+    report = validate(open_packet(_without_entry(add_extension(packet_root), "task.trials")))
+    unused = [f for f in report.findings if f.check == "packet.registry.unused"]
+    assert [(f.level, f.registry, f.message.split(":")[0]) for f in unused] == [(Level.WARNING, None, "task")]
+    assert report.passed
+
+
+def test_an_extension_declaring_a_resource_is_not_warned_of_and_neither_is_core(packet_root):
+    report = validate(open_packet(add_extension(packet_root)))
+    assert "packet.registry.unused" not in _checks(report)
+
+
+def test_an_extension_that_fails_binding_is_not_warned_of(packet_root):
+    root = _without_entry(add_extension(packet_root), "task.trials")
+    manifest = json.loads((root / "packet.json").read_text())
+    manifest["registries"]["task"]["version"] = "0.9.0"
+    (root / "packet.json").write_text(json.dumps(manifest))
+    report = validate(open_packet(root))
+    assert "packet.registry.version" in _checks(report)
+    assert "packet.registry.unused" not in _checks(report)
+
+
+def test_an_absent_required_singleton_is_reported_and_not_an_unused_binding(packet_root):
+    """Part 04 §8: `required_missing` already names the fault of an extension with a required singleton."""
+    report = validate(open_packet(_without_entry(_required_extension(packet_root, "cue"), "cue.marks")))
+    assert "packet.resource.required_missing" in _checks(report)
+    assert "packet.registry.unused" not in _checks(report)

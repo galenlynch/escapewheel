@@ -26,7 +26,8 @@ def amend(
 ) -> None:
     """Write `make()`, then `change`'s edit of it over it at the next patch version (Part 05 §15.1).
 
-    A table whose bytes the edit changes is written at a new uri beside the held file; every other
+    Each version binds the extensions it uses, so an edit adding an extension's table binds it. A
+    table whose bytes the edit changes is written at a new uri beside the held file; every other
     entry is kept, and the superseded manifest's exact bytes are retained under `manifests/`
     (Part 03 §9). A name the packet holds keeps its number and a new one is numbered after them, as
     Part 05 §4.3 has an amending build number. `superseded_identity` sets packet-level fields of
@@ -52,7 +53,13 @@ def amend(
     major, minor, patch = superseded["packet_version"].split(".")
     following = f"{major}.{minor}.{int(patch) + 1}"
     manifest = json.loads((scratch / "packet.json").read_text())
-    assert manifest["registries"] == superseded["registries"], out.name
+    # Each version binds the extensions it uses (Part 04 §8), and one bound by both is bound alike.
+    shared = manifest["registries"].keys() & superseded["registries"].keys()
+    assert all(manifest["registries"][name] == superseded["registries"][name] for name in shared), out.name
+    for name in manifest["registries"].keys() - shared:
+        path = manifest["registries"][name]["path"]
+        (out / path).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(scratch / path, out / path)
     before = {e["resource_id"]: e for e in superseded["resources"]}
     resources = []
     for entry in manifest["resources"]:
@@ -68,7 +75,13 @@ def amend(
     (out / "manifests").mkdir()
     retained = out / "manifests" / f"{superseded['packet_version']}.json"
     retained.write_bytes((out / "packet.json").read_bytes())
-    amended = {**superseded, "packet_version": following, "resources": resources, **(identity or {})}
+    amended = {
+        **superseded,
+        "packet_version": following,
+        "registries": manifest["registries"],
+        "resources": resources,
+        **(identity or {}),
+    }
     for member in dropped:
         del amended[member]
     (out / "packet.json").write_text(json.dumps(amended, indent=2) + "\n")
