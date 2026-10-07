@@ -163,6 +163,71 @@ def test_a_local_prefix_lists_its_keys_by_name_as_they_are(tmp_path):
     assert set(keys) == names
 
 
+class PrivateMemory(MemoryFileSystem):
+    """A private bucket's double: it refuses every unsigned request, and counts what it is asked."""
+
+    protocol = ("ewprivate",)
+    store: ClassVar[dict] = {}
+    pseudo_dirs: ClassVar[list] = [""]
+    asked: ClassVar[list] = []
+    cachable = False
+
+    def __init__(self, anon=False, **kwargs):
+        super().__init__(**kwargs)
+        self.anon = anon
+
+    @classmethod
+    def _strip_protocol(cls, path):
+        return super()._strip_protocol(path.removeprefix("ewprivate://"))
+
+    def _refuse_unsigned(self):
+        self.asked.append("unsigned" if self.anon else "signed")
+        if self.anon:
+            raise PermissionError("Access Denied")
+
+    def find(self, path, **kwargs):
+        self._refuse_unsigned()
+        return super().find(path, **kwargs)
+
+    def _open(self, path, mode="rb", **kwargs):
+        self._refuse_unsigned()
+        return super()._open(path, mode, **kwargs)
+
+
+@pytest.fixture
+def private_store(monkeypatch):
+    from escapewheel_validator import stores
+
+    fsspec.register_implementation("ewprivate", PrivateMemory, clobber=True)
+    monkeypatch.setitem(stores.ANONYMOUS, "ewprivate", {"anon": True})
+    monkeypatch.setattr(stores, "_SIGNED", set())
+    PrivateMemory.store.clear()
+    PrivateMemory.pseudo_dirs[:] = [""]
+    fsspec.filesystem("ewprivate").pipe("/bucket/arr/zarr.json", b"{}")
+    PrivateMemory.asked.clear()
+    return PrivateMemory.asked
+
+
+def test_a_cloud_store_is_reached_without_signing():
+    pytest.importorskip("s3fs")
+    from escapewheel_validator.stores import _filesystem
+
+    filesystem, path = _filesystem("s3://bucket/a.zarr")
+    assert filesystem.anon and path == "bucket/a.zarr"
+
+
+def test_a_store_that_refuses_an_unsigned_request_is_asked_again_signed(private_store):
+    assert [m.key for m in listing("ewprivate://bucket/arr").members] == ["zarr.json"]
+    assert private_store == ["unsigned", "signed"]
+
+
+def test_a_bucket_that_refused_once_is_asked_signed_from_then_on(private_store):
+    listing("ewprivate://bucket/arr")
+    private_store.clear()
+    assert read_member("ewprivate://bucket/arr", "zarr.json") == b"{}"
+    assert private_store == ["signed"]
+
+
 class ChecksumMemory(MemoryFileSystem):
     """An object store double whose `info` reports checksums, and which counts what it reads."""
 

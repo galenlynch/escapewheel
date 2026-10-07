@@ -45,7 +45,7 @@ from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 from urllib.parse import unquote, urlparse
 
 from .errors import ResourceMissing, StoreUnreachable, UnknownAlgorithm
@@ -75,8 +75,26 @@ def local_path(uri: str) -> Path:
 WORKERS = 8
 
 
-def _filesystem(uri: str) -> tuple[Any, str]:
-    """Return an fsspec filesystem and the path within it, for a non-local URI."""
+#: How each cloud backend is asked to read without signing. A resource a packet names is one its
+#: readers must reach, and a stale credential chain fails before the client tries no signature.
+ANONYMOUS: Mapping[str, Mapping[str, Any]] = {
+    "s3": {"anon": True},
+    "s3a": {"anon": True},
+    "gs": {"token": "anon"},
+    "gcs": {"token": "anon"},
+    "az": {"anon": True},
+    "abfs": {"anon": True},
+    "adl": {"anon": True},
+}
+
+#: Each `(scheme, bucket)` that refused an unsigned request, so its later requests are signed first.
+_SIGNED: set[tuple[str, str]] = set()
+
+T = TypeVar("T")
+
+
+def _filesystem(uri: str, *, signed: bool = False) -> tuple[Any, str]:
+    """Return an fsspec filesystem and the path within it, for a non-local URI, unsigned unless `signed`."""
     try:
         import fsspec  # type: ignore[import-untyped]  # optional; the 'remote' extra
     except ImportError as exc:  # pragma: no cover - exercised only without the extra
@@ -86,11 +104,28 @@ def _filesystem(uri: str) -> tuple[Any, str]:
             f"that scheme (s3fs for s3://, gcsfs for gs://)",
             uri=uri,
         ) from exc
+    options = {} if signed else ANONYMOUS.get(urlparse(uri).scheme, {})
     try:
-        filesystem, path = fsspec.core.url_to_fs(uri)
+        filesystem, path = fsspec.core.url_to_fs(uri, **options)
     except (ImportError, ValueError) as exc:
         raise StoreUnreachable(f"{uri}: {exc}", uri=uri) from exc
     return filesystem, path
+
+
+def _reach(uri: str, operation: Callable[[Any, str], T]) -> T:
+    """Run `operation` on a non-local URI's store unsigned, and signed if the store refuses that.
+
+    A refusal is `PermissionError`, which is how s3fs reports an unsigned request to a private
+    bucket; any other failure is the operation's own.
+    """
+    parsed = urlparse(uri)
+    bucket = (parsed.scheme, parsed.netloc)
+    if parsed.scheme in ANONYMOUS and bucket not in _SIGNED:
+        try:
+            return operation(*_filesystem(uri))
+        except PermissionError:
+            _SIGNED.add(bucket)
+    return operation(*_filesystem(uri, signed=True))
 
 
 #: Each admitted digest function and the hexadecimal width of a single object's value (Part 04 §4.3).
@@ -274,16 +309,22 @@ def listing(uri: str) -> Listing:
             raise ResourceMissing(f"{uri} does not exist", uri=uri)
         found = [Member(f.relative_to(root).as_posix(), f.stat().st_size) for f in root.rglob("*") if f.is_file()]
     else:
-        filesystem, path = _filesystem(uri)
-        try:
+
+
+        def entries_of(filesystem: Any, path: str) -> tuple[str, Mapping[str, Any] | None, Mapping[str, Any]]:
+            # A refused `isfile` reads as False; the `find` after it is what raises the refusal.
             if filesystem.isfile(path):
-                info = filesystem.info(path)
-                return Listing((Member("", int(info["size"]), store_digest(info)),), int(info["size"]))
-            entries = filesystem.find(path, detail=True)
+                return path, filesystem.info(path), {}
+            return path, None, filesystem.find(path, detail=True)
+
+        try:
+            path, whole, entries = _reach(uri, entries_of)
         except FileNotFoundError as exc:
             raise ResourceMissing(f"{uri} does not exist", uri=uri) from exc
         except Exception as exc:
             raise StoreUnreachable(f"{uri}: {exc}", uri=uri) from exc
+        if whole is not None:
+            return Listing((Member("", int(whole["size"]), store_digest(whole)),), int(whole["size"]))
         found = [
             Member(key[len(path) :].lstrip("/"), int(info.get("size") or 0), store_digest(info))
             for key, info in entries.items()
@@ -349,21 +390,25 @@ def reported_checksum(uri: str, key: str, algorithm: str) -> str | None:
     """
     if is_local(uri):
         return None
-    filesystem, path = _filesystem(uri)
-    target = f"{path}/{key}" if key else path
-    info: Mapping[str, Any] | None = None
-    try:
+
+    def head(filesystem: Any, path: str) -> Mapping[str, Any]:
+        target = f"{path}/{key}" if key else path
         if hasattr(filesystem, "call_s3") and hasattr(filesystem, "split_path"):
             bucket, name, version = filesystem.split_path(target)
-            info = filesystem.call_s3(
+            reported: Mapping[str, Any] = filesystem.call_s3(
                 "head_object",
                 Bucket=bucket,
                 Key=name,
                 ChecksumMode="ENABLED",
                 **({"VersionId": version} if version else {}),
             )
-        else:
-            info = filesystem.info(target)
+            return reported
+        listed: Mapping[str, Any] = filesystem.info(target)
+        return listed
+
+    info: Mapping[str, Any] | None = None
+    try:
+        info = _reach(uri, head)
     except Exception:  # noqa: BLE001 - a store that will not say is read instead
         return None
     return store_checksums(info or {}).get(algorithm)
@@ -474,10 +519,13 @@ def read_member(uri: str, key: str) -> bytes:
     try:
         if is_local(uri):
             return (local_path(uri) / key if key else local_path(uri)).read_bytes()
-        filesystem, path = _filesystem(uri)
-        with filesystem.open(f"{path}/{key}" if key else path, "rb") as handle:
-            data: bytes = handle.read()
-        return data
+
+        def read(filesystem: Any, path: str) -> bytes:
+            with filesystem.open(f"{path}/{key}" if key else path, "rb") as handle:
+                data: bytes = handle.read()
+            return data
+
+        return _reach(uri, read)
     except StoreUnreachable as exc:
         exc.key = key
         raise
@@ -487,18 +535,22 @@ def read_member(uri: str, key: str) -> bytes:
 
 def _member_digest(uri: str, key: str, algorithm: str = "sha256") -> str:
     """One object's single-object value, streamed so a large chunk is never held whole."""
-    digested = hasher(algorithm)
     if is_local(uri):
+        digested = hasher(algorithm)
         target = local_path(uri) / key if key else local_path(uri)
         with target.open("rb") as handle:
             while block := handle.read(BLOCK):
                 digested.update(block)
         return str(digested.hexdigest())
-    filesystem, path = _filesystem(uri)
-    with filesystem.open(f"{path}/{key}" if key else path, "rb") as handle:
-        while block := handle.read(BLOCK):
-            digested.update(block)
-    return str(digested.hexdigest())
+
+    def stream(filesystem: Any, path: str) -> str:
+        digested = hasher(algorithm)
+        with filesystem.open(f"{path}/{key}" if key else path, "rb") as handle:
+            while block := handle.read(BLOCK):
+                digested.update(block)
+        return str(digested.hexdigest())
+
+    return _reach(uri, stream)
 
 
 __all__ = [
