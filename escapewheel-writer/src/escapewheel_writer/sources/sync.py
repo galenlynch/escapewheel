@@ -130,6 +130,22 @@ class SyncStream:
         return f"{self.experiment}.{self.node}.{self.stream}"
 
 
+def _load(path: Path) -> NDArray[Any]:
+    """Read one `.npy` file through its path, since `np.load` given a store path cannot open it."""
+    with path.open("rb") as stored:
+        array: NDArray[Any] = np.load(stored)
+    return array
+
+
+def _first_element(path: Path) -> int:
+    """Read element 0 of a one-dimensional `.npy` file from its header and one item, not the whole array."""
+    with path.open("rb") as stored:
+        version = np.lib.format.read_magic(stored)
+        header = np.lib.format.read_array_header_1_0 if version == (1, 0) else np.lib.format.read_array_header_2_0
+        _, _, dtype = header(stored)
+        return int(np.frombuffer(stored.read(dtype.itemsize), dtype=dtype)[0])
+
+
 def _by_key(streams: list[SyncStream]) -> dict[str, list[SyncStream]]:
     """Group streams by the key a sorted folder would use, to spot an ambiguous one."""
     grouped: dict[str, list[SyncStream]] = {}
@@ -338,14 +354,14 @@ class SyncSource:
         """
 
         def events(stream: SyncStream) -> tuple[Any, Any]:
-            return np.load(stream.path / "states.npy"), np.load(stream.path / "sample_numbers.npy")
+            return _load(stream.path / "states.npy"), _load(stream.path / "sample_numbers.npy")
 
         out = []
         for name, group in sorted(_by_key(keep).items()):
             if len(group) == 1:
                 out.append(group[0])
                 continue
-            ordered = sorted(group, key=lambda st: (-np.load(st.path / "sample_numbers.npy").size, st.node))
+            ordered = sorted(group, key=lambda st: (-_load(st.path / "sample_numbers.npy").size, st.node))
             first, *rest = ordered
             base_states, base_samples = events(first)
             for other in rest:
@@ -362,7 +378,7 @@ class SyncSource:
                         where=name,
                     )
                 drift = np.abs(
-                    np.load(first.path / "timestamps.npy")[here] - np.load(other.path / "timestamps.npy")[there]
+                    _load(first.path / "timestamps.npy")[here] - _load(other.path / "timestamps.npy")[there]
                 ).max()
                 missed = base_samples.size - shared.size, other_samples.size - shared.size
                 unseen = (
@@ -401,7 +417,7 @@ class SyncSource:
         Three sources, in the order of how directly each says it. A supplied value wins because
         a caller that states one has a reason. Then the record node's own `sync_messages.txt`,
         which is where a supplied value comes from anyway. Only then the counter array
-        beside the data, read at element 0 through a memory map -- correct, but it requires the
+        beside the data, read at element 0 from its header and first item -- correct, but it requires the
         continuous data to be present, and a packet built from events and a sorting has no
         reason to hold it.
         """
@@ -418,11 +434,11 @@ class SyncSource:
                 code=SourceFault.NO_FIRST_SAMPLE,
                 where=stream.key,
             )
-        return int(np.load(continuous, mmap_mode="r")[0])
+        return _first_element(continuous)
 
     def _rises(self, stream: SyncStream) -> tuple[NDArray[np.int64], NDArray[np.float64]]:
         """Rising edges of the sync line: raw sample numbers and their HARP seconds."""
-        states = np.load(stream.path / "states.npy")
+        states = _load(stream.path / "states.npy")
         rising = states == self.sync_line
         if not rising.any():
             raise SourceDefect(
@@ -431,8 +447,8 @@ class SyncSource:
                 where=stream.key,
             )
         return (
-            np.load(stream.path / "sample_numbers.npy")[rising].astype(np.int64),
-            np.load(stream.path / "timestamps.npy")[rising].astype(np.float64),
+            _load(stream.path / "sample_numbers.npy")[rising].astype(np.int64),
+            _load(stream.path / "timestamps.npy")[rising].astype(np.float64),
         )
 
     # -- tables -------------------------------------------------------------------------

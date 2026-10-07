@@ -192,7 +192,7 @@ def test_a_line_with_no_edges_is_a_defect(source):
 
 
 def test_the_first_sample_is_read_from_disk_when_not_supplied(tmp_path):
-    """Element 0 of a 1.3 GB array, memory-mapped, so the file is never touched."""
+    """Element 0 of a 1.3 GB array, read from its header and first item rather than whole."""
     syncfixture.build(tmp_path, with_continuous=True)
     source = SyncSource(tmp_path, session_id=SESSION, clocks=PROBE_CLOCKS)
     rows = source.anchors()
@@ -451,3 +451,17 @@ def test_the_instant_is_derived_once_however_often_it_is_asked_for(tmp_path):
     before = len(source.notes)
     assert source.epoch() == first
     assert len(source.notes) == before
+
+
+def test_a_store_root_reads_the_anchors_a_local_one_does(tmp_path):
+    """A store root's paths reach `np.load` as objects it cannot open, so each array is opened through its path."""
+    from fsspec.implementations.memory import MemoryFileSystem
+
+    local = tmp_path / "local"
+    syncfixture.build(local, with_continuous=True)
+    store = MemoryFileSystem()
+    for path in local.rglob("*"):
+        if path.is_file():
+            store.pipe(f"/sync/{path.relative_to(local).as_posix()}", path.read_bytes())
+    stored = SyncSource("memory://sync", session_id=SESSION, clocks=PROBE_CLOCKS, source_cache=str(tmp_path / "cache"))
+    assert stored.anchors() == SyncSource(local, session_id=SESSION, clocks=PROBE_CLOCKS).anchors() != []

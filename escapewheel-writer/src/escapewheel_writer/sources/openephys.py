@@ -132,7 +132,9 @@ class OpenEphysSource:
         found: list[dict[str, str]] = []
         for path in self.settings():
             try:
-                root = ET.parse(path).getroot()
+                # Opened by the path rather than named to the parser, which opens only a local file.
+                with path.open("rb") as settings:
+                    root = ET.parse(settings).getroot()
             except ET.ParseError as exc:
                 self.notes.append(Note(f"{path}: not parseable as XML ({exc}); skipped", NoteCode.SETTINGS_UNPARSEABLE))
                 continue

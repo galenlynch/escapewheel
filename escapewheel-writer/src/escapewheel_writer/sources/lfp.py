@@ -28,7 +28,7 @@ from ..errors import SourceDefect, SourceFault, UsageError, UsageFault
 from ..notes import Note, NoteCode
 from .compensations import Compensates
 from .nwb.names import contact_columns, contact_ids, ucum_code
-from .store import SourceStore, source_root
+from .store import SourceStore, source_root, store_uri
 
 #: Where an NWB keeps its LFP series.
 GROUP = "processing/ecephys/LFP"
@@ -218,7 +218,7 @@ class LFPSource(Compensates):
     def _uri(self, series: Path) -> str:
         if self.uri_base:
             return f"{self.uri_base}/{GROUP}/{series.name}/{DATA}"
-        return (series / DATA).resolve().as_uri()
+        return store_uri(series / DATA)
 
     # -- what the store declares --------------------------------------------------------
 

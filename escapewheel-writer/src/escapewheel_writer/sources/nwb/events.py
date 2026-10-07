@@ -139,6 +139,9 @@ class Events(NWBFile):
 
     def intervals(self) -> list[dict[str, Any]]:
         """`core.intervals`, one row per trial (Part 01 §3.10)."""
+        columns = self.table("intervals/trials")
+        if not columns:
+            return []
         if self.interval_kind is None:
             raise SourceDefect(
                 "core.intervals needs an interval_kind naming the resource that specialises these "
@@ -146,9 +149,6 @@ class Events(NWBFile):
                 code=SourceFault.NO_INTERVAL_KIND,
                 where=CORE_INTERVALS,
             )
-        columns = self.table("intervals/trials")
-        if not columns:
-            return []
         for required in ("start_time", "stop_time"):
             if required not in columns:
                 raise SourceDefect(

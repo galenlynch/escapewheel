@@ -3,6 +3,7 @@
 - :class:`SourceStore` -- a source directory or store prefix, with every parsed read memoized.
 - :func:`store_for` -- the store for a root, reused where the caller keeps shared stores.
 - :func:`source_root` -- a root as a path: a local root resolved, a store root opened.
+- :func:`store_uri` -- where a path lives, as a packet names it, whatever cache it is read through.
 - :class:`KeptObjects` -- whole objects kept across builds, each confirmed by its store before
   use (Part 12 §10).
 - :func:`prune_kept` -- the kept files unused for a number of days, removed where asked.
@@ -298,6 +299,17 @@ def source_root(root: str | PurePath, *, cache: str | PurePath | None = None, **
     return opened if cache is None else _kept(opened, cache)
 
 
+def store_uri(path: Any) -> str:
+    """Return where `path` lives, as a packet names it: a `file:` URI, or the store's own URI.
+
+    A path read through the source cache stringifies as the chain `simplecache::s3://…`, which
+    names this build's cache and no location a reader can open (Part 03 §4).
+    """
+    if getattr(path, "protocol", "") in ("", "file"):
+        return Path(path).resolve().as_uri()
+    return str(path).rsplit("::", 1)[-1]
+
+
 def _kept(root: Any, cache: str | PurePath) -> Any:
     """Open a store root through the objects kept under `cache`, as a new run.
 
@@ -361,4 +373,4 @@ def store_for(
     return shared[key]
 
 
-__all__ = ["STORAGE_FORMAT", "KeptObjects", "SourceStore", "prune_kept", "source_root", "store_for"]
+__all__ = ["STORAGE_FORMAT", "KeptObjects", "SourceStore", "prune_kept", "source_root", "store_for", "store_uri"]

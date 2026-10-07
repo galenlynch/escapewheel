@@ -94,6 +94,19 @@ def test_a_uri_base_replaces_the_local_path(nwb):
     assert array.uri == "s3://bucket/s.nwb/processing/ecephys/LFP/ElectricalSeries45883-1-LFP/data"
 
 
+def test_a_store_root_is_named_by_its_store_not_the_source_cache(nwb, tmp_path):
+    """Part 03 §4: a cached path's `simplecache::` chain names no location a reader can open."""
+    from fsspec.implementations.memory import MemoryFileSystem
+
+    store = MemoryFileSystem()
+    for path in nwb.rglob("*"):
+        if path.is_file():
+            store.pipe(f"/lfp/s.nwb/{path.relative_to(nwb).as_posix()}", path.read_bytes())
+    source = lfpfixture.source("memory://lfp/s.nwb", verify="none", source_cache=str(tmp_path / "cache"))
+    array = source.external_arrays()["core.45883-1.lfp"]
+    assert array.uri == "memory:///lfp/s.nwb/processing/ecephys/LFP/ElectricalSeries45883-1-LFP/data"
+
+
 def test_an_unreachable_store_leaves_the_claim_unmade(nwb):
     """Part 04 §5.2: bytes beside the writer are not the bytes a remote URI names, so a store it
     cannot reach records nothing rather than what it measured of a local copy."""

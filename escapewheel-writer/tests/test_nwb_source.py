@@ -600,3 +600,12 @@ def test_the_session_carries_what_the_trials_no_longer_repeat(source, carrying):
 def test_an_nwb_unit_is_mapped_to_ucum_or_left_for_validation(stated, code):
     """Part 02 §8.4. An unlisted spelling passes through, so validation rejects it visibly."""
     assert ucum_code(stated) == code
+
+
+def test_an_nwb_without_trials_needs_no_interval_kind(nwb, harp):
+    """The kind names what specialises the intervals, and an NWB with no trials has none to name."""
+    with pytest.raises(SourceDefect) as refused:
+        NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC).intervals()
+    assert refused.value.code is SourceFault.NO_INTERVAL_KIND
+    shutil.rmtree(nwb / "intervals" / "trials")
+    assert NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC).intervals() == []

@@ -148,3 +148,12 @@ def test_a_prefix_reaches_every_device_and_every_link(tmp_path):
     attached = source.attachments()
     assert attached["50198"]["parent_device_id"] == "A_headstage.slot3.port2"
     assert {link["parent_device_id"] for link in attached.values()} <= ids
+
+
+def test_a_store_root_is_read_through_the_source_cache(source, tmp_path):
+    """A store root reaches the adapter as a path no XML parser opens, so the adapter opens it."""
+    from fsspec.implementations.memory import MemoryFileSystem
+
+    MemoryFileSystem().pipe("/clipped/Record Node 109/settings.xml", SETTINGS.encode())
+    stored = OpenEphysSource("memory://clipped", session_id="s001", source_cache=str(tmp_path / "cache"))
+    assert stored.devices() == source.devices() != []
