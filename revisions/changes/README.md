@@ -23,4 +23,4 @@ Dependencies run downward, so a document may depend on the ones above it and on 
 
 | order | document | status | placement |
 |---:|---|---|---|
-| 1 | `a-packet-binds-only-the-extensions-it-uses.md` | Ready | Part 04 §§8 and 10; Part 05 §15.1 |
+| 1 | `a-packet-binds-only-the-extensions-it-uses.md` | Ready | Part 02 §10.2; Part 04 §§8 and 10; Part 05 §15.1 |
