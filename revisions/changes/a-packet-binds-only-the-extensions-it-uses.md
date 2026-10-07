@@ -46,9 +46,13 @@ Observations are of the tree at the commit this document is based on, and of pac
   and a resource absent from the packet binds as an empty relation, so a bound extension's rules
   run where the packet carries none of its resources. Nothing requires such a rule to find nothing.
   The tree's four extension registries, `aind_opto`, `aind_unit_qc`, `dynamic_foraging` and
-  `vr_foraging`, hold 49 rules; each reads a resource of its own extension, and the five that also
-  read `core.intervals` join it from their own extension's table, so none returns a row where its
-  extension's resources are empty.
+  `vr_foraging`, hold 49 rules. Each selects from a table of its own extension, groups wherever it
+  aggregates, and joins `core.intervals` to that table where it reads core at all, so none returns
+  a row where its extension's resources are empty. The corpus packet `sessions_only` binds
+  `dynamic_foraging`, declares none of its resources, and validates with no error or warning; none
+  of the 13 `dynamic_foraging` checks the validator runs, four of them rules reading
+  `core.intervals`, finds a row. The validator's own `extension.table_absent`, which no part
+  defines, notes at `info` that the extension's three tables are absent.
 - An absent optional singleton creates no empty table (Part 02 §2.5), so binding an unused
   extension does not give a collection of packets a common set of tables.
 - The writer binds exactly the extensions its recipe lists, plus those the current manifest binds
@@ -93,7 +97,8 @@ packet.
 
 An amending build binds each registry its recipe names, and each registry the packet's current
 manifest binds under an ID for which the recipe names none, unless that registry is an extension
-registry declaring none of the amended manifest's resources. Its writer MUST report each registry
+registry that has no required singleton and declares none of the amended manifest's resources. Its
+writer MUST report each registry
 it leaves out this way, naming its ID, which no checker verifies.
 
 ## 4. Questions
@@ -104,8 +109,9 @@ it leaves out this way, naming its ID, which no checker verifies.
    already be read off its resources; an error would make every packet built this way
    nonconforming over an extra file.
 2. Does an amending build drop an unused held binding itself, or only where its recipe asks?
-   **Answered 2026-10-06:** Itself, reporting what it left out. Under §3.2 leaving one out cannot
-   change the amended packet's findings or meaning, so a recipe member requesting it would add
+   **Answered 2026-10-06:** Itself, reporting what it left out. Its rules find nothing under §3.2,
+   and one with a required singleton is kept, so leaving one out cannot change the amended
+   packet's findings or meaning, so a recipe member requesting it would add
    surface and protect nothing, and a recipe has no way to remove a held binding today. A registry
    the recipe names is still bound under Part 05 §3.1.
 3. Does the rule exempt the core registry, which is always bound since `core.sessions` is a
@@ -131,8 +137,10 @@ removes, which Part 05 §15.2 permits for an analysis, compatibility-projection 
 resource. The stored copy of that registry stays in the packet while a retained manifest binds it,
 under the cleanup rules Part 03 §3.2 and Part 05 §15 apply to a descriptor's `path`.
 
-A bound extension with a required singleton is never reported unused: it either declares a
-resource of the packet or fails `packet.resource.required_missing`, which already names the fault.
+A bound extension with a required singleton is never reported unused or left out: it either
+declares a resource of the packet or fails `packet.resource.required_missing`, which already names
+the fault. An amendment removing such an extension's last resource, which Part 05 §15.2 permits only for an
+analysis, compatibility-projection or documentation singleton, therefore still fails that check.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
@@ -143,7 +151,7 @@ resource of the packet or fails `packet.resource.required_missing`, which alread
 | validation and import | Part 05 §15.1's amending-build binding rule changes under §3.4. | The writer suite. |
 | extensions | Unchanged: an extension document's shape is unchanged, and its rules already comply with §3.2. | None required. |
 | reader, writer, validator, adapters | The validator reports `packet.registry.unused`. The writer's amending build leaves out an unused held extension and reports it. The reader is unchanged, since it resolves only declarations a resource names. | The validator and writer suites. |
-| conformance fixtures and tests | A corpus packet binding an unused extension passes with the warning. | The corpus stage of `verify.py`. |
+| conformance fixtures and tests | `sessions_only` stops binding `dynamic_foraging`, so it stays clean, which the corpus judges as passing with no warning. A new corpus packet binding an unused extension expects the warning. | The corpus stage of `verify.py`. |
 | revision process and tooling | The ledger places §§3.1 to 3.4. | `ledger.py`, `evidence.py`. |
 | generated publications and developer documentation | The combined specification regenerates. | `verify.py`. |
 
@@ -162,6 +170,8 @@ These cases distinguish the new rules from the current ones:
 - an amending build of a packet binding an unused extension, and one removing the last analysis
   resource an extension declares, each write a manifest that does not bind that extension, and the
   writer reports the registry left out;
+- an amending build that removes the last resource of an extension with a required singleton keeps
+  that binding, and the amended packet fails `packet.resource.required_missing`;
 - an amending build keeps a held extension that declares a resource of the amended manifest, and
   binds an unused extension its recipe names, which validation then warns of; and
 - the stored copy of a registry left out of an amendment remains readable through the retained
