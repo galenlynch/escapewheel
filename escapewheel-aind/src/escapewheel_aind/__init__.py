@@ -22,6 +22,8 @@ errors
     The codes a defect from these adapters carries.
 resource_ids
     The extension resource IDs these adapters name.
+recipe
+    ``escapewheel-aind-recipe``, which drafts a session's recipe from its public assets.
 
 Notes
 -----

@@ -1,15 +1,18 @@
 """The codes a defect from these adapters carries.
 
 - :class:`AindFault` -- why a source cannot supply what a build asked of it.
+- :class:`DraftFault` and :exc:`DraftRefused` -- why the recipe drafter drafts nothing.
 
-The package defines no exception class: an adapter raises the writer's
-:exc:`~escapewheel_writer.errors.SourceDefect`, which a build already catches, with one of these as
-its `code`.
+An adapter defines no exception class: it raises the writer's
+:exc:`~escapewheel_writer.errors.SourceDefect`, which a build already catches, with an `AindFault`
+as its `code`. The drafter is no adapter, so it raises its own.
 """
 
 from __future__ import annotations
 
 from enum import StrEnum
+
+from escapewheel_writer import WriterError
 
 
 class AindFault(StrEnum):
@@ -43,4 +46,25 @@ class AindFault(StrEnum):
     UNIT_REPEATED = "unit_repeated"
 
 
-__all__ = ["AindFault"]
+class DraftFault(StrEnum):
+    """Why the recipe drafter drafts nothing."""
+
+    #: DocDB v2 holds no record of the raw asset.
+    NO_RAW_RECORD = "no_raw_record"
+    #: No asset of a level the recipe needs is in a public bucket.
+    NO_PUBLIC_ASSET = "no_public_asset"
+    #: An asset the caller named is not the session's, or is not public.
+    PINNED_ASSET = "pinned_asset"
+    #: Code Ocean was to be searched and no token is set.
+    NO_CODEOCEAN_TOKEN = "no_codeocean_token"
+
+
+class DraftRefused(WriterError):
+    """The recipe drafter refuses to draft, for the reason its `code` names."""
+
+    def __init__(self, message: str, *, code: DraftFault) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+__all__ = ["AindFault", "DraftFault", "DraftRefused"]

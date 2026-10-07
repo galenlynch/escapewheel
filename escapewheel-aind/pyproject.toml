@@ -29,6 +29,20 @@ dependencies = [
 # Source kinds this distribution registers, by the name a recipe names them. The group is
 # `escapewheel_writer.adapter.SOURCE_GROUP`, and `adapter.discovered()` loads it; a registered kind
 # is constructed exactly as a built-in one is (`session.build`), so nothing here is a lesser source.
+# The recipe drafter's lookups: DocDB, Code Ocean, and S3. Optional, because a build reading these
+# adapters' sources needs none of them.
+[project.optional-dependencies]
+recipe = [
+    "aind-data-access-api>=1.10",
+    "codeocean>=0.17",
+    # A drafted recipe stages the sorting's waveforms as Zarr, which the writer writes only with this extra.
+    "escapewheel-writer[arrays]",
+    "s3fs>=2026.7",
+]
+
+[project.scripts]
+escapewheel-aind-recipe = "escapewheel_aind.recipe.cli:main"
+
 [project.entry-points."escapewheel.sources"]
 session = "escapewheel_aind.session:SessionSource"
 video = "escapewheel_aind.video:VideoSource"
@@ -111,6 +125,11 @@ files = ["src/escapewheel_aind"]
 strict = true
 show_error_codes = true
 exclude = ["scratch"]
+
+# The recipe extra's lookups, none of which ships types.
+[[tool.mypy.overrides]]
+module = ["aind_data_access_api.*", "codeocean.*", "s3fs"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"

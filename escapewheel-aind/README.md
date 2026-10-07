@@ -39,6 +39,43 @@ deliver` serves it over (Part 12 §3), so a delivery need not name one.
 Writing it this way is what makes moving it to its own repository a packaging change rather than a
 rewrite.
 
+## Drafting a session's recipe
+
+`escapewheel-aind-recipe` drafts the recipe for one ecephys session from its raw asset's name:
+
+```bash
+uv sync --extra recipe
+CODEOCEAN_API_TOKEN=... uv run escapewheel-aind-recipe ecephys_786867_2025-09-25_12-43-56 \
+  --registry ../spec/artifacts/logical_schemas.json \
+  --extension extensions/aind_unit_qc.json --extension ../extensions/dynamic_foraging.json \
+  --out recipe.toml
+uv run escapewheel import --check recipe.toml
+```
+
+The drafter takes its inputs from three places:
+
+- **DocDB v2** supplies the session's facts, from the raw asset's record, and the assets derived
+  from that asset.
+- **Code Ocean** supplies more of those assets. Its app parameters also record which sorted asset
+  an NWB was built from.
+- **S3** listings of known prefixes, one level each, show what each chosen asset holds.
+
+It reads only assets in a public bucket, so it refuses an asset stored inside Code Ocean and names
+the asset in the recipe's header. It takes the newest public sorted asset, or the one `--sorted`
+names. It takes the newest public NWB built from that sorting, or the one `--nwb` names. Where no
+such NWB is public, it reads the sorted asset's own ephys-only NWB, which carries probes and
+electrodes but no behaviour. `--no-codeocean` drafts from DocDB alone.
+
+The sources and their ownership are those an AIND ecephys session needs, so a resource that two
+sources can supply is already settled. Values that no catalogue states are marked `GUESS`. The
+recipe's footer lists each source it left out, with the reason. `video` is added only with
+`--videos`, a local copy of the behaviour videos, because the adapter's `ffprobe` reads a local
+file. The task's own tables need an extraction that no installed adapter performs.
+
+`acquisition_start_time` in the raw asset's record is a Pacific wall-clock reading stamped `+00:00`.
+The drafter keeps a `+00:00` stamp only where a stream boundary with a non-zero offset states the
+same instant. It reads any other `+00:00` stamp as local time, and the recipe says so.
+
 ## Its extension registries
 
 `extensions/` holds the `aind_opto` and `aind_unit_qc` registries these adapters fill, beside them
