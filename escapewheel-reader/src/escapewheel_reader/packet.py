@@ -19,7 +19,7 @@ import pyarrow.dataset as pads
 from . import clocks, duck
 from .errors import RegistryFault, RegistryUnavailable, ResourceNotFoundError
 from .location import Located, Location, Resolution, Rewrite, Sources, resolve_sources
-from .manifest import Manifest, Resource
+from .manifest import Manifest, RegistryBinding, Resource
 from .predicates import Predicate, both, expression, on_clock_constraints
 from .protocols import Memo
 from .registries import acquire, held, hold, parse
@@ -331,10 +331,37 @@ class Packet:
                 raise RegistryUnavailable(registry_id, RegistryFault.MISSING, "the manifest binds no such registry")
             document = held(binding.sha256)
             if document is None:
-                document = acquire(self._root, binding)
+                self._fetch_unheld()
+                document = self._acquired.get(registry_id) or acquire(self._root, binding)
                 hold(document)
             self._acquired[registry_id] = document
         return self._acquired[registry_id]
+
+    def _fetch_unheld(self) -> None:
+        """Read every bound registry this process does not hold at once, so the round trips overlap.
+
+        A copy that cannot be read is left for :meth:`registry_bytes` to read again and report, so
+        only an operation needing that registry fails.
+        """
+        unheld = [
+            (name, binding)
+            for name, binding in self._manifest.registries.items()
+            if name not in self._acquired and held(binding.sha256) is None
+        ]
+        if len(unheld) < 2:
+            return
+
+        def read(binding: RegistryBinding) -> bytes | None:
+            try:
+                return acquire(self._root, binding)
+            except RegistryUnavailable:
+                return None
+
+        with ThreadPoolExecutor(len(unheld)) as pool:
+            for (name, _), document in zip(unheld, pool.map(read, (b for _, b in unheld)), strict=True):
+                if document is not None:
+                    hold(document)
+                    self._acquired[name] = document
 
     def registry_document(self, registry_id: str) -> dict[str, Any]:
         """One bound registry, decoded for declaration lookup and not otherwise checked.

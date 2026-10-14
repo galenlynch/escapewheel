@@ -254,6 +254,10 @@ no others:
    `%APPDATA%\escapewheel\sources.json` on Windows);
 3. `sources.json` at the packet root, which the writer leaves.
 
+Those passed in are read on opening, so a bad one fails there. The other two ranks are read the
+first time an external resource is resolved, and a packet whose resources are all its own never
+reads them.
+
 A source resolves through the first document naming it. The location found, or an entry's own
 absolute URI, then takes the longest mirror prefix in the first document holding one that begins
 it, matched by whole decoded names, with a `file:` URI matched as the path it names. A mirror

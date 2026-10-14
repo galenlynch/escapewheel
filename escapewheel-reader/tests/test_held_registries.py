@@ -1,4 +1,5 @@
-"""A reader takes a bound registry from any document matching its digest (Part 04 §10)."""
+"""A reader takes a bound registry from any document matching its digest (Part 04 §10), and reads
+what it does not hold, and the resolution documents, only when they are needed."""
 
 import gzip
 import hashlib
@@ -7,8 +8,11 @@ import shutil
 from pathlib import Path
 
 import pytest
+from packet_fixture import install_registry, read_registry
 
 from escapewheel_reader import RegistryFault, RegistryUnavailable, open_packet, registries
+from escapewheel_reader import location as location_module
+from escapewheel_reader import packet as packet_module
 
 INCORPORATED_CORE = Path(__file__).resolve().parents[2] / "spec" / "artifacts" / "logical_schemas.json"
 
@@ -76,3 +80,46 @@ def test_acquire_reads_only_the_stored_copy(packet_root):
     with pytest.raises(RegistryUnavailable) as refused:
         registries.acquire(packet.location, binding)
     assert refused.value.reason is RegistryFault.MISSING
+
+
+def test_every_unheld_bound_registry_is_read_once(packet_root, monkeypatch):
+    """The first declaration a packet needs reads every registry it binds, together."""
+    install_registry(
+        packet_root, {**read_registry(packet_root), "registry_id": "task", "resources": {}}, role="extension"
+    )
+    reads = []
+    acquire = registries.acquire
+
+    def counted(root, binding):
+        reads.append(binding.registry_id)
+        return acquire(root, binding)
+
+    monkeypatch.setattr(packet_module, "acquire", counted)
+    packet = open_packet(packet_root)
+    _ = packet.registry
+    _ = packet.extensions()
+    assert sorted(reads) == ["core", "task"]
+
+
+def test_an_unreadable_extension_fails_only_what_needs_it(packet_root):
+    install_registry(
+        packet_root, {**read_registry(packet_root), "registry_id": "task", "resources": {}}, role="extension"
+    )
+    _stored(packet_root, "task").unlink()
+    packet = open_packet(packet_root)
+    assert "core.sessions" in packet.registry["resources"]
+    with pytest.raises(RegistryUnavailable) as refused:
+        packet.extensions()
+    assert (refused.value.registry_id, refused.value.reason) == ("task", RegistryFault.MISSING)
+
+
+def test_opening_reads_no_resolution_document(packet_root, monkeypatch):
+    """Only an external entry needs one (Part 04 §5.5), so a packet-owned read never looks."""
+    looked = []
+    read_document = location_module.read_document
+    monkeypatch.setattr(location_module, "read_document", lambda where: looked.append(where) or read_document(where))
+    packet = open_packet(packet_root)
+    assert packet.table("core.intervals").num_rows == 2
+    assert looked == []
+    _ = packet.resolution.documents
+    assert [str(where) for where in looked][-1] == str(packet_root / "sources.json")

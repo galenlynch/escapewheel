@@ -17,7 +17,8 @@ import functools
 import json
 import os
 import re
-from collections.abc import Iterable, Mapping, Sequence
+import threading
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import resources as importlib_resources
 from pathlib import Path
@@ -347,9 +348,11 @@ class Located:
     unusable: tuple[tuple[str, str], ...] = ()
 
 
-@dataclass(frozen=True)
 class Resolution:
     """The resolution documents one reader ranks for one packet, and those it did not use (Part 04 §5.5).
+
+    Documents a reader looks for itself are read only when something first needs them, since a
+    packet-owned resource never does and over a store each is a request.
 
     Attributes
     ----------
@@ -359,8 +362,38 @@ class Resolution:
         Each document it did not use, and why.
     """
 
-    documents: tuple[SourcesDocument, ...] = ()
-    unused: tuple[tuple[str, str], ...] = ()
+    def __init__(
+        self,
+        documents: Iterable[SourcesDocument] = (),
+        unused: Iterable[tuple[str, str]] = (),
+        later: Callable[[], tuple[tuple[SourcesDocument, ...], tuple[tuple[str, str], ...]]] | None = None,
+    ) -> None:
+        self._documents = tuple(documents)
+        self._unused = tuple(unused)
+        self._later = later
+        self._lock = threading.Lock()
+
+    def _settle(self) -> None:
+        if self._later is None:
+            return
+        with self._lock:
+            if self._later is not None:
+                documents, unused = self._later()
+                self._documents += documents
+                self._unused += unused
+                self._later = None
+
+    @property
+    def documents(self) -> tuple[SourcesDocument, ...]:
+        """In rank: the caller's, the configuration's, then the packet's default."""
+        self._settle()
+        return self._documents
+
+    @property
+    def unused(self) -> tuple[tuple[str, str], ...]:
+        """Each document it did not use, and why."""
+        self._settle()
+        return self._unused
 
     @classmethod
     def of(cls, rewrite: Rewrite | None = None, sources: Iterable[Sources] = ()) -> Resolution:
@@ -652,9 +685,10 @@ def resolve_sources(
 
     The caller's come first: `rewrite` as a document of mirrors, then each of `supplied` in the
     order given. The configuration's follow, from :func:`configured_sources` unless `configured`
-    lists them, then `sources.json` at the packet root. A configured or default document that is
-    absent is skipped, and one that cannot be used is recorded as unused rather than raised, so a
-    defective optional file cannot stop a packet opening.
+    lists them, then `sources.json` at the packet root. The configuration's and the default are read
+    when the resolution is first consulted rather than here. One that is absent is skipped, and one
+    that cannot be used is recorded as unused rather than raised, so a defective optional file
+    cannot stop a packet opening.
 
     Parameters
     ----------
@@ -687,20 +721,25 @@ def resolve_sources(
             documents.append(read_document(Location.of(one)))
         except FileNotFoundError as exc:
             raise SourcesError(f"no source resolution document at {one}") from exc
-    unused: list[tuple[str, str]] = []
     if configured is None:
         configured = configured_sources()
     optional = [(Location.of(where), False) for where in configured] + [(root.join(SOURCES_FILENAME), True)]
-    for where, default in optional:
-        try:
-            document = read_document(where)
-        except FileNotFoundError:
-            continue
-        except SourcesError as exc:
-            unused.append((str(where), str(exc)))
-            continue
-        documents.append(SourcesDocument(document.where, document.base, document.sources, document.mirrors, default))
-    return Resolution(tuple(documents), tuple(unused))
+
+    def read_optional() -> tuple[tuple[SourcesDocument, ...], tuple[tuple[str, str], ...]]:
+        found: list[SourcesDocument] = []
+        unused: list[tuple[str, str]] = []
+        for where, default in optional:
+            try:
+                document = read_document(where)
+            except FileNotFoundError:
+                continue
+            except SourcesError as exc:
+                unused.append((str(where), str(exc)))
+                continue
+            found.append(SourcesDocument(document.where, document.base, document.sources, document.mirrors, default))
+        return tuple(found), tuple(unused)
+
+    return Resolution(documents, later=read_optional)
 
 
 __all__ = [
