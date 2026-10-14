@@ -143,6 +143,8 @@ class PacketSet:
         self._by_packet: dict[str, dict[int, Session]] = {}
         for session in self._sessions:
             self._by_packet.setdefault(session.packet_id, {})[session.session_id] = session
+        # Kept so a labelled file's footer is read once however many scans include it.
+        self._labelled: dict[tuple[int, str], pads.Fragment] = {}
 
     @staticmethod
     def _number(packets: Sequence[Packet]) -> list[Session]:
@@ -362,27 +364,31 @@ class PacketSet:
         if scoped:
             for packet in holding:
                 self._distinguishable(packet, resource_id)
-        bases = [cast(pads.FileSystemDataset, packet.scan(resource_id)) for packet in holding]
-        schema = pa.unify_schemas([base.schema for base in bases], promote_options="permissive")
+        # A labelled fragment is what a scoped scan reads, so its footer also gives the schema.
+        handles = [packet.table_resource(resource_id) for packet in holding]
+        fragments = [
+            [self._labelled_fragment(packet, handle, resource_id)]
+            if scoped
+            else list(cast(pads.FileSystemDataset, handle.dataset()).get_fragments())
+            for packet, handle in zip(holding, handles, strict=True)
+        ]
+        schemas = [
+            each[0].physical_schema if scoped else handle.schema()
+            for each, handle in zip(fragments, handles, strict=True)
+        ]
+        schema = pa.unify_schemas(schemas, promote_options="permissive")
         if scoped:
             schema = schema.append(pa.field("packet_key", pa.int32()))
-        children = []
-        for packet, base in zip(holding, bases, strict=True):
-            fragments = list(base.get_fragments())
-            label = pc.field("packet_key") == pa.scalar(self._packet_key(packet), pa.int32())
-            children.append(
-                pads.FileSystemDataset.from_paths(
-                    [fragment.path for fragment in fragments],
-                    schema=schema,
-                    format=base.format,
-                    filesystem=base.filesystem,
-                    partitions=[
-                        fragment.partition_expression & label if scoped else fragment.partition_expression
-                        for fragment in fragments
-                    ],
-                )
-            )
+        children = [pads.FileSystemDataset(each, schema, each[0].format, each[0].filesystem) for each in fragments]
         return pads.dataset(children)  # type: ignore[arg-type]  # the stubs omit a list of datasets
+
+    def _labelled_fragment(self, packet: Packet, handle: TableResource, resource_id: str) -> pads.Fragment:
+        """Return the packet's file for `resource_id` carrying its `packet_key`, made once per packet set."""
+        packet_key = self._packet_key(packet)
+        if (packet_key, resource_id) not in self._labelled:
+            label = pc.field("packet_key") == pa.scalar(packet_key, pa.int32())
+            self._labelled[packet_key, resource_id] = handle.labelled(label)
+        return self._labelled[packet_key, resource_id]
 
     def scanner(
         self,

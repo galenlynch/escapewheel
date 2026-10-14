@@ -1,21 +1,23 @@
 """A remote table's footer is read once per handle, and its size asked of the store at most once."""
 
 import json
+import shutil
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 from pyarrow import fs as pafs
 
-from escapewheel_reader import ResourceUnreadableError, open_packet
+from escapewheel_reader import ResourceUnreadableError, open_packet, open_packets
 from escapewheel_reader import location as location_module
 
 BUCKET = "bench"
+PACKET = f"s3://{BUCKET}/session_001"
 
 
 @pytest.fixture
 def store(packet_root, monkeypatch):
-    """Serve the packet over S3's HTTP API from a local server, recording each request."""
+    """Serve the packet's directory over S3's HTTP API from a local server, recording each request."""
     requests: list[tuple[str, str]] = []
 
     class Objects(BaseHTTPRequestHandler):
@@ -24,7 +26,7 @@ def store(packet_root, monkeypatch):
 
         def _object(self):
             bucket, _, key = self.path.split("?")[0].lstrip("/").partition("/")
-            target = packet_root / key
+            target = packet_root.parent / key
             return target.read_bytes() if bucket == BUCKET and key and target.is_file() else None
 
         def _head(self, status, length):
@@ -77,12 +79,12 @@ def _record_sizes(root):
 def _table_requests(requests, packet_root, resource_id="core.intervals"):
     uri = json.loads((packet_root / "packet.json").read_text())
     key = next(r["uri"] for r in uri["resources"] if r["resource_id"] == resource_id)
-    return [method for method, path in requests if path.split("?")[0].endswith(key)]
+    return [method for method, path in requests if path.split("?")[0].endswith(f"session_001/{key}")]
 
 
 def test_a_recorded_size_leaves_the_footer_and_the_data(packet_root, store):
     _record_sizes(packet_root)
-    packet = open_packet(f"s3://{BUCKET}")
+    packet = open_packet(PACKET)
     store.clear()
     assert packet.table("core.intervals").num_rows == 2
     assert _table_requests(store, packet_root) == ["GET", "GET"]
@@ -90,7 +92,7 @@ def test_a_recorded_size_leaves_the_footer_and_the_data(packet_root, store):
 
 def test_the_footer_is_read_once_per_handle(packet_root, store):
     _record_sizes(packet_root)
-    packet = open_packet(f"s3://{BUCKET}")
+    packet = open_packet(PACKET)
     store.clear()
     _ = packet.table_resource("core.intervals").schema()
     _ = packet.table("core.intervals")
@@ -99,7 +101,7 @@ def test_the_footer_is_read_once_per_handle(packet_root, store):
 
 
 def test_without_a_recorded_size_the_store_is_asked_once(packet_root, store):
-    packet = open_packet(f"s3://{BUCKET}")
+    packet = open_packet(PACKET)
     store.clear()
     _ = packet.table("core.intervals")
     _ = packet.table("core.intervals")
@@ -112,4 +114,19 @@ def test_a_wrong_recorded_size_names_it(packet_root, store):
     entry["size_bytes"] = (packet_root / entry["uri"]).stat().st_size - 1
     (packet_root / "packet.json").write_text(json.dumps(manifest))
     with pytest.raises(ResourceUnreadableError, match="size_bytes"):
-        open_packet(f"s3://{BUCKET}").table("core.intervals")
+        open_packet(PACKET).table("core.intervals")
+
+
+def test_a_packet_set_reads_each_footer_once_and_asks_no_size(packet_root, tmp_path, store):
+    _record_sizes(packet_root)
+    second = tmp_path / "session_002"
+    shutil.copytree(packet_root, second)
+    manifest = json.loads((second / "packet.json").read_text())
+    (second / "packet.json").write_text(json.dumps({**manifest, "packet_id": "session_002"}))
+    pair = open_packets([PACKET, f"s3://{BUCKET}/session_002"])
+    store.clear()
+    for _ in range(2):
+        assert pair.scan("core.spike_events").to_table().num_rows > 0
+    spikes = [method for method, path in store if "spike_events" in path]
+    # Per packet: one footer, then one data read per scan.
+    assert spikes == ["GET"] * 6

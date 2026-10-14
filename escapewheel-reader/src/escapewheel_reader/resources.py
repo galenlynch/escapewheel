@@ -157,6 +157,7 @@ class TableResource:
         self._resource = resource
         self._root = Location.of(root)
         self._opened: pads.FileSystemDataset | None = None
+        self._size: int | None = None
         self._opening = threading.Lock()
 
     @property
@@ -262,24 +263,54 @@ class TableResource:
                 self._opened = self._open()
             return self._opened
 
-    def _open(self) -> pads.FileSystemDataset:
+    def _located(self) -> tuple[str, pafs.FileSystem, int | None]:
+        """Return the file's path, its filesystem, and its size where the reader needs to know it.
+
+        Every open without a known size asks the store for it, so a remote file's size comes from
+        `size_bytes` where recorded and is otherwise asked once and kept.
+        """
         path, filesystem = self._store()
-        filesystem = filesystem or pafs.LocalFileSystem()
-        size = self._resource.entry.get("size_bytes")
-        recorded = size if isinstance(size, int) and not isinstance(size, bool) and size > 0 else None
-        # Every open without a known size asks the store for it, so ask once and keep the answer.
-        known = recorded if recorded is not None or self.is_local else filesystem.get_file_info(str(path)).size
-        fragment = parquet_format().make_fragment(str(path), filesystem, file_size=known)
+        if self._size is None and not self.is_local:
+            size = self._resource.entry.get("size_bytes")
+            recorded = size if isinstance(size, int) and not isinstance(size, bool) and size > 0 else None
+            self._size = recorded if recorded is not None else filesystem.get_file_info(str(path)).size
+        return str(path), filesystem or pafs.LocalFileSystem(), self._size
+
+    def _open(self) -> pads.FileSystemDataset:
+        path, filesystem, size = self._located()
+        fragment = parquet_format().make_fragment(path, filesystem, file_size=size)
         try:
             schema = fragment.physical_schema  # reads the footer, which the fragment then keeps
         except pa.ArrowInvalid as exc:
-            if recorded is None:
+            if "size_bytes" not in self._resource.entry or self.is_local:
                 raise
             raise ResourceUnreadableError(
-                f"{self.resource_id}: not readable as Parquet at its recorded size_bytes {recorded}: {exc}",
+                f"{self.resource_id}: not readable as Parquet at its recorded size_bytes {size}: {exc}",
                 resource_id=self.resource_id,
             ) from exc
         return pads.FileSystemDataset([fragment], schema, parquet_format(), filesystem)
+
+    def labelled(self, partition_expression: pads.Expression) -> pads.ParquetFileFragment:
+        """Return a fragment over this table's file that carries `partition_expression`.
+
+        PyArrow fills a partition column only from a fragment's own expression, so labelling a
+        file means a new fragment, which reads its own footer. It shares the handle's size, so the
+        store is asked for that at most once.
+
+        Parameters
+        ----------
+        partition_expression : pyarrow.dataset.Expression
+            What every row of the file satisfies, such as a packet set's `packet_key`.
+
+        Returns
+        -------
+        pyarrow.dataset.ParquetFileFragment
+            The fragment, unread.
+        """
+        path, filesystem, size = self._located()
+        return parquet_format().make_fragment(
+            path, filesystem, partition_expression=partition_expression, file_size=size
+        )
 
     def schema(self) -> pa.Schema:
         """Read the resource's Arrow schema without reading its data.
