@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "revision": "R177",
+  "based_on": "b18c7786154643360120538b38f1b79bdc6a888e",
+  "clauses": {
+    "R177 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/04_packet_catalog.md",
+          "anchor": "ew-packet-manifest-conformance"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-reader/src/escapewheel_reader/schemas/logical_schemas.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_held_registries.py::test_a_held_document_answers_without_the_stored_copy"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_held_registries.py::test_a_document_of_the_same_version_with_another_digest_is_not_used"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_held_registries.py::test_a_missing_stored_copy_fails_naming_the_registry_where_none_is_held"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_held_registries.py::test_a_verified_stored_copy_serves_the_next_packet_binding_it"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_held_registries.py::test_a_stored_copy_failing_its_digest_is_not_held"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_held_registries.py::test_the_shipped_core_registry_is_the_incorporated_one"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_manifest.py::test_a_registry_failing_its_digest_fails_the_operation_that_needed_it"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-reader/src/escapewheel_reader/registries.py",
+          "escapewheel-reader/src/escapewheel_reader/packet.py",
+          "escapewheel-reader/pyproject.toml"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-reader/README.md",
+          "escapewheel-reader/docs/source/api.rst"
+        ]
+      }
+    },
+    "R177 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-portable-bound-registries"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validator.py::test_a_registry_the_reader_holds_does_not_stand_in_for_a_missing_stored_copy"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validator.py::test_a_missing_bound_registry_fails_the_packet"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_held_registries.py::test_acquire_reads_only_the_stored_copy"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-reader/src/escapewheel_reader/registries.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "No guide describes where a validator obtains a bound registry; the validator still reads the stored copy through the reader's acquire."
+      }
+    }
+  }
+}

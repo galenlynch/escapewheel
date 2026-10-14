@@ -1,12 +1,16 @@
 """Acquire the registry documents a packet binds (Part 04 §8).
 
-- :func:`acquire` -- one bound registry's bytes, verified against its descriptor's digest.
+- :func:`acquire` -- one bound registry's stored bytes, verified against its descriptor's digest.
+- :func:`held` -- a registry document this process already holds under a digest, if any.
+- :func:`hold` -- keep a document under its digest for every later packet binding it.
 - :func:`parse` -- verified bytes decoded for declaration lookup.
 - :func:`gunzip_member` -- exactly one gzip member, decompressed.
 - :func:`declared_tables` -- the tables a registry document declares.
 
-A registry is read only from its descriptor's path and only after its digest matches; no other copy
-stands in for it.
+A reader may use any document whose digest matches a descriptor in place of the stored copy (Part
+04 §10), so the core registry this distribution ships, and every registry already verified in this
+process, answer without a request. :func:`acquire` reads only the stored copy, which is what a
+validator checks (Part 03 §3.2).
 """
 
 from __future__ import annotations
@@ -15,6 +19,7 @@ import hashlib
 import json
 import zlib
 from collections.abc import Mapping
+from importlib import resources as importlib_resources
 from typing import Any
 
 from .errors import RegistryFault, RegistryUnavailable
@@ -53,6 +58,53 @@ def gunzip_member(data: bytes) -> bytes:
     return decoded
 
 
+#: Verified registry documents by SHA-256, seeded on first use with the core registry this
+#: distribution ships. None until seeded.
+_HELD: dict[str, bytes] | None = None
+
+
+def _held() -> dict[str, bytes]:
+    global _HELD
+    if _HELD is None:
+        bundled = importlib_resources.files("escapewheel_reader").joinpath("schemas/logical_schemas.json").read_bytes()
+        _HELD = {hashlib.sha256(bundled).hexdigest(): bundled}
+    return _HELD
+
+
+def held(sha256: str) -> bytes | None:
+    """Return the registry document this process holds under `sha256`, or None.
+
+    Parameters
+    ----------
+    sha256 : str
+        A descriptor's `sha256`.
+
+    Returns
+    -------
+    bytes or None
+        The document, whose digest is `sha256`.
+    """
+    return _held().get(sha256)
+
+
+def hold(document: bytes) -> str:
+    """Keep a registry document so a later packet binding the same digest needs no request.
+
+    Parameters
+    ----------
+    document : bytes
+        The exact document bytes; the digest is computed here, so a caller cannot mislabel them.
+
+    Returns
+    -------
+    str
+        The document's SHA-256.
+    """
+    digest = hashlib.sha256(document).hexdigest()
+    _held()[digest] = document
+    return digest
+
+
 def _contained(path: str) -> bool:
     """Whether a descriptor path stays under the packet root, so reading it cannot escape."""
     segments = path.split("/")
@@ -66,7 +118,9 @@ def _contained(path: str) -> bool:
 
 
 def acquire(root: Location, binding: RegistryBinding) -> bytes:
-    """Read one bound registry's exact document bytes and verify them against its descriptor.
+    """Read one bound registry's stored copy and verify it against its descriptor.
+
+    Never consults :func:`held`: a validator checks the stored copy itself (Part 03 §3.2).
 
     Parameters
     ----------
@@ -180,4 +234,4 @@ def declared_tables(document: Mapping[str, Any] | None, *, strict: bool = False)
     }
 
 
-__all__ = ["acquire", "declared_tables", "gunzip_member"]
+__all__ = ["acquire", "declared_tables", "gunzip_member", "held", "hold"]

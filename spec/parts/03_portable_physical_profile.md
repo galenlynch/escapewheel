@@ -124,8 +124,9 @@ modification time, operating system, file name, and comment carry no meaning, an
 ignore them.
 
 A conforming packet MUST contain every bound registry. A writer MUST NOT bind a registry by remote
-location or omit the stored copy, and a reader or validator MUST NOT resolve a bound registry from
-anywhere else. A descriptor's `path` names a file for the immutability, amendment, and cleanup rules
+location or omit the stored copy, and a validator MUST NOT resolve a bound registry from anywhere
+else. A reader obtains a bound registry under
+[Part 04 §10](04_packet_catalog.md#ew-packet-manifest-conformance). A descriptor's `path` names a file for the immutability, amendment, and cleanup rules
 of §8.1 and [Part 05 §15](05_validation_and_import.md#ew-packet-amendment).
 
 <a id="ew-staging-area" data-spec-anchor="canonical"></a>

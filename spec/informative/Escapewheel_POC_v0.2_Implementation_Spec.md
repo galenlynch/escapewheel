@@ -2560,8 +2560,9 @@ modification time, operating system, file name, and comment carry no meaning, an
 ignore them.
 
 A conforming packet MUST contain every bound registry. A writer MUST NOT bind a registry by remote
-location or omit the stored copy, and a reader or validator MUST NOT resolve a bound registry from
-anywhere else. A descriptor's `path` names a file for the immutability, amendment, and cleanup rules
+location or omit the stored copy, and a validator MUST NOT resolve a bound registry from anywhere
+else. A reader obtains a bound registry under
+[Part 04 §10](../parts/04_packet_catalog.md#ew-packet-manifest-conformance). A descriptor's `path` names a file for the immutability, amendment, and cleanup rules
 of §8.1 and [Part 05 §15](../parts/05_validation_and_import.md#ew-packet-amendment).
 
 <a id="ew-staging-area" data-spec-anchor="canonical"></a>
@@ -3500,10 +3501,14 @@ the schema requires it or has the wrong type. A reader need not apply the incorp
 assert its closure, patterns, or formats. A reader MAY expose the decoded JSON of a rejected
 manifest as raw data but MUST NOT resolve declarations or resources through it.
 
-A reader resolving a declaration MUST acquire the bound registry that declares it through its
-descriptor, decode it as the packet's physical profile requires, and verify its digest. When the
-registry is missing, unreadable, or fails the digest, the reader MUST fail the operation that needed
-it and name the registry ID. It MUST NOT substitute other bytes or silently omit a bound registry.
+A reader resolving a declaration MUST use, as the bound registry that declares it, a document
+whose SHA-256 equals its descriptor's `sha256`. Where the reader already holds such a document,
+from any source, it MAY use it without acquiring the stored copy. Otherwise it MUST acquire the
+stored copy through the descriptor, decode it as the packet's physical profile requires, and
+verify its digest, and where that copy is missing, unreadable, or fails the digest, it MUST fail
+the operation that needed it and name the registry ID. A reader MUST NOT use a document whose
+digest differs from the descriptor's or silently omit a bound registry, and need not report where
+a document it used came from. No checker verifies which document a reader used.
 Operations that need no such declaration proceed, and a reader need not run any other manifest check
 or obtain a registry result for ordinary access. Where a resource's declaration resolves, a reader
 MUST expose that declaration's content class and lineage policy with the resource, and

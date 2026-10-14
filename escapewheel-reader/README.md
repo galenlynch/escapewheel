@@ -211,8 +211,11 @@ ranges bounds its memory.
 ## Reading checks only what reading needs
 
 Opening a packet checks that the manifest decodes, repeats no member or resource ID, and has the
-members the reader uses at their JSON types (Part 04 §10). A registry the packet binds is read
-only when a declaration is needed, and refused unless it matches its descriptor's digest. A
+members the reader uses at their JSON types (Part 04 §10). A registry the packet binds is needed
+only when a declaration is, and any document whose SHA-256 equals its descriptor's serves: the
+core registry this distribution ships, or one already read from a packet in this process, held in
+memory by digest. Only where neither matches is the packet's stored copy read, and it is refused
+unless it matches the digest. A
 resource whose `uri` is malformed stays unreadable while the rest of the packet opens, and the
 error names its ID.
 

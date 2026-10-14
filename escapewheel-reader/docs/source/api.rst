@@ -231,6 +231,8 @@ the module that defines it.
    registries.acquire
    registries.declared_tables
    registries.gunzip_member
+   registries.held
+   registries.hold
    uri.canonical
    uri.decode
    uri.encode

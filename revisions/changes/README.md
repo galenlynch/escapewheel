@@ -23,4 +23,3 @@ Dependencies run downward, so a document may depend on the ones above it and on 
 
 | order | document | status | placement |
 |---:|---|---|---|
-| 1 | `a-reader-takes-a-bound-registry-from-any-copy-matching-its-digest.md` | Ready | Part 03 §3.2; Part 04 §10 |

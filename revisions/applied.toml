@@ -4736,3 +4736,11 @@ where = [{ part = "04", anchor = "ew-packet-manifest-conformance" }]
 [clause."R176 §3.4"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-amendment-definition" }]
+
+[clause."R177 §3.1"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-packet-manifest-conformance" }]
+
+[clause."R177 §3.2"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-portable-bound-registries" }]

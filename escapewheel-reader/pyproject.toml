@@ -70,6 +70,7 @@ docs = [
 # outside it: a path in this package = a path under `spec/`. `tools/copies.py` at the
 # monorepo root writes them, and `tests/test_copies.py` checks that they agree.
 "src/escapewheel_reader/descriptor.py" = "tools/checkers/descriptor.py"
+"src/escapewheel_reader/schemas/logical_schemas.json" = "artifacts/logical_schemas.json"
 "src/escapewheel_reader/schemas/physical_profile.schema.json" = "artifacts/physical_profile.schema.json"
 "src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json" = "artifacts/physical_profiles/escapewheel-portable-v0.1.json"
 "src/escapewheel_reader/schemas/sources.schema.json" = "artifacts/sources.schema.json"

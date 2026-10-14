@@ -24,7 +24,7 @@ from packet_fixture import (
     write_table,
 )
 
-from escapewheel_reader import open_packet
+from escapewheel_reader import open_packet, registries
 
 #: What the fixture packet declares of core: each table's key and the columns a test reads.
 COLUMNS = {
@@ -488,3 +488,9 @@ def _no_configured_sources(monkeypatch, tmp_path_factory):
     """Keep a developer's own resolution documents (Part 04 §5.5's second rank) out of every test."""
     monkeypatch.delenv("ESCAPEWHEEL_SOURCES", raising=False)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path_factory.mktemp("config")))
+
+
+@pytest.fixture(autouse=True)
+def _no_held_registries(monkeypatch):
+    """Start every test holding no registry, so it reads the stored copies its packet carries."""
+    monkeypatch.setattr(registries, "_HELD", {})

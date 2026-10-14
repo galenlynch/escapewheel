@@ -22,7 +22,7 @@ from .location import Located, Location, Resolution, Rewrite, Sources, resolve_s
 from .manifest import Manifest, Resource
 from .predicates import Predicate, both, expression, on_clock_constraints
 from .protocols import Memo
-from .registries import acquire, parse
+from .registries import acquire, held, hold, parse
 from .resources import ArrayResource, TableResource, read_pool
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -304,7 +304,10 @@ class Packet:
     # -- the registry the packet carries --------------------------------------------
 
     def registry_bytes(self, registry_id: str) -> bytes:
-        """One bound registry's exact document bytes, verified against its descriptor.
+        """One bound registry's document, whose SHA-256 equals its descriptor's.
+
+        A document this process already holds under that digest answers without a request (Part 04
+        §10); otherwise the stored copy is read and then held.
 
         Parameters
         ----------
@@ -319,14 +322,18 @@ class Packet:
         Raises
         ------
         RegistryUnavailable
-            If the manifest binds no such registry, or it is missing, unreadable, or fails its
-            digest. Nothing is substituted for it (Part 04 §10).
+            If the manifest binds no such registry, or this process holds no document with its
+            digest and the stored copy is missing, unreadable, or fails it (Part 04 §10).
         """
         if registry_id not in self._acquired:
             binding = self._manifest.registries.get(registry_id)
             if binding is None:
                 raise RegistryUnavailable(registry_id, RegistryFault.MISSING, "the manifest binds no such registry")
-            self._acquired[registry_id] = acquire(self._root, binding)
+            document = held(binding.sha256)
+            if document is None:
+                document = acquire(self._root, binding)
+                hold(document)
+            self._acquired[registry_id] = document
         return self._acquired[registry_id]
 
     def registry_document(self, registry_id: str) -> dict[str, Any]:

@@ -1,12 +1,13 @@
 """`validate` over a packet: the registries that direct it, its verdicts, and its verification modes."""
 
+import gzip
 import inspect
 import json
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
-from escapewheel_reader import RegistryFault, RegistryUnavailable, open_packet
+from escapewheel_reader import RegistryFault, RegistryUnavailable, open_packet, registries
 from packet_fixture import install_registry, read_registry
 
 from escapewheel_validator import Level, Verification, validate
@@ -79,6 +80,20 @@ def test_a_missing_bound_registry_fails_the_packet(packet_root):
     assert not report.passed
     assert [f.check for f in report.findings] == ["packet.registry.missing"]
     assert report.registries == [] and report.evaluations == []
+
+
+def test_a_registry_the_reader_holds_does_not_stand_in_for_a_missing_stored_copy(packet_root, monkeypatch):
+    """A reader may use a matching document; a validator checks the packet's own copy (Part 03 §3.2)."""
+    monkeypatch.setattr(registries, "_HELD", {})
+    manifest = json.loads((packet_root / "packet.json").read_text())
+    stored = packet_root / manifest["registries"]["core"]["path"]
+    registries.hold(gzip.decompress(stored.read_bytes()))
+    stored.unlink()
+    packet = open_packet(packet_root)
+    assert "core.sessions" in packet.registry["resources"]
+    report = validate(packet)
+    assert not report.passed
+    assert [f.check for f in report.findings] == ["packet.registry.missing"]
 
 
 def test_no_caller_supplied_registry_can_stand_in_for_a_bound_one(packet_root):
