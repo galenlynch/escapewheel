@@ -11,12 +11,13 @@ from __future__ import annotations
 
 import functools
 import json
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa
 import pyarrow.dataset as pads
-import pyarrow.parquet as pq
+import pyarrow.fs as pafs
 
 from .errors import ResourceUnreadableError, UnresolvedSource, UnsupportedCodecError
 from .location import Location
@@ -155,6 +156,8 @@ class TableResource:
         """
         self._resource = resource
         self._root = Location.of(root)
+        self._opened: pads.FileSystemDataset | None = None
+        self._opening = threading.Lock()
 
     @property
     def resource(self) -> Resource:
@@ -240,14 +243,43 @@ class TableResource:
     def dataset(self) -> pads.Dataset:
         """Open the resource as a PyArrow dataset without reading it.
 
+        Opened once per handle: the footer is read here and kept, so later scans read only data.
+        A remote object's size is taken from `size_bytes` where the entry records it, and
+        otherwise asked of the store once.
+
         Returns
         -------
         pyarrow.dataset.Dataset
             A lazy dataset, suitable for predicate pushdown over large resources.
+
+        Raises
+        ------
+        ResourceUnreadableError
+            If a remote object is not Parquet at its recorded `size_bytes`.
         """
+        with self._opening:
+            if self._opened is None:
+                self._opened = self._open()
+            return self._opened
+
+    def _open(self) -> pads.FileSystemDataset:
         path, filesystem = self._store()
-        opened: pads.Dataset = pads.dataset(path, format=parquet_format(), partitioning="hive", filesystem=filesystem)
-        return opened
+        filesystem = filesystem or pafs.LocalFileSystem()
+        size = self._resource.entry.get("size_bytes")
+        recorded = size if isinstance(size, int) and not isinstance(size, bool) and size > 0 else None
+        # Every open without a known size asks the store for it, so ask once and keep the answer.
+        known = recorded if recorded is not None or self.is_local else filesystem.get_file_info(str(path)).size
+        fragment = parquet_format().make_fragment(str(path), filesystem, file_size=known)
+        try:
+            schema = fragment.physical_schema  # reads the footer, which the fragment then keeps
+        except pa.ArrowInvalid as exc:
+            if recorded is None:
+                raise
+            raise ResourceUnreadableError(
+                f"{self.resource_id}: not readable as Parquet at its recorded size_bytes {recorded}: {exc}",
+                resource_id=self.resource_id,
+            ) from exc
+        return pads.FileSystemDataset([fragment], schema, parquet_format(), filesystem)
 
     def schema(self) -> pa.Schema:
         """Read the resource's Arrow schema without reading its data.
@@ -257,8 +289,7 @@ class TableResource:
         pyarrow.Schema
             The schema.
         """
-        path, filesystem = self._store()
-        return pq.read_schema(path, filesystem=filesystem)
+        return self.dataset().schema
 
     @property
     def is_local(self) -> bool:

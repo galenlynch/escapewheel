@@ -55,6 +55,7 @@ class Packet:
         resolved = tuple(replace(resource, resolve=self._declaration) for resource in manifest.resources)
         self._manifest = replace(manifest, resources=resolved)
         self._by_id = {r.resource_id: r for r in resolved}
+        self._tables: dict[str, TableResource] = {}
         self._memo = Memo()
 
     @property
@@ -246,9 +247,13 @@ class Packet:
         Returns
         -------
         TableResource
-            A handle that can read, open lazily, or register the resource.
+            A handle that can read, open lazily, or register the resource; the same one each call,
+            so its footer is read once.
         """
-        return TableResource(self.resource(resource_id), self._root)
+        handle = self._tables.get(resource_id)
+        if handle is None:
+            handle = self._tables.setdefault(resource_id, TableResource(self.resource(resource_id), self._root))
+        return handle
 
     def array_resource(self, resource_id: str) -> ArrayResource:
         """Get a readable handle for a dense array resource.
