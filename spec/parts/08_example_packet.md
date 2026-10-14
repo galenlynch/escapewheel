@@ -82,6 +82,7 @@ The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one 
       "declaration_id": "core.units",
       "uri": "tables/core/units.parquet",
       "validation_state": "passed",
+      "size_bytes": 4124,
       "digest": {"algorithm": "sha256", "value": "…"}
     },
     {
@@ -115,6 +116,7 @@ The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one 
       "declaration_id": "analysis.spike_events",
       "uri": "tables/analysis/spike_events.parquet",
       "validation_state": "passed",
+      "size_bytes": 1609,
       "digest": {"algorithm": "sha256", "value": "…"},
       "derived_from": ["core.spike_events", "core.clocks"]
     }

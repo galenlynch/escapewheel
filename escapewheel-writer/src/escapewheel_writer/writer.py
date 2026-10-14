@@ -629,7 +629,11 @@ class PacketWriter:
                     )
                 )
             check_parquet_floor(path)
-            entries.append(resource_entry(resource_id, resource_id, encode(relative.split("/")), owned=path))
+            entries.append(
+                resource_entry(
+                    resource_id, resource_id, encode(relative.split("/")), owned=path, size_bytes=path.stat().st_size
+                )
+            )
         if only is None and self._held is not None:
             entries += self._stage_dropped(staging, place, {e["resource_id"] for e in entries})
         return entries
@@ -657,7 +661,9 @@ class PacketWriter:
             pq.write_table(table, path, **options)
             self.rows_written[resource_id] = table.num_rows
             check_parquet_floor(path)
-            entry = resource_entry(resource_id, declaration_id, encode(relative.split("/")), owned=path)
+            entry = resource_entry(
+                resource_id, declaration_id, encode(relative.split("/")), owned=path, size_bytes=path.stat().st_size
+            )
             if lineage := held.entries[resource_id].get("derived_from"):
                 entry["derived_from"] = list(lineage)
             entries.append(entry)
