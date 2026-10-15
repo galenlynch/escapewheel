@@ -278,24 +278,28 @@ class TableResource:
 
     def _open(self) -> pads.FileSystemDataset:
         path, filesystem, size = self._located()
-        fragment = parquet_format().make_fragment(path, filesystem, file_size=size)
+        fragment = self._footed(parquet_format().make_fragment(path, filesystem, file_size=size))
+        return pads.FileSystemDataset([fragment], fragment.physical_schema, parquet_format(), filesystem)
+
+    def _footed(self, fragment: pads.ParquetFileFragment) -> pads.ParquetFileFragment:
+        """Read `fragment`'s footer, which it then keeps, naming a recorded size the file contradicts."""
         try:
-            schema = fragment.physical_schema  # reads the footer, which the fragment then keeps
+            _ = fragment.physical_schema
         except pa.ArrowInvalid as exc:
             if "size_bytes" not in self._resource.entry or self.is_local:
                 raise
             raise ResourceUnreadableError(
-                f"{self.resource_id}: not readable as Parquet at its recorded size_bytes {size}: {exc}",
+                f"{self.resource_id}: not readable as Parquet at its recorded size_bytes {self._size}: {exc}",
                 resource_id=self.resource_id,
             ) from exc
-        return pads.FileSystemDataset([fragment], schema, parquet_format(), filesystem)
+        return fragment
 
     def labelled(self, partition_expression: pads.Expression) -> pads.ParquetFileFragment:
         """Return a fragment over this table's file that carries `partition_expression`.
 
         PyArrow fills a partition column only from a fragment's own expression, so labelling a
-        file means a new fragment, which reads its own footer. It shares the handle's size, so the
-        store is asked for that at most once.
+        file means a new fragment, which reads its own footer here. It shares the handle's size, so
+        the store is asked for that at most once.
 
         Parameters
         ----------
@@ -305,11 +309,16 @@ class TableResource:
         Returns
         -------
         pyarrow.dataset.ParquetFileFragment
-            The fragment, unread.
+            The fragment, its footer read and kept.
+
+        Raises
+        ------
+        ResourceUnreadableError
+            If a remote object is not Parquet at its recorded `size_bytes`.
         """
         path, filesystem, size = self._located()
-        return parquet_format().make_fragment(
-            path, filesystem, partition_expression=partition_expression, file_size=size
+        return self._footed(
+            parquet_format().make_fragment(path, filesystem, partition_expression=partition_expression, file_size=size)
         )
 
     def schema(self) -> pa.Schema:

@@ -130,3 +130,12 @@ def test_a_packet_set_reads_each_footer_once_and_asks_no_size(packet_root, tmp_p
     spikes = [method for method, path in store if "spike_events" in path]
     # Per packet: one footer, then one data read per scan.
     assert spikes == ["GET"] * 6
+
+
+def test_a_packet_set_names_a_wrong_recorded_size(packet_root, store):
+    manifest = json.loads((packet_root / "packet.json").read_text())
+    entry = next(r for r in manifest["resources"] if r["resource_id"] == "core.spike_events")
+    entry["size_bytes"] = (packet_root / entry["uri"]).stat().st_size - 1
+    (packet_root / "packet.json").write_text(json.dumps(manifest))
+    with pytest.raises(ResourceUnreadableError, match="size_bytes"):
+        open_packets([PACKET]).scan("core.spike_events")
