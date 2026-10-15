@@ -2,6 +2,7 @@
 
 - :func:`check_packet_owned_opaque` -- every opaque payload is present, and its names survive a
   copy to another filesystem.
+- :func:`check_owned_sizes` -- every recorded `size_bytes` holds.
 - :func:`check_owned_digests` -- every recorded digest holds, where a mode asks for the read.
 - :func:`owned_uri` -- where a packet-owned entry's bytes are.
 - :func:`route_summary` -- how each digest was established, for a summary finding.
@@ -48,6 +49,31 @@ def check_packet_owned_opaque(packet: Packet, report: Report) -> None:
                 check_table.PHYSICAL_OPAQUE_NAME_PORTABILITY,
                 describe(resource.resource_id, directory, names, reason),
                 [(resource.resource_id, directory, *names)],
+            )
+
+
+def check_owned_sizes(packet: Packet, report: Report) -> None:
+    """Every packet-owned resource's recorded `size_bytes` covers the bytes its digest does (Part 03 §10).
+
+    A reader takes a remote table's size from the entry to read its footer first, so a wrong one
+    makes the table unreadable. Sizing needs a listing and no read, so this runs on every validation.
+    Where nothing is there, or the store cannot be reached, the digest and table checks report it.
+    """
+    for resource in packet.resources():
+        if resource.is_external or resource.source is not None:
+            continue
+        claimed = resource.entry.get("size_bytes")
+        if not isinstance(claimed, int) or isinstance(claimed, bool):
+            continue
+        try:
+            found = stores.listing(owned_uri(packet, resource.entry))
+        except (ResourceMissing, StoreUnreachable):
+            continue
+        if found.size_bytes != claimed:
+            report.add_about(
+                resource.resource_id,
+                check_table.OWNED_SIZE_BYTES,
+                f"{resource.resource_id}: holds {found.size_bytes:,} bytes, manifest records {claimed:,}",
             )
 
 

@@ -92,3 +92,27 @@ def test_an_empty_packet_owned_prefix_is_missing(packet_root):
     report = validate(open_packet(root))
     assert ("error", "resource.missing") in {(f.level, f.check) for f in report.findings}
     assert "array.unreadable" not in {f.check for f in report.findings}
+
+
+def _record_sizes(root, *, off_by=None):
+    """Record every packet-owned resource's size, one byte short where `off_by` names it."""
+    from escapewheel_validator.stores import listing
+
+    manifest = json.loads((root / "packet.json").read_text())
+    for entry in manifest["resources"]:
+        entry["size_bytes"] = listing(str(root / entry["uri"])).size_bytes - (entry["resource_id"] == off_by)
+    (root / "packet.json").write_text(json.dumps(manifest))
+    return root
+
+
+def test_recorded_sizes_that_hold_draw_no_finding(packet_root):
+    root = _record_sizes(add_array(packet_root, declared=["zstd"], axes=3))
+    assert "owned.size_bytes" not in {f.check for f in validate(open_packet(root)).findings}
+
+
+def test_a_wrong_recorded_size_is_an_error_without_checksums(packet_root):
+    """A reader takes a remote table's size from the entry, so this is checked on every validation."""
+    report = validate(open_packet(_record_sizes(packet_root, off_by="core.intervals")))
+    assert not report.passed
+    found = [f for f in report.findings if f.check == "owned.size_bytes"]
+    assert [(f.level, f.message.split(":")[0]) for f in found] == [("error", "core.intervals")]

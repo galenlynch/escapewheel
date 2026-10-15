@@ -40,7 +40,7 @@ from .shim.arrays import check_packet_owned_arrays
 from .shim.external import resolve_external
 from .shim.floors import report_page_types_unassessed, report_unassessed
 from .shim.ordering import check_ordering
-from .shim.owned import check_owned_digests, check_packet_owned_opaque
+from .shim.owned import check_owned_digests, check_owned_sizes, check_packet_owned_opaque
 from .shim.tables import (
     check_duplication,
     check_reserved_values,
@@ -224,6 +224,7 @@ def _check_resources(context: _Context) -> None:
         check_owned_digests(packet, report, modes.store_checksums)
     check_packet_owned_arrays(packet, report)
     check_packet_owned_opaque(packet, report)
+    check_owned_sizes(packet, report)
     check_time_origin(packet, report)
 
 

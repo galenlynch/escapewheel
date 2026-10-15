@@ -149,10 +149,11 @@ SOURCES_ABSOLUTE_URI = _unnamed("sources.absolute_uri", _ERROR, _RESOURCE)
 SOURCES_DECLARED_COUNT = _unnamed("sources.declared_count", _INFO, _PACKET)
 SOURCES_UNRESOLVED = _unnamed("sources.unresolved", _INFO, _PACKET)
 
-# A resource's bytes: whether they are there, and whether they hold their recorded digest.
+# A resource's bytes: whether they are there, and whether they hold their recorded size and digest.
 RESOURCE_MISSING = _unnamed("resource.missing", _ERROR, _RESOURCE)
 RESOURCE_UNREADABLE = _unnamed("resource.unreadable", _ERROR, _RESOURCE)
 OWNED_DIGEST = _unnamed("owned.digest", _ERROR, _RESOURCE)
+OWNED_SIZE_BYTES = _unnamed("owned.size_bytes", _ERROR, _RESOURCE)
 OWNED_VERIFIED = _unnamed("owned.verified", _INFO, _PACKET)
 
 # An external resource against what the manifest claims of it.
@@ -394,6 +395,7 @@ __all__ = [
     "EXTERNAL_UNREACHABLE",
     "EXTERNAL_VERIFIED",
     "OWNED_DIGEST",
+    "OWNED_SIZE_BYTES",
     "OWNED_VERIFIED",
     "PACKET_MANIFEST_DUPLICATE_MEMBER",
     "PACKET_MANIFEST_INVALID_JSON",
