@@ -146,7 +146,9 @@ with a non-zero exit if the runtime preflight rejects the environment; rerun it 
 unrestricted execution rather than retrying in the same sandbox. `GATE_TMPDIR` or `--tmpdir` sets
 `TMPDIR` for every step and holds the log; the caller's `UV_CACHE_DIR` carries through. The
 directory must be owned by the user running the gate, since pytest refuses a temporary root it does
-not own, which rules out a FUSE mount that reports every file as root's.
+not own, which rules out a FUSE mount that reports every file as root's. Its path must also be
+short, since the writer's tests open Unix-domain sockets under it and a socket path is limited to
+108 bytes.
 
 ## 4.1 Working with large packets
 
