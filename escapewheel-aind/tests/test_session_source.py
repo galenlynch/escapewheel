@@ -94,6 +94,19 @@ def test_a_stream_missing_its_window_is_a_defect(tmp_path):
     assert refused.value.where == "data_streams[0]"
 
 
+def test_the_task_controller_is_the_behaviour_stream_where_the_cameras_are_declared_apart(tmp_path):
+    window = {"stream_start_time": EPHYS_START, "stream_end_time": EPHYS_STOP}
+    asset = session_asset(
+        tmp_path,
+        streams=[
+            {**window, "ephys_modules": [{}]},
+            {**window, "stream_modalities": [{"abbreviation": "behavior"}]},
+            {**window, "stream_modalities": [{"abbreviation": "behavior-videos"}]},
+        ],
+    )
+    assert session_source(asset).behavior().index == 1
+
+
 def test_an_ambiguous_split_is_a_defect(tmp_path):
     asset = session_asset(
         tmp_path,

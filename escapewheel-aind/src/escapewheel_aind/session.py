@@ -288,8 +288,14 @@ class SessionSource(Compensates):
         return out
 
     def _only(self, *, ephys: bool) -> AcquisitionStream:
-        """Return the single stream on one side of the ephys split, or raise."""
+        """Return the single stream on one side of the ephys split, or raise.
+
+        Where the rig declares the task controller and its cameras as separate non-ephys
+        streams, the controller's, whose modality is `behavior`, is the one.
+        """
         matching = [stream for stream in self.streams() if stream.ephys is ephys]
+        if not ephys and len(matching) > 1:
+            matching = [stream for stream in matching if "behavior" in stream.modalities] or matching
         if len(matching) != 1:
             kind = "ephys" if ephys else "non-ephys"
             raise SourceDefect(
