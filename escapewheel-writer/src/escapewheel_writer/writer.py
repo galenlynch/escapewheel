@@ -383,7 +383,9 @@ class PacketWriter:
             )
         spec = self.spec(resource_id)
         assert spec is not None
-        self._batches[resource_id] = (number_batch(spec, self._session_batch(spec, b), self.keys) for b in batches)
+        self._batches[resource_id] = (
+            number_batch(spec, self._session_batch(spec, b), self.keys, self._declarations.spec) for b in batches
+        )
 
     def after_staging(self, report: Callable[[Callable[[str], None]], None]) -> None:
         """Register something to be reported once the packet has been written.
@@ -602,6 +604,7 @@ class PacketWriter:
                     self._tables[resource_id],
                     self.keys,
                     paired_kinds(self._tables, self._declarations, resource_id),
+                    self._declarations.spec,
                 )
                 table = built if self._held is None else self._held.settle(resource_id, built, derived=self._derived)
                 if table is None:

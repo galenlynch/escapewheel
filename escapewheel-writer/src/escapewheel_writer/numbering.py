@@ -12,6 +12,7 @@ from typing import Any
 from escapewheel_reader.registries import declared_tables
 from escapewheel_reader.resource_ids import CORE_INTERVALS
 
+from .arrow import numbered_as
 from .keys import Keys
 from .registries import Declarations
 
@@ -30,11 +31,7 @@ def preassign(tables: Mapping[str, Sequence[Mapping[str, Any]]], declarations: D
         spec = declarations.spec(resource_id)
         if spec is None:
             continue
-        target = {
-            column: referenced
-            for ref in spec.get("references", [])
-            for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
-        }
+        target = numbered_as(spec, declarations.spec)
         paired = paired_kinds(tables, declarations, resource_id)
         for column in spec["columns"]:
             name = column["name"]

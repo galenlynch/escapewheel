@@ -28,7 +28,7 @@ from escapewheel_reader.resource_ids import CORE_CLOCKS, CORE_SESSIONS, CORE_SOU
 from escapewheel_reader.sql import quote
 from escapewheel_validator.amendment import DERIVED, PREFERENCES, PROVENANCE, Version, absent, chain_reaches
 
-from .arrow import sort_key
+from .arrow import SpecOf, numbered_as, sort_key
 from .errors import AmendmentFault, AmendmentRefused
 from .promotion import act_on_promotion
 from .secrets import without_userinfo
@@ -62,13 +62,9 @@ def owned(spec: Mapping[str, Any]) -> list[tuple[str, str]]:
     ]
 
 
-def _kinds(spec: Mapping[str, Any]) -> dict[str, str]:
+def _kinds(spec: Mapping[str, Any], spec_of: SpecOf) -> dict[str, str]:
     """Return each assigned identifier column's numbering kind, as `arrow.number` chooses it."""
-    target = {
-        column: referenced
-        for ref in spec.get("references", ())
-        for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
-    }
+    target = numbered_as(spec, spec_of)
     return {
         c["name"]: target.get(c["name"], c["name"])
         for c in spec["columns"]
@@ -324,7 +320,7 @@ class Held:
         if resource_id not in self.entries or resource_id not in self.tables:
             return []
         spec = self.tables[resource_id]
-        kinds = _kinds(spec)
+        kinds = _kinds(spec, self.tables.get)
         # A value a discriminator on its own row pairs is numbered in the named resource's one key
         # column (Part 02 §8.3).
         paired = {

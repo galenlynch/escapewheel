@@ -259,7 +259,43 @@ def owned_names(spec: Mapping[str, Any]) -> dict[str, str]:
     }
 
 
-def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any, paired: Paired | None = None) -> None:
+#: A resource's registry entry by its ID, or None where none is declared.
+SpecOf = Callable[[str], Mapping[str, Any] | None]
+
+
+def _hops(spec: Mapping[str, Any]) -> dict[str, tuple[str, str]]:
+    return {
+        column: (str(ref["resource"]), referenced)
+        for ref in spec.get("references", ())
+        for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
+    }
+
+
+def numbered_as(spec: Mapping[str, Any], spec_of: SpecOf | None = None) -> dict[str, str]:
+    """Map each referencing column to the numbering it shares: the column its references end at.
+
+    A foreign key is numbered in the map of what it names, not its own, or `parent_clock_id` and
+    `clock_id` would number one clock twice. The chain is followed to its end, since a key may
+    name a row whose key is itself a reference: `trials.block_id` names a block, and
+    `blocks.block_id` the interval it occupies, so both are interval numbers. Without `spec_of`
+    only the first hop is known.
+    """
+    out = {}
+    for column, hop in _hops(spec).items():
+        seen = {hop}
+        while spec_of is not None and (further := _hops(spec_of(hop[0]) or {}).get(hop[1])) and further not in seen:
+            seen.add(hop := further)
+        out[column] = hop[1]
+    return out
+
+
+def number(
+    spec: Mapping[str, Any],
+    rows: list[dict[str, Any]],
+    keys: Any,
+    paired: Paired | None = None,
+    spec_of: SpecOf | None = None,
+) -> None:
     """Normalize identifier values as their declarations require, in place.
 
     Done here rather than in each adapter because the invariant is cross-adapter: the recipe
@@ -276,15 +312,7 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any, paire
     holds the key of whichever resource that is.
     """
     names = owned_names(spec)
-    # A foreign key is numbered in the map of the column it points at, not its own. Otherwise
-    # `parent_clock_id` and `clock_id` -- both clocks -- get separate numbering and the parent
-    # chain names a clock that does not exist, which `core.clocks.parent_chain_well_founded`
-    # reports. Same for `default_electrode_id` into electrodes and `supersedes_run_id` into runs.
-    target = {
-        column: referenced
-        for ref in spec.get("references", [])
-        for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
-    }
+    target = numbered_as(spec, spec_of)
     identifiers = [c for c in spec["columns"] if c.get("role") == "identifier"]
     # Read before any column is numbered: a row reaches its kind through its own references, and
     # once those hold numbers the kind is lost and the value falls into a map of its own.
@@ -357,7 +385,9 @@ def _number_dictionary(values: pa.Array, column: Mapping[str, Any], kind: str, k
     return pa.array(numbered, type=value_type).take(values.indices)
 
 
-def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> pa.RecordBatch:
+def number_batch(
+    spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any, spec_of: SpecOf | None = None
+) -> pa.RecordBatch:
     """Return a streamed batch with its identifier columns numbered, as `number` does for records.
 
     The streaming path exists so a table of 10^8 rows never becomes Python objects, so this maps
@@ -370,11 +400,7 @@ def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> p
     the table it streams is a fact table, which owns no identifier a name pairs with.
     """
     columns = dict(zip(batch.schema.names, batch.columns, strict=True))
-    target = {
-        column: referenced
-        for ref in spec.get("references", [])
-        for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
-    }
+    target = numbered_as(spec, spec_of)
     changed = False
     for column in spec["columns"]:
         name = column["name"]
@@ -408,6 +434,7 @@ def build_table(
     records: Sequence[Mapping[str, Any]],
     keys: Any = None,
     paired: Paired | None = None,
+    spec_of: SpecOf | None = None,
 ) -> pa.Table:
     """Build a sorted Arrow table for one resource.
 
@@ -422,6 +449,8 @@ def build_table(
         given -- which only a caller building a table with no identifier in it can want.
     paired : Mapping, optional
         For each identifier paired value, the map its row's kind numbers it in (see `number`).
+    spec_of : callable, optional
+        Every table's entry, through which a reference's chain is followed (see `numbered_as`).
 
     Returns
     -------
@@ -437,7 +466,7 @@ def build_table(
     if keys is not None:
         # Before the sort, not after: Part 03 §5.3 orders by the primary key, and the key is the
         # number. Sorting the names would order `unit_10` between `unit_1` and `unit_2`.
-        number(spec, rows, keys, paired)
+        number(spec, rows, keys, paired, spec_of)
     if order := sort_key(resource, spec):
         # None sorts first and consistently; a nullable sort column is legal.
         rows.sort(key=lambda r: tuple((r.get(k) is None, r.get(k)) for k in order))
@@ -459,11 +488,13 @@ __all__ = [
     "ARROW",
     "COERCE",
     "Paired",
+    "SpecOf",
     "build_table",
     "canonical_json",
     "localize",
     "number",
     "number_batch",
+    "numbered_as",
     "owned_names",
     "schema",
     "sort_key",

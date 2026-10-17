@@ -83,3 +83,34 @@ def test_a_date_written_as_a_string_becomes_a_date(tmp_path, registry, minimal):
     commit_tables(root, registry, {**minimal, "core.subjects": [subject]})
     written = open_packet(root).table("core.subjects").column("date_of_birth").to_pylist()[0]
     assert (written.year, written.month, written.day) == (2024, 9, 24)
+
+
+def _referencing(column, resource, referenced):
+    identifier = {"name": column, "type": "int32", "role": "identifier", "identity": "assigned"}
+    return {
+        "columns": [identifier],
+        "references": [{"columns": [column], "resource": resource, "resource_columns": [referenced]}],
+    }
+
+
+def test_a_key_naming_a_key_that_is_itself_a_reference_is_numbered_where_the_chain_ends():
+    """A trial names its block, and a block's key is the interval it occupies: one number for both."""
+    from escapewheel_writer.arrow import number, numbered_as
+    from escapewheel_writer.keys import Keys
+
+    specs = {
+        "x.blocks": _referencing("block_id", "core.intervals", "interval_id"),
+        "x.trials": _referencing("block_id", "x.blocks", "block_id"),
+    }
+    assert numbered_as(specs["x.trials"]) == {"block_id": "block_id"}
+    assert numbered_as(specs["x.trials"], specs.get) == {"block_id": "interval_id"}
+    # Intervals are numbered by their bounds before any table, so not in the names' string order.
+    labels = [f"b/{i}" for i in range(12)]
+    keys = Keys()
+    for label in labels:
+        keys.of("interval_id", label)
+    trials = [{"block_id": label} for label in reversed(labels)]
+    blocks = [{"block_id": label} for label in labels]
+    number(specs["x.blocks"], blocks, keys, spec_of=specs.get)
+    number(specs["x.trials"], trials, keys, spec_of=specs.get)
+    assert [r["block_id"] for r in trials] == [r["block_id"] for r in reversed(blocks)]
