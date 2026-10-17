@@ -73,6 +73,9 @@ def test_a_signal_is_regular_on_its_dispatch_clock(tmp_path):
     assert (asset["device_id"], asset["resource_id"]) == ("SniffDetector", "core.sniff_detector_raw_voltage")
     (axis,) = records["core.array_dimensions"]
     assert (axis["origin_tick"], axis["step_tick_num"]) == (0, 1)
+    # Anchored, so it declares the window it counted: its three samples.
+    (window,) = records["core.clock_observation_intervals"]
+    assert (window["clock_id"], window["start_tick"], window["stop_tick"]) == (clock["clock_id"], 0, 2)
 
 
 def test_no_signal_reads_no_register(tmp_path):

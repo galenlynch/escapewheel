@@ -16,6 +16,7 @@ from escapewheel_reader.resource_ids import (
     CORE_ARRAY_ASSETS,
     CORE_ARRAY_DIMENSIONS,
     CORE_CLOCK_ANCHORS,
+    CORE_CLOCK_OBSERVATION_INTERVALS,
     CORE_CLOCKS,
     CORE_COORDINATE_FRAME_AXES,
     CORE_COORDINATE_FRAMES,
@@ -99,6 +100,7 @@ class NWBSource(Devices, Electrodes, Signals, Events):
             CORE_ARRAY_ASSETS,
             CORE_ARRAY_DIMENSIONS,
             CORE_CLOCK_ANCHORS,
+            CORE_CLOCK_OBSERVATION_INTERVALS,
             CORE_CLOCKS,
             CORE_DEVICES,
             CORE_COORDINATE_FRAME_AXES,
@@ -126,6 +128,7 @@ class NWBSource(Devices, Electrodes, Signals, Events):
             CORE_ARRAY_ASSETS,
             CORE_ARRAY_DIMENSIONS,
             CORE_CLOCK_ANCHORS,
+            CORE_CLOCK_OBSERVATION_INTERVALS,
             CORE_CLOCKS,
             CORE_DEVICES,
         }
@@ -261,6 +264,7 @@ class NWBSource(Devices, Electrodes, Signals, Events):
             CORE_EVENTS: self.events(),
             CORE_INTERVALS: self.intervals(),
             CORE_CLOCK_ANCHORS: self.signal_anchors(),
+            CORE_CLOCK_OBSERVATION_INTERVALS: self.signal_observation_intervals(),
             CORE_ARRAY_ASSETS: self.array_assets(),
             CORE_ARRAY_DIMENSIONS: self.array_dimensions(),
         }

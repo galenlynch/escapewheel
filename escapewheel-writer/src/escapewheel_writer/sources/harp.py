@@ -20,6 +20,7 @@ from escapewheel_reader.resource_ids import (
     CORE_ARRAY_ASSETS,
     CORE_ARRAY_DIMENSIONS,
     CORE_CLOCK_ANCHORS,
+    CORE_CLOCK_OBSERVATION_INTERVALS,
     CORE_CLOCKS,
     CORE_DEVICES,
 )
@@ -85,7 +86,16 @@ class HarpSource(SignalArrays):
     """
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
-    PRODUCES = frozenset({CORE_DEVICES, CORE_CLOCKS, CORE_CLOCK_ANCHORS, CORE_ARRAY_ASSETS, CORE_ARRAY_DIMENSIONS})
+    PRODUCES = frozenset(
+        {
+            CORE_DEVICES,
+            CORE_CLOCKS,
+            CORE_CLOCK_ANCHORS,
+            CORE_CLOCK_OBSERVATION_INTERVALS,
+            CORE_ARRAY_ASSETS,
+            CORE_ARRAY_DIMENSIONS,
+        }
+    )
 
     #: Part 05 §3.4: what of `PRODUCES` this adapter supplies only part of, which a source entry
     #: without `owns` contributes rather than owns.
@@ -274,6 +284,7 @@ class HarpSource(SignalArrays):
             CORE_DEVICES: self.devices(),
             CORE_CLOCKS: self.signal_clocks(),
             CORE_CLOCK_ANCHORS: self.signal_anchors(),
+            CORE_CLOCK_OBSERVATION_INTERVALS: self.signal_observation_intervals(),
             CORE_ARRAY_ASSETS: self.array_assets(),
             CORE_ARRAY_DIMENSIONS: self.array_dimensions(),
         }

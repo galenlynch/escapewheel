@@ -1,6 +1,6 @@
 """Continuously sampled streams as arrays on their own dispatch clocks, whatever file they are read from.
 
-- :class:`SignalArrays` -- each signal's array, asset row, clock, axis and anchors, from the
+- :class:`SignalArrays` -- each signal's array, asset row, clock, window, axis and anchors, from the
   ticks and values a reading adapter supplies.
 """
 
@@ -145,6 +145,26 @@ class SignalArrays:
             }
             for name in self.signals
         ]
+
+    def signal_observation_intervals(self) -> list[dict[str, Any]]:
+        """`core.clock_observation_intervals`, one per dispatch counter: every sample it counted.
+
+        An anchored clock declares its window (Part 01 §2.3), and a counter whose tick k is
+        sample k observed exactly `[0, samples - 1]`.
+        """
+        rows = []
+        for name in self.signals:
+            ticks, _ = self._signal(name)
+            if len(ticks):
+                rows.append(
+                    {
+                        "session_id": self.session_id,
+                        "clock_id": self._dispatch_clock_id(name),
+                        "start_tick": 0,
+                        "stop_tick": len(ticks) - 1,
+                    }
+                )
+        return rows
 
     def signal_anchors(self, every: int = 10_000) -> list[dict[str, Any]]:
         """`core.clock_anchors`, relating each dispatch counter to the reference clock.
