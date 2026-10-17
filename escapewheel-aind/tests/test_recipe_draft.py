@@ -1,6 +1,7 @@
 """The recipe drafter: which assets it reads, how it reads their times, and what it renders."""
 
 import tomllib
+from dataclasses import replace
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
@@ -160,6 +161,48 @@ def test_layout_reads_known_prefixes_and_falls_back_to_the_sorted_asset_s_nwb():
     assert recipe["packet"]["extensions"] == ["aind_unit_qc.json"]
     assert missing == []
     assert "video: ffprobe reads a local file" in text
+    assert "dynamic_foraging: the raw asset holds no behavior JSON" in text
+
+
+def test_the_behavior_json_wins_the_trials_and_the_sniff_register_is_found():
+    choice = assets.choose(_catalogue(), RAW)
+    behavior = f"{OPEN}/{RAW}/behavior"
+    first, restart = "behavior_791094_2025-10-08_16-49-31", "behavior_791094_2025-10-08_16-52-04"
+    tree = {
+        behavior: [first, restart, "Sniffing"],
+        f"{behavior}/{first}/behavior": ["791094_2025-10-08_16-49-31.json"],
+        f"{behavior}/{restart}/behavior": ["791094_2025-10-08_16-52-04.json", "parameters.json"],
+        f"{behavior}/Sniffing": ["T16-48.harp", "T16-50.harp"],
+        f"{behavior}/Sniffing/T16-48.harp": ["SniffDetector__1.bin", "device.yml"],
+        f"{behavior}/Sniffing/T16-50.harp": ["SniffDetector__32.bin", "device.yml"],
+    }
+    layout = catalog.layout(choice, _listing(tree))
+    assert layout.behavior_json == f"{behavior}/{restart}/behavior/791094_2025-10-08_16-52-04.json"
+    assert any("one per start of the GUI" in note for note in layout.notes)
+    layout = replace(layout, nwb_file=f"{OPEN}/{RAW}_nwb/{RAW}_experiment1_recording1.nwb")
+    recipe = tomllib.loads(_render(choice, layout)[0])
+    kinds = {s["kind"]: s for s in recipe["source"]}
+    assert kinds["dynamic_foraging"]["root"] == layout.behavior_json
+    assert kinds["harp"]["root"] == f"{behavior}/Sniffing/T16-50.harp"
+    assert kinds["harp"]["signals"] == ["RawVoltage"]
+    # The NWB still names the task's kind, since its trials table is read, but the JSON's rows win.
+    assert kinds["aind_nwb"]["interval_kind"] == "dynamic_foraging.trials"
+    assert "core.intervals" not in kinds["aind_nwb"]["owns"]
+    assert recipe["preference"]["core.intervals"]["source"] == "dynamic_foraging"
+    assert recipe["packet"]["extensions"] == ["aind_unit_qc.json", "dynamic_foraging.json"]
+
+
+def test_a_private_asset_is_read_from_its_mirror():
+    private = assets.Asset(f"{RAW}_nwb_2026-08-18_13-28-44", "nwb", None, None, f"{RAW}_sorted_2026-07-29_16-03-08")
+    copy = f"s3://aind-scratch-data/escapewheel-nwb/{private.name}/"
+    held, notes = assets.mirrored(_catalogue(private), {private.name: copy, "absent": copy})
+    assert assets.choose(held, RAW).nwb.uri == copy.rstrip("/")
+    assert notes == [f"{private.name} is private and read from a copy at {copy}"]
+    layout = draft.Layout(nwb_file=f"{copy}{RAW}_experiment1_recording1.nwb")
+    text, _ = _render(assets.choose(held, RAW), layout)
+    kinds = {s["kind"]: s for s in tomllib.loads(text)["source"]}
+    assert kinds["aind_nwb"]["storage_options"] == kinds["lfp"]["storage_options"] == {"anon": False}
+    assert "nwb" not in kinds["aind_unit_qc"] and "storage_options" not in kinds["session"]
 
 
 def test_a_combined_nwb_binds_the_task_and_a_local_copy_adds_the_videos(tmp_path):

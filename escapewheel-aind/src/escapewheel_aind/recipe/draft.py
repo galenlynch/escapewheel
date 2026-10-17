@@ -3,7 +3,7 @@
 - :class:`Layout` -- what the chosen assets hold, read one prefix at a time.
 - :func:`render` -- the recipe's TOML, commented where a value was inferred or a source left out.
 
-The sources and their ownership are those an AIND ecephys session with a dynamic-foraging NWB
+The sources and their ownership are those an AIND ecephys session of the dynamic-foraging task
 needs, so a resource two of them can supply is already settled. The sources' adapters must be
 installed beside the writer: each AIND kind runs in the build's process.
 """
@@ -53,11 +53,18 @@ from escapewheel_reader.resource_ids import (
     CORE_UNITS,
 )
 
-from ..resource_ids import AIND_UNIT_QC_METRICS, AIND_UNIT_QC_SYNCHRONY, AIND_UNIT_QC_WAVEFORM_METRICS
-from .assets import Choice
+from ..resource_ids import (
+    AIND_UNIT_QC_METRICS,
+    AIND_UNIT_QC_SYNCHRONY,
+    AIND_UNIT_QC_WAVEFORM_METRICS,
+    DYNAMIC_FORAGING_BLOCKS,
+    DYNAMIC_FORAGING_SESSIONS,
+    DYNAMIC_FORAGING_TRIALS,
+)
+from .assets import PUBLIC_BUCKETS, Choice
 
 #: Extension registries the drafted sources fill, keyed by the kind that fills one.
-EXTENSION_OF = {"aind_unit_qc": "aind_unit_qc"}
+EXTENSION_OF = {"aind_unit_qc": "aind_unit_qc", "dynamic_foraging": "dynamic_foraging"}
 
 #: The rig's zone, which every AIND ecephys rig shares.
 ZONE = "America/Los_Angeles"
@@ -80,6 +87,10 @@ class Layout:
     ephys_nwbs : sequence of str
         The sorted asset's own NWB stores, one per experiment, which carry units and electrodes
         and no behaviour.
+    behavior_json : str or None
+        The foraging GUI's behavior JSON, from which the task's trials are read.
+    sniff : str or None
+        The HARP acquisition folder of the sniff detector, which holds its voltage register.
     """
 
     experiments: Sequence[str] = ()
@@ -87,11 +98,13 @@ class Layout:
     videos: str | None = None
     nwb_file: str | None = None
     ephys_nwbs: Sequence[str] = ()
+    behavior_json: str | None = None
+    sniff: str | None = None
     notes: tuple[str, ...] = field(default=())
 
 
-#: What a drafted option holds: TOML's scalars a recipe uses, and a list of strings.
-Value = bool | int | str | Sequence[str]
+#: What a drafted option holds: TOML's scalars a recipe uses, a list of strings, and a table of flags.
+Value = bool | int | str | Sequence[str] | Mapping[str, bool]
 
 
 def _value(value: Value) -> str:
@@ -102,6 +115,8 @@ def _value(value: Value) -> str:
     if isinstance(value, str):
         # A JSON string is a TOML basic string: both escape with backslashes and \uXXXX.
         return json.dumps(value)
+    if isinstance(value, Mapping):
+        return "{" + ", ".join(f"{key} = {_value(flag)}" for key, flag in value.items()) + "}"
     return "[" + ", ".join(json.dumps(v) for v in value) + "]"
 
 
@@ -122,6 +137,8 @@ class _Source:
     options: dict[str, Value]
     owns: Sequence[str] = ()
     contributes: Sequence[str] = ()
+    #: Resources this source wins where another supplies the same rows, each with the reason.
+    preferred: Mapping[str, str] = field(default_factory=dict)
 
     def lines(self) -> list[str]:
         out = ["", *_comment(self.why), "[[source]]", f'kind = "{self.kind}"']
@@ -131,6 +148,13 @@ class _Source:
         if self.owns:
             out += _list("owns", self.owns)
         return out
+
+
+def _signed(uri: str) -> dict[str, Value]:
+    """Return the options that read `uri` with the ambient credentials, where it is a mirror rather than public."""
+    if uri.removeprefix("s3://").split("/", 1)[0] in PUBLIC_BUCKETS:
+        return {}
+    return {"storage_options": {"anon": False}}
 
 
 def _experiment(layout: Layout, nwb_file: str | None) -> tuple[str | None, list[str]]:
@@ -202,10 +226,13 @@ def sources(choice: Choice, layout: Layout, *, local_videos: Path | None) -> tup
         _Source(
             "aind_unit_qc",
             "The pipeline's per-unit quality metrics, from the same analyzer.",
-            {"root": sorted_uri, **scoped, **({"nwb": nwb} if nwb else {}), "in_process": True},
+            # Its `nwb` is opened unsigned whatever the recipe says, so a mirror cannot be one.
+            {"root": sorted_uri, **scoped, **({"nwb": nwb} if nwb and not _signed(nwb) else {}), "in_process": True},
             owns=[AIND_UNIT_QC_METRICS, AIND_UNIT_QC_WAVEFORM_METRICS, AIND_UNIT_QC_SYNCHRONY],
         ),
     ]
+    if nwb and _signed(nwb):
+        left_out.append("aind_unit_qc's nwb: it opens a mirror unsigned, so no NaN metric is filled from the NWB")
     if layout.clipped:
         found.append(
             _Source(
@@ -222,6 +249,7 @@ def sources(choice: Choice, layout: Layout, *, local_videos: Path | None) -> tup
     if read is not None:
         nwb_options: dict[str, Value] = {
             "root": read,
+            **_signed(read),
             "zone": ZONE,
             # Whether a stream is a signal is a fact about the instrument, which no catalogue states.
             "signals": [],
@@ -229,7 +257,9 @@ def sources(choice: Choice, layout: Layout, *, local_videos: Path | None) -> tup
             "in_process": True,
         }
         if nwb is not None:
-            nwb_options["interval_kind"] = "dynamic_foraging.trials"
+            # Stated even where the behavior JSON's trials win, since an NWB with a trials table
+            # refuses to read without one.
+            nwb_options["interval_kind"] = DYNAMIC_FORAGING_TRIALS
         if layout.clipped:
             nwb_options["attachments"] = f"{raw_uri}/ecephys/ecephys_clipped"
         why = (
@@ -257,7 +287,7 @@ def sources(choice: Choice, layout: Layout, *, local_videos: Path | None) -> tup
                     CORE_EVENT_STREAMS,
                     CORE_EVENTS,
                     CORE_PROBES,
-                    CORE_INTERVALS,
+                    *([] if layout.behavior_json else [CORE_INTERVALS]),
                     CORE_UNIT_COORDINATES,
                     CORE_COORDINATE_FRAMES,
                     CORE_COORDINATE_FRAME_AXES,
@@ -270,19 +300,46 @@ def sources(choice: Choice, layout: Layout, *, local_videos: Path | None) -> tup
             _Source(
                 "lfp",
                 "The NWB's LFP series, referenced rather than copied.",
-                {"root": read},
+                {"root": read, **_signed(read)},
                 owns=[CORE_ARRAY_CHANNELS],
                 contributes=[CORE_ARRAY_ASSETS, CORE_ARRAY_DIMENSIONS, CORE_ARRAY_LABELS],
             )
         )
     else:
         left_out.append("aind_nwb and lfp: no NWB is public, so the packet has no probes or electrodes")
-    if nwb is not None:
-        left_out.append(
-            "dynamic_foraging: the task's trials, blocks and session parameters need an extraction no "
-            "installed adapter performs"
+    if layout.behavior_json is not None:
+        found.append(
+            _Source(
+                "dynamic_foraging",
+                "The task's trials, blocks and session parameters, from the foraging GUI's behavior JSON.",
+                {"root": layout.behavior_json, "in_process": True},
+                owns=[DYNAMIC_FORAGING_TRIALS, DYNAMIC_FORAGING_BLOCKS, DYNAMIC_FORAGING_SESSIONS],
+                preferred={
+                    CORE_INTERVALS: "the NWB's trials table is converted from this JSON, which also holds the blocks"
+                },
+            )
         )
-    elif ephys_nwb is not None:
+    else:
+        left_out.append("dynamic_foraging: the raw asset holds no behavior JSON")
+    if layout.sniff is not None:
+        found.append(
+            _Source(
+                "harp",
+                "The sniff detector's voltage, one sample per event of its RawVoltage register.",
+                {"root": layout.sniff, "signals": ["RawVoltage"]},
+                contributes=[
+                    CORE_DEVICES,
+                    CORE_CLOCKS,
+                    CORE_CLOCK_ANCHORS,
+                    CORE_CLOCK_OBSERVATION_INTERVALS,
+                    CORE_ARRAY_ASSETS,
+                    CORE_ARRAY_DIMENSIONS,
+                ],
+            )
+        )
+    else:
+        left_out.append("harp: the raw asset holds no sniff detector's voltage register")
+    if nwb is None and ephys_nwb is not None:
         left_out.append(
             "the behaviour: no NWB of this sorting carrying it is in a public bucket, so the sorted asset's "
             "ephys-only NWB is read"
@@ -324,10 +381,10 @@ def render(
     )
     missing = [extension for extension in needed if extension not in extensions]
     lines = [
-        "# Drafted by `escapewheel-aind-recipe` from DocDB and Code Ocean, reading only public assets:",
+        "# Drafted by `escapewheel-aind-recipe` from DocDB and Code Ocean, reading:",
         f"#   raw     {choice.raw.uri}",
         f"#   sorted  {choice.sorted.uri}",
-        f"#   nwb     {choice.nwb.uri if choice.nwb else 'none public'}",
+        f"#   nwb     {choice.nwb.uri if choice.nwb else 'none readable'}",
         *(["# Review every line marked GUESS before building."] if any("GUESS" in s.why for s in found) else []),
         *(f"# {note}" for note in [*choice.notes, *layout.notes]),
         "",
@@ -354,6 +411,14 @@ def render(
     ]
     for source in found:
         lines += source.lines()
+    for source in found:
+        for resource, reason in source.preferred.items():
+            lines += [
+                "",
+                f"[preference.{_value(resource)}]",
+                f"source = {_value(source.kind)}",
+                f"reason = {_value(reason)}",
+            ]
     if left_out:
         lines += ["", "# Left out:", *(f"#   {line}" for line in left_out)]
     return "\n".join(lines) + "\n", missing

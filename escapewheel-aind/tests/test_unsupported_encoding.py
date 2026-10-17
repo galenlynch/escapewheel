@@ -27,6 +27,7 @@ ANALYZER = "sorted/postprocessed/experiment1_Record Node 109#Neuropix-PXI-100.A_
 NEEDED: dict[str, tuple[tuple[str, str], ...]] = {
     "session": (),
     "video": (),
+    "dynamic_foraging": (),
     "aind_nwb": (("mini.nwb/acquisition/sniff/timestamps", SourceFault.PICKLED),),
     # A column the analyzer holds in another encoding is not a metric, so the adapter skips it and
     # reports what the table then lacks.

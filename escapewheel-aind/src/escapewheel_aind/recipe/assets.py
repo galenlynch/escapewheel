@@ -2,17 +2,18 @@
 
 - :class:`Asset` -- one asset, public or not, and what it was derived from.
 - :func:`from_docdb` and :func:`from_codeocean` -- an asset from either catalogue's record.
+- :func:`mirrored` -- private assets given the location of a readable copy.
 - :func:`choose` -- the sorted asset and the NWB a recipe reads, and the candidates passed over.
 
-A recipe reads only assets in a public bucket: a packet names where each source lives, and a
-private location is one its readers cannot open.
+A recipe reads only assets in a public bucket, or a copy `mirrored` names: a packet names where
+each source lives, and a private location is one its readers cannot open.
 """
 
 from __future__ import annotations
 
 import re
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Literal
 
 from ..errors import DraftFault, DraftRefused
@@ -122,6 +123,18 @@ def merged(assets: Iterable[Asset]) -> dict[str, Asset]:
     return by_name
 
 
+def mirrored(assets: Mapping[str, Asset], mirrors: Mapping[str, str]) -> tuple[dict[str, Asset], list[str]]:
+    """Give each private asset named in `mirrors` its copy's location, and say so for each."""
+    out = dict(assets)
+    notes = []
+    for name, uri in sorted(mirrors.items()):
+        asset = assets.get(name)
+        if asset is not None and not asset.public:
+            out[name] = replace(asset, uri=uri.rstrip("/"))
+            notes.append(f"{name} is private and read from a copy at {uri}")
+    return out, notes
+
+
 @dataclass(frozen=True)
 class Choice:
     """The assets a recipe reads, and what a reader of it should know about the rest."""
@@ -206,4 +219,5 @@ __all__ = [
     "from_codeocean",
     "from_docdb",
     "merged",
+    "mirrored",
 ]

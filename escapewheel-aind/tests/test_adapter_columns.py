@@ -24,6 +24,7 @@ from escapewheel_aind.unit_qc import UnitQCSource
 from escapewheel_aind.video import VideoSource
 from tests import nwbfixture
 from tests.builders import session_asset, session_source
+from tests.test_dynamic_foraging import source as foraging
 from tests.test_unit_qc import UNITS as QC_UNITS
 from tests.test_unit_qc import stream as analyzer
 from tests.test_video_source import HARP_ROW, camera
@@ -63,8 +64,13 @@ def _unit_qc(root: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     return UnitQCSource(asset, session_id="s1", units=QC_UNITS)
 
 
+def _dynamic_foraging(root: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
+    return foraging(root)
+
+
 BUILDERS: dict[str, Callable[[Path, pytest.MonkeyPatch], Any]] = {
     "session": _session_source,
+    "dynamic_foraging": _dynamic_foraging,
     "video": _video,
     "aind_nwb": _nwb,
     "aind_unit_qc": _unit_qc,

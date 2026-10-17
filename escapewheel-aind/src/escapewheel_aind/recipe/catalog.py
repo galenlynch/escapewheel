@@ -5,7 +5,7 @@
 - :func:`layout` -- what the chosen assets hold, read one known prefix at a time.
 
 DocDB is read at `v2`, the store of record for schema 2.x; its client defaults to the legacy
-`v1`. S3 is read anonymously, since only public buckets are read at all.
+`v1`. A public bucket is read anonymously.
 """
 
 from __future__ import annotations
@@ -15,11 +15,14 @@ from collections.abc import Callable, Iterable
 from typing import Any
 
 from ..errors import DraftFault, DraftRefused
-from .assets import Choice
+from .assets import PUBLIC_BUCKETS, Choice
 from .draft import Layout
 
 DOCDB_HOST = "api.allenneuraldynamics.org"
 CODEOCEAN_DOMAIN = "https://codeocean.allenneuraldynamics.org"
+
+#: The sniff detector's RawVoltage register, as a HARP logger names its file.
+SNIFF_REGISTER = "SniffDetector__32.bin"
 
 #: Lists one prefix's immediate children, as names without the prefix. Injected for tests.
 Lister = Callable[[str], list[str]]
@@ -64,12 +67,14 @@ def codeocean_assets(subject_id: str) -> Iterable[Any]:
 
 
 def s3_lister() -> Lister:
-    """List one S3 prefix, unsigned, one level deep."""
+    """List one S3 prefix one level deep: a public bucket unsigned, a mirror's with ambient credentials."""
     import s3fs
 
-    fs = s3fs.S3FileSystem(anon=True)
+    unsigned, signed = s3fs.S3FileSystem(anon=True), s3fs.S3FileSystem()
 
     def children(uri: str) -> list[str]:
+        bucket = uri.removeprefix("s3://").split("/", 1)[0]
+        fs = unsigned if bucket in PUBLIC_BUCKETS else signed
         try:
             return sorted(entry.rstrip("/").rsplit("/", 1)[-1] for entry in fs.ls(uri.rstrip("/") + "/", refresh=True))
         except FileNotFoundError:
@@ -88,11 +93,21 @@ def layout(choice: Choice, children: Lister) -> Layout:
         notes.append("the sorted asset has no postprocessed/, so core.sorting_run_channels stays empty")
     clipped = "ecephys_clipped" in children(f"{choice.raw.uri}/ecephys")
     videos = None
-    behavior = [n for n in children(f"{choice.raw.uri}/behavior") if n.startswith("behavior_")]
+    behavior_uri = f"{choice.raw.uri}/behavior"
+    held = children(behavior_uri)
+    behavior = [n for n in held if n.startswith("behavior_") and not n.endswith(".harp")]
     for session in behavior:
-        if "behavior-videos" in children(f"{choice.raw.uri}/behavior/{session}"):
-            videos = f"{choice.raw.uri}/behavior/{session}/behavior-videos"
+        if "behavior-videos" in children(f"{behavior_uri}/{session}"):
+            videos = f"{behavior_uri}/{session}/behavior-videos"
             break
+    behavior_json, json_notes = _behavior_json(behavior_uri, behavior, children)
+    notes += json_notes
+    # A rig logs the detector either in its own folder or beside the GUI's.
+    harp = [f"{behavior_uri}/Sniffing/{n}" for n in children(f"{behavior_uri}/Sniffing") if n.endswith(".harp")]
+    harp += [f"{behavior_uri}/{n}" for n in held if n.startswith("behavior_sniffing") and n.endswith(".harp")]
+    sniffs = [folder for folder in harp if SNIFF_REGISTER in children(folder)]
+    if len(sniffs) > 1:
+        notes.append(f"{len(sniffs)} folders hold {SNIFF_REGISTER}; the recipe reads {sniffs[-1]}: GUESS")
     ephys = sorted(n for n in children(f"{choice.sorted.uri}/nwb") if n.endswith(".nwb"))
     nwb_file = None
     if choice.nwb is not None and choice.nwb.uri is not None:
@@ -105,8 +120,40 @@ def layout(choice: Choice, children: Lister) -> Layout:
         else:
             notes.append(f"{choice.nwb.name} holds no .nwb store, so no NWB is read")
     return Layout(
-        experiments, clipped, videos, nwb_file, tuple(f"{choice.sorted.uri}/nwb/{n}" for n in ephys), tuple(notes)
+        experiments,
+        clipped,
+        videos,
+        nwb_file,
+        tuple(f"{choice.sorted.uri}/nwb/{n}" for n in ephys),
+        behavior_json=behavior_json,
+        sniff=sniffs[-1] if sniffs else None,
+        notes=tuple(notes),
     )
 
 
-__all__ = ["CODEOCEAN_DOMAIN", "DOCDB_HOST", "Lister", "codeocean_assets", "docdb_records", "layout", "s3_lister"]
+def _behavior_json(behavior_uri: str, sessions: list[str], children: Lister) -> tuple[str | None, list[str]]:
+    """Return the GUI's JSON, `<subject>_<date>_<time>.json` under a session's `behavior/`.
+
+    A restarted GUI leaves a session folder per start, and the last is read.
+    """
+    found = [
+        f"{behavior_uri}/{session}/behavior/{name}"
+        for session in sessions
+        for name in children(f"{behavior_uri}/{session}/behavior")
+        if name.endswith(".json") and name[:1].isdigit()
+    ]
+    if len(found) > 1:
+        return found[-1], [f"{len(found)} behavior JSONs, one per start of the GUI; the recipe reads the last: GUESS"]
+    return (found[0] if found else None), []
+
+
+__all__ = [
+    "CODEOCEAN_DOMAIN",
+    "DOCDB_HOST",
+    "SNIFF_REGISTER",
+    "Lister",
+    "codeocean_assets",
+    "docdb_records",
+    "layout",
+    "s3_lister",
+]

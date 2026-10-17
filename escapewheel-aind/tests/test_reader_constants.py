@@ -18,7 +18,8 @@ import escapewheel_aind
 from escapewheel_aind import resource_ids
 
 SOURCE = Path(escapewheel_aind.__file__).resolve().parent
-EXTENSIONS = Path(__file__).resolve().parents[1] / "extensions"
+#: The registries this package carries, and the monorepo's, which hold the task extensions.
+EXTENSIONS = [Path(__file__).resolve().parents[depth] / "extensions" for depth in (1, 2)]
 
 CORE_IDS = {getattr(core_ids, name) for name in core_ids.__all__}
 OWN = {name: getattr(resource_ids, name) for name in resource_ids.__all__}
@@ -70,7 +71,8 @@ def test_a_constant_of_the_package_is_named_for_its_id():
 def test_every_constant_of_the_package_names_a_resource_an_extension_declares():
     declared = {
         resource_id
-        for document in sorted(EXTENSIONS.glob("*.json"))
+        for directory in EXTENSIONS
+        for document in sorted(directory.glob("*.json"))
         for resource_id in json.loads(document.read_text())["resources"]
     }
     assert sorted(value for value in OWN.values() if value not in declared) == []

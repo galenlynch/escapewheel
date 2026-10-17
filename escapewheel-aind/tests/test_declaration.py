@@ -22,7 +22,7 @@ KINDS = {name: adapter for name, adapter in discovered().items() if adapter.__mo
 
 def test_this_distribution_registers_the_kinds_it_ships():
     """A guard on the sweep below: an empty discovery would make every test here vacuously pass."""
-    assert set(KINDS) == {"session", "video", "aind_nwb", "aind_unit_qc"}
+    assert set(KINDS) == {"session", "video", "aind_nwb", "aind_unit_qc", "dynamic_foraging"}
 
 
 @pytest.mark.parametrize("kind", sorted(KINDS))

@@ -48,6 +48,7 @@ session = "escapewheel_aind.session:SessionSource"
 video = "escapewheel_aind.video:VideoSource"
 aind_nwb = "escapewheel_aind.nwb:AindNWBSource"
 aind_unit_qc = "escapewheel_aind.unit_qc:UnitQCSource"
+dynamic_foraging = "escapewheel_aind.dynamic_foraging:DynamicForagingSource"
 
 # What these adapters work around in their sources, which reaches a packet's
 # `core.processing_runs.parameters` through `compensations.registered()`. Declared here because the

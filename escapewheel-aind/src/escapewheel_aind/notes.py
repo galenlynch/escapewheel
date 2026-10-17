@@ -40,6 +40,8 @@ class AindNote(StrEnum):
     FRAME_EXTRAPOLATED = "frame_extrapolated"
     #: The units table names no unit by device and sorter label, so no coordinate is emitted.
     NO_UNIT_NAMES = "no_unit_names"
+    #: A task parameter varies across trials, so the session row leaves it unset.
+    PARAMETER_VARIES = "parameter_varies"
 
 
 __all__ = ["AindNote"]

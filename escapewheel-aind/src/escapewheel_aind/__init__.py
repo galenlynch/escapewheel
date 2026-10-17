@@ -16,6 +16,8 @@ nwb
     The columns and conventions an AIND pipeline adds to an otherwise ordinary NWB.
 unit_qc
     The unit quality metrics a sorting analyzer computes, as the ``aind_unit_qc`` extension.
+dynamic_foraging
+    The dynamic-foraging task's trials, blocks and session parameters, from the foraging GUI's behavior JSON.
 compensations
     The upstream faults these adapters work around, recorded in the packet.
 errors

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -32,6 +34,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--packet-out", default=None, help="where the build writes the packet (default: the raw name)")
     parser.add_argument("--videos", type=Path, help="a local copy of the raw asset's behavior-videos")
+    parser.add_argument(
+        "--mirror", type=Path, help="a CSV of asset_name and destination: a readable copy of each private asset"
+    )
     parser.add_argument("--no-codeocean", action="store_true", help="find assets in DocDB alone")
     parser.add_argument("--out", type=Path, help="write the recipe here rather than to standard output")
     return parser
@@ -44,8 +49,13 @@ def _choose(args: argparse.Namespace) -> tuple[dict[str, object], assets.Choice]
     subject_id = str((record.get("subject") or {}).get("subject_id") or args.raw.split("_")[1])
     if not args.no_codeocean:
         found += [a for co in catalog.codeocean_assets(subject_id) if (a := assets.from_codeocean(co, args.raw))]
-    choice = assets.choose(assets.merged(found), args.raw, sorted_name=args.sorted_name, nwb_name=args.nwb_name)
-    return record, choice
+    mirrors = {}
+    if args.mirror:
+        with args.mirror.open(newline="") as rows:
+            mirrors = {row["asset_name"]: row["destination"] for row in csv.DictReader(rows)}
+    held, copies = assets.mirrored(assets.merged(found), mirrors)
+    choice = assets.choose(held, args.raw, sorted_name=args.sorted_name, nwb_name=args.nwb_name)
+    return record, replace(choice, notes=(*copies, *choice.notes))
 
 
 def main(argv: Sequence[str] | None = None) -> int:

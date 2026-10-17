@@ -19,6 +19,7 @@ A recipe names one of these as a `[[source]]`'s `kind`:
 | `video` | a behaviour video and its CSV: one row per frame on the rig clock |
 | `aind_nwb` | an NWB written by an AIND pipeline, with the columns that pipeline adds |
 | `aind_unit_qc` | a sorting analyzer's unit quality metrics, as the `aind_unit_qc` extension |
+| `dynamic_foraging` | the foraging GUI's behavior JSON: the task's trials, blocks and session parameters |
 
 [DESIGN.md](DESIGN.md) explains why each reads its source the way it does.
 
@@ -61,7 +62,8 @@ The drafter takes its inputs from three places:
 - **S3** listings of known prefixes, one level each, show what each chosen asset holds.
 
 It reads only assets in a public bucket, so it refuses an asset stored inside Code Ocean and names
-the asset in the recipe's header. It takes the newest public sorted asset, or the one `--sorted`
+the asset in the recipe's header. `--mirror` names a readable copy of such an asset instead, as a
+CSV of `asset_name` and `destination`. It takes the newest public sorted asset, or the one `--sorted`
 names. It takes the newest public NWB built from that sorting, or the one `--nwb` names. Where no
 such NWB is public, it reads the sorted asset's own ephys-only NWB, which carries probes and
 electrodes but no behaviour. `--no-codeocean` drafts from DocDB alone.
@@ -70,7 +72,8 @@ The sources and their ownership are those an AIND ecephys session needs, so a re
 sources can supply is already settled. Values that no catalogue states are marked `GUESS`. The
 recipe's footer lists each source it left out, with the reason. `video` is added only with
 `--videos`, a local copy of the behaviour videos, because the adapter's `ffprobe` reads a local
-file. The task's own tables need an extraction that no installed adapter performs.
+file. The task's trials, blocks and session parameters come from the foraging GUI's behavior
+JSON, and the sniff voltage from the HARP folder holding its register.
 
 `acquisition_start_time` in the raw asset's record is a Pacific wall-clock reading stamped `+00:00`.
 The drafter keeps a `+00:00` stamp only where a stream boundary with a non-zero offset states the
