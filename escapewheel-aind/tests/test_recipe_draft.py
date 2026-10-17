@@ -56,6 +56,13 @@ def test_the_newest_public_sorting_is_read_and_a_private_one_is_reported():
     assert choice.nwb is None
 
 
+def test_a_name_abbreviating_its_raw_asset_is_read_by_its_source_data():
+    short = f"{RAW[:-9]}_sorted_2026-04-23_14-11-00"
+    asset = assets.from_docdb(_record(short, f"{OPEN}/{short}", [RAW]), RAW)
+    assert (asset.level, asset.made) == ("sorted", "2026-04-23_14-11-00")
+    assert assets.from_docdb(_record(short, f"{OPEN}/{short}"), RAW) is None
+
+
 def test_a_private_asset_is_refused_when_pinned():
     with pytest.raises(DraftRefused, match="no public bucket"):
         assets.choose(_catalogue(), RAW, sorted_name=f"{RAW}_sorted_2026-09-01_00-00-00")
@@ -190,6 +197,18 @@ def test_the_behavior_json_wins_the_trials_and_the_sniff_register_is_found():
     assert "core.intervals" not in kinds["aind_nwb"]["owns"]
     assert recipe["preference"]["core.intervals"]["source"] == "dynamic_foraging"
     assert recipe["packet"]["extensions"] == ["aind_unit_qc.json", "dynamic_foraging.json"]
+
+
+def test_a_flat_upload_holds_its_json_and_videos_directly():
+    choice = assets.choose(_catalogue(), RAW)
+    raw = f"{OPEN}/{RAW}"
+    tree = {
+        raw: ["behavior", "behavior-videos", "ecephys"],
+        f"{raw}/behavior": ["raw.harp", "791093_2025-08-28_15-21-26.json", "behavior_session_model_x.json"],
+    }
+    layout = catalog.layout(choice, _listing(tree))
+    assert layout.behavior_json == f"{raw}/behavior/791093_2025-08-28_15-21-26.json"
+    assert layout.videos == f"{raw}/behavior-videos"
 
 
 def test_a_private_asset_is_read_from_its_mirror():

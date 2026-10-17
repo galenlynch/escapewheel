@@ -267,7 +267,7 @@ def sources(choice: Choice, layout: Layout, *, local_videos: Path | None) -> tup
             "dynamic-foraging task: GUESS, since no catalogue states either."
             if nwb is not None
             else "The sorted asset's own NWB, for its probes and electrodes. It holds no behaviour, so the packet\n"
-            "has no events or trials; signals is empty: GUESS, since no catalogue states it."
+            "has no task events; signals is empty: GUESS, since no catalogue states it."
         )
         found.append(
             _Source(
@@ -341,7 +341,7 @@ def sources(choice: Choice, layout: Layout, *, local_videos: Path | None) -> tup
         left_out.append("harp: the raw asset holds no sniff detector's voltage register")
     if nwb is None and ephys_nwb is not None:
         left_out.append(
-            "the behaviour: no NWB of this sorting carrying it is in a public bucket, so the sorted asset's "
+            "the task's events: no readable NWB of this sorting carries them, so the sorted asset's "
             "ephys-only NWB is read"
         )
     if layout.videos is not None and local_videos is not None:

@@ -78,11 +78,15 @@ def classify(name: str, raw: str) -> tuple[Level, str | None] | None:
 
 def from_docdb(record: Mapping[str, Any], raw: str) -> Asset | None:
     """Read an asset from a DocDB v2 record, or return None if the record is not one of `raw`'s assets."""
-    found = classify(str(record.get("name", "")), raw)
+    name = str(record.get("name", ""))
+    sources = (record.get("data_description") or {}).get("source_data") or []
+    found = classify(name, raw)
+    if found is None and raw in sources and (match := DERIVED.match(name)):
+        # A derived name can abbreviate its raw asset's; the record's source data still names it.
+        found = classify(name, match["raw"])
     if found is None:
         return None
     level, made = found
-    sources = (record.get("data_description") or {}).get("source_data") or []
     parents = [s for s in sources if (parent := classify(str(s), raw)) is not None and parent[0] == "sorted"]
     sorted_from = str(parents[0]) if level == "nwb" and parents else None
     return Asset(str(record["name"]), level, _public(record.get("location")), made, sorted_from)

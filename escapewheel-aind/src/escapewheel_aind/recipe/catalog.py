@@ -100,7 +100,10 @@ def layout(choice: Choice, children: Lister) -> Layout:
         if "behavior-videos" in children(f"{behavior_uri}/{session}"):
             videos = f"{behavior_uri}/{session}/behavior-videos"
             break
-    behavior_json, json_notes = _behavior_json(behavior_uri, behavior, children)
+    # A newer upload holds one session's files directly: the JSON in `behavior/`, the videos beside it.
+    if videos is None and "behavior-videos" in children(choice.raw.uri):
+        videos = f"{choice.raw.uri}/behavior-videos"
+    behavior_json, json_notes = _behavior_json(behavior_uri, held, behavior, children)
     notes += json_notes
     # A rig logs the detector either in its own folder or beside the GUI's.
     harp = [f"{behavior_uri}/Sniffing/{n}" for n in children(f"{behavior_uri}/Sniffing") if n.endswith(".harp")]
@@ -131,20 +134,27 @@ def layout(choice: Choice, children: Lister) -> Layout:
     )
 
 
-def _behavior_json(behavior_uri: str, sessions: list[str], children: Lister) -> tuple[str | None, list[str]]:
-    """Return the GUI's JSON, `<subject>_<date>_<time>.json` under a session's `behavior/`.
+def _behavior_json(
+    behavior_uri: str, held: list[str], sessions: list[str], children: Lister
+) -> tuple[str | None, list[str]]:
+    """Return the GUI's JSON, `<subject>_<date>_<time>.json` in `behavior/` or a session folder's.
 
     A restarted GUI leaves a session folder per start, and the last is read.
     """
-    found = [
+    found = [f"{behavior_uri}/{name}" for name in held if _is_gui_json(name)]
+    found += [
         f"{behavior_uri}/{session}/behavior/{name}"
         for session in sessions
         for name in children(f"{behavior_uri}/{session}/behavior")
-        if name.endswith(".json") and name[:1].isdigit()
+        if _is_gui_json(name)
     ]
     if len(found) > 1:
         return found[-1], [f"{len(found)} behavior JSONs, one per start of the GUI; the recipe reads the last: GUESS"]
     return (found[0] if found else None), []
+
+
+def _is_gui_json(name: str) -> bool:
+    return name.endswith(".json") and name[:1].isdigit()
 
 
 __all__ = [
