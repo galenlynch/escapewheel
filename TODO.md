@@ -335,6 +335,12 @@ remains, with a second found while the credential draft was appraised.
   the file is undecided.
 - **`spec/tools/check.py` prints outcome lines for a non-valid core registry** and offers no
   output of the complete result.
+- **A store location in a source option is read anonymously whatever the recipe says.** A
+  source's `storage_options` reaches its `root` only; `aind_unit_qc` opens its `nwb` option
+  through `SourceStore` with the anonymous default, so a recipe cannot point that option at a
+  bucket needing credentials. `escapewheel-aind-recipe` also lists S3 unsigned and accepts only
+  `aind-open-data`. Wire `storage_options` through every option naming a store location, and
+  let the drafter read a signed bucket.
 
 The same reading found four defects in the specification and the registry. Part 05 §1 and Part 11
 §3 are repaired, R161 rewords the false `processing_run_id` description of both array-asset

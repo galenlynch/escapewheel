@@ -1,6 +1,12 @@
 # Is the NWB a faithful carrier?
 
 Measured on `ecephys_786867_2025-09-25_12-43-56`, against the raw asset it was exported from.
+The NWB is `ecephys_786867_2025-09-25_12-43-56_nwb_2026-01-27_15-13-44` (Code Ocean asset
+`2af66fc3`), the only export of this session that carries `acquisition/sniff_detector`. The
+amplitude-repaired, IBL-aligned exports of 2026-08 omit it, so a packet built from one of those
+reads the sniff signal from the raw asset's `behavior/Sniffing/` HARP files; §2 is why that loses
+nothing.
+
 The question is whether a packet may read the NWB for a resource, or must read past it: an export
 that re-encodes a measurement is a fine source, and one that recomputes or discards is not.
 
@@ -23,27 +29,44 @@ admissible under the tick invariant.
 
 `acquisition/sniff_detector` declares itself *"imported from HARP SniffDetector__32.bin"*.
 `SniffDetector__32.bin` is 82,343,688 bytes: 5,881,692 HARP messages of 14 bytes, register 32
-(`RawVoltage`, U16, access `Event`). Parsed and compared against the NWB:
+(`RawVoltage`, U16, access `Event`). Parsed and compared against the NWB, every message against
+every sample:
 
 ```
-                       raw register            NWB
-first tick             450,783,938,993         450,783,938,993
-last tick              451,243,445,179         451,243,445,179
-tick steps             78 x 5,033,638          78 x 5,033,638
-                       79 x   773,567          79 x   773,567
+                       raw register              NWB
+messages / samples     5,881,692                 5,881,692
+first tick             450,783,938,993           450,783,938,993
+last tick              451,243,445,179           451,243,445,179
+tick steps of 78       5,033,638                 5,033,638
+tick steps of 79         773,567                   773,567
+other tick steps          74,486                    74,486
 values                 2,397 distinct 846..4095  2,397 distinct 846..4095
 ```
 
-Identical. Reading the raw buys nothing here in fidelity; it buys independence from the exporter
-continuing to be faithful, which is a different argument.
+Identical, message for message. Reading the raw buys nothing here in fidelity; it buys
+independence from the exporter continuing to be faithful, which is a different argument.
+
+The first message is not a sample. It is a READ reply (message type 1, value 2410), the device
+answering a query of the register when acquisition started; the other 5,881,691 are `Event`
+messages. The NWB keeps it as its first sample. A reader of the raw register keeps only the
+events, which is what `escapewheel-writer`'s `harp` source does.
 
 ### 2.1 The axis is natively irregular
 
-The device emits a periodic event at ~400 Hz on a 31250 Hz counter, so each interval lands on 78
-or 79 ticks: mean 78.1248, against `625/8 = 78.125`. Deviation from a strict rational grid reaches
-924 ticks (30 ms) over the session, with **no gaps**. That is dispatch jitter and not clock drift
--- these are harp ticks, and HARP devices are hardware-synchronised, so there is no second clock
-to drift against.
+The device emits a periodic event at ~400 Hz on a 31250 Hz counter, so most intervals land on 78
+or 79 ticks: mean 78.1248, against `625/8 = 78.125`. The other 74,485 event intervals are:
+
+| intervals | what they are |
+|---|---|
+| the first 25, of 42-43 ticks | start-up at ~730 Hz, before the stream settles at 400 Hz |
+| one of 156 ticks, 0.98 s in | one sample not sent, when the `RawVoltageDispatchRate` write (register 33) lands |
+| 42,540 single intervals of 77 | one tick short of 78, the same jitter |
+| 14,710 runs of 1-4 intervals between 42 and 124 | one message stamped up to 46 ticks (1.5 ms) off the grid; each run sums to within 2 ticks of its nominal length |
+
+So after the first second there are **no gaps**: no message is lost, and an irregular interval is a
+displaced timestamp the next interval makes good. Deviation from a strict rational grid reaches
+924 ticks (30 ms) over the session. That is dispatch jitter and not clock drift -- these are harp
+ticks, and HARP devices are hardware-synchronised, so there is no second clock to drift against.
 
 R20 §2.1's compact form therefore does not apply, and R33's rational step would cost 30 ms of
 error. The axis needs explicit tick coordinates. They are monotonic with a near-constant step, so
