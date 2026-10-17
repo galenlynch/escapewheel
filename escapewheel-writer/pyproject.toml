@@ -33,11 +33,9 @@ nwb = ["numcodecs>=0.13"]
 # Writing a packet-owned dense array needs a Zarr v3 writer (R21 §3.1); reading a v2 one
 # still does not, which is what `sources/zarr_compat.py` exists for.
 arrays = ["zarr>=3"]
-# The Harp adapter reads only `device.yml`, the schema a Harp device writes beside its own data,
-# so it needs a YAML parser and nothing more. Decoding the binary register streams would need a
-# Harp library (`contraqctor`, `harp-python`); nothing here does, because the samples reach us
-# through the NWB and what was missing was the declaration rather than the data.
-harp = ["pyyaml>=6"]
+# The Harp adapter reads `device.yml` with a YAML parser, and decodes the register streams a
+# recipe declares signals with `harp-python`, the Harp project's reader.
+harp = ["pyyaml>=6", "harp-python>=0.4"]
 # `escapewheel verify` reaches a store to record what is there (R36 §2.4), and `verify = "members"`
 # on a remote uri_base does the same at build time. The client lives with the validator, which
 # is where the verification code is; this only asks for it.
@@ -70,6 +68,7 @@ types = [
 dev = [
     { include-group = "types" },
     "codespell",
+    "harp-python>=0.4",
     "numcodecs",
     "pytest",
     "pytest-cov",
@@ -166,6 +165,11 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 # pyyaml is the `harp` extra, and ships no stubs of its own.
 module = "yaml"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# harp-python is the `harp` extra, and ships no py.typed marker.
+module = "harp"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

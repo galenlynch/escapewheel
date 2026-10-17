@@ -29,7 +29,7 @@ from escapewheel_writer.sources.sorter import SorterSource
 from escapewheel_writer.sources.sync import SyncSource
 from escapewheel_writer.sources.waveforms import WaveformSource
 from tests import lfpfixture, sorterfixture, syncfixture
-from tests.test_harp_source import SCHEMA as HARP_SCHEMA
+from tests.test_harp_source import acquisition as harp_acquisition
 from tests.test_openephys_source import SETTINGS
 from tests.test_sync_source import FIRST_SAMPLES, PROBE_CLOCKS
 from tests.test_waveforms import build as analyzer
@@ -40,9 +40,9 @@ SESSION = "s001"
 
 
 def _harp(root: Path) -> Any:
-    (root / "SniffDetector.harp").mkdir()
-    (root / "SniffDetector.harp" / "device.yml").write_text(HARP_SCHEMA)
-    return HarpSource(root, session_id=SESSION)
+    harp_acquisition(root)
+    harp = Clock("harp", session_id=SESSION, name="HARP", tick_rate_num=HARP_TICK_RATE_HZ, origin="epoch")
+    return HarpSource(root, session_id=SESSION, reference_clock=harp.record(), signals=["RawVoltage"])
 
 
 def _openephys(root: Path) -> Any:

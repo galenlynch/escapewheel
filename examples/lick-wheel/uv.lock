@@ -466,6 +466,7 @@ requires-dist = [
     { name = "escapewheel-validator", extras = ["remote"], marker = "extra == 'remote'", editable = "../../escapewheel-validator" },
     { name = "escapewheel-validator", extras = ["s3"], marker = "extra == 's3'", editable = "../../escapewheel-validator" },
     { name = "fsspec", specifier = ">=2026.7.0" },
+    { name = "harp-python", marker = "extra == 'harp'", specifier = ">=0.4" },
     { name = "numcodecs", marker = "extra == 'nwb'", specifier = ">=0.13" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pyarrow", specifier = ">=25.0.1" },
@@ -479,6 +480,7 @@ provides-extras = ["nwb", "arrays", "harp", "remote", "s3"]
 [package.metadata.requires-dev]
 dev = [
     { name = "codespell" },
+    { name = "harp-python", specifier = ">=0.4" },
     { name = "interrogate" },
     { name = "mypy" },
     { name = "numcodecs" },
@@ -493,6 +495,7 @@ dev = [
 docs = [
     { name = "codespell" },
     { name = "furo" },
+    { name = "harp-python", specifier = ">=0.4" },
     { name = "interrogate" },
     { name = "mypy" },
     { name = "myst-parser" },
@@ -510,6 +513,7 @@ docs = [
 ]
 jupyter = [
     { name = "codespell" },
+    { name = "harp-python", specifier = ">=0.4" },
     { name = "interrogate" },
     { name = "ipykernel" },
     { name = "mypy" },

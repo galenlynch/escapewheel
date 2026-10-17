@@ -8,7 +8,7 @@ from escapewheel_writer.sources import ADAPTERS
 
 CAPABLE = {
     Streams: {"sorter"},
-    StagesArrays: {"nwb", "waveforms"},
+    StagesArrays: {"harp", "nwb", "waveforms"},
     ReferencesArrays: {"lfp"},
     ReferencesMedia: set(),
     ReferencesResources: {"sidecars"},

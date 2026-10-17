@@ -439,8 +439,10 @@ class SourceFault(StrEnum):
     NO_TICK_RATE = "no_tick_rate"
     #: The file states no session start time.
     NO_SESSION_START = "no_session_start"
-    #: The recipe declares a signal the file does not hold with timestamps.
+    #: The recipe declares a signal the source does not hold with timestamps.
     SIGNAL_ABSENT = "signal_absent"
+    #: The recipe declares a signal the source records in more than one place.
+    SIGNAL_SPLIT = "signal_split"
     #: The source was given no `interval_kind`.
     NO_INTERVAL_KIND = "no_interval_kind"
     #: The trials table lacks a column every trial needs.
@@ -734,6 +736,8 @@ class UsageFault(StrEnum):
     UNKNOWN_VERIFY_MODE = "unknown_verify_mode"
     #: A source was handed a clock that belongs to another session.
     CLOCK_OTHER_SESSION = "clock_other_session"
+    #: A source was asked for signals and given no clock to put their ticks on.
+    SIGNALS_WITHOUT_CLOCK = "signals_without_clock"
     #: A name or a number already stands for something else of its kind.
     KEY_TAKEN = "key_taken"
 
