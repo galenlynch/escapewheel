@@ -326,6 +326,16 @@ def test_a_removal_with_no_label_is_reported(tmp_path):
     assert NoteCode.REMOVAL_UNRECORDED in codes(source.notes)
 
 
+def test_a_stream_without_a_curation_record_is_read_with_nothing_known_curated(tmp_path):
+    sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=sorterfixture.SPIKES)
+    (tmp_path / "curated" / sorterfixture.NAMES[0] / "curation.json").unlink()
+    source = SorterSource(tmp_path, session_id=SESSION)
+    (version,) = source.curation_versions()
+    assert (version["metadata"]["n_removed"], version["metadata"]["format_version"]) == (None, None)
+    assert not any(q["source"] == "manual" for q in source.unit_quality_labels())
+    assert codes(source.notes).count(NoteCode.CURATION_UNRECORDED) == 1
+
+
 def test_a_non_quality_category_gets_its_own_source(tmp_path):
     import json
 

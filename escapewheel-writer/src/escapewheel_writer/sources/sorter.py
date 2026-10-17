@@ -200,6 +200,23 @@ class SorterSource:
         loaded: dict[str, Any] = self._cache[key]
         return loaded
 
+    def _curation(self, stream: SortedStream) -> dict[str, Any]:
+        """Return a stream's `curation.json`, or an empty one where the pipeline wrote none.
+
+        An older pipeline curated without recording what it did, so the curated sorting is read
+        with nothing known removed, merged or labelled by hand, and the absence is reported.
+        """
+        key = f"{stream.key}/curation.json"
+        if key not in self._cache and not (stream.path / "curation.json").is_file():
+            self._cache[key] = {}
+            self.notes.append(
+                Note(
+                    f"{stream.key}: no curation.json, so no removal, merge, split or manual label is known",
+                    NoteCode.CURATION_UNRECORDED,
+                )
+            )
+        return self._json(stream, "curation.json")
+
     @staticmethod
     def _npy(path: Any, *, mmap: bool = False) -> NDArray[Any]:
         """Read a `.npy`, from a local file or from a store.
@@ -419,7 +436,7 @@ class SorterSource:
         for stream in self.streams():
             info = self._json(stream, "si_folder.json")
             log = info.get("annotations", {}).get("__sorting_info__", {}).get("log", {})
-            curation = self._json(stream, "curation.json")
+            curation = self._curation(stream)
             rows.append(
                 {
                     "processing_run_id": self._run_id(stream, "spike_sorting"),
@@ -463,7 +480,7 @@ class SorterSource:
         """
         rows = []
         for stream in self.streams():
-            curation = self._json(stream, "curation.json")
+            curation = self._curation(stream)
             rows.append(
                 {
                     "curation_id": self._curation_id(stream),
@@ -473,9 +490,11 @@ class SorterSource:
                     "curation_tool": "spikeinterface",
                     "metadata": {
                         "format_version": curation.get("format_version"),
-                        "n_removed": len(curation.get("removed") or []),
-                        "n_merges": len(curation.get("merges") or []),
-                        "n_splits": len(curation.get("splits") or []),
+                        # Unknown rather than zero where nothing was recorded.
+                        **{
+                            f"n_{field}": len(curation.get(field) or []) if curation else None
+                            for field in ("removed", "merges", "splits")
+                        },
                     },
                 }
             )
@@ -659,7 +678,7 @@ class SorterSource:
 
     def manual_labels(self, stream: SortedStream) -> list[dict[str, Any]]:
         """`core.unit_quality_labels` rows from a curation's own manual labels."""
-        curation = self._json(stream, "curation.json")
+        curation = self._curation(stream)
         return manual_labels(
             stream,
             curation,

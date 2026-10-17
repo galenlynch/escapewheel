@@ -91,6 +91,8 @@ class NoteCode(StrEnum):
     LABEL_UNPROJECTED = "label_unprojected"
     #: The curation removed units that carry no manual label saying so.
     REMOVAL_UNRECORDED = "removal_unrecorded"
+    #: A curated stream records no curation, so nothing removed, merged or labelled is known.
+    CURATION_UNRECORDED = "curation_unrecorded"
     #: A manual label names a unit the sorting does not have.
     LABEL_NAMES_NO_UNIT = "label_names_no_unit"
     #: A unit has several labels in one category, and they are left unprojected.
