@@ -19,13 +19,24 @@ from collections.abc import Iterator, Mapping
 from functools import cached_property
 from pathlib import Path
 from typing import Any, ClassVar
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 import numpy as np
 import pyarrow as pa
 from escapewheel_reader.resource_ids import CORE_MEDIA_ASSET_INSTANCES, CORE_MEDIA_ASSETS, CORE_MEDIA_FRAMES
-from escapewheel_writer.adapter import FILES, FLIGHT, STREAM, Compensates, ExternalMedia, Note, source_root
+from escapewheel_writer.adapter import (
+    FILES,
+    FLIGHT,
+    STREAM,
+    Compensates,
+    ExternalMedia,
+    Note,
+    SourceDefect,
+    source_root,
+    store_uri,
+)
 
+from .errors import AindFault
 from .notes import AindNote
 
 #: Rows per emitted batch. A camera writes ~2.5 M frames a session and three cameras 7.5 M, which
@@ -71,7 +82,9 @@ class VideoSource(Compensates):
     ----------
     root : str or Path
         A directory holding videos and, beside each, a CSV of the same stem giving its frame
-        timing. A video with no CSV is referenced and contributes no frames.
+        timing. A video with no CSV is referenced and contributes no frames. A store root is read
+        in place: the CSVs through the source cache, and each video's container index by ffprobe
+        over HTTPS, which streams the file once rather than keeping a copy.
     session_id : str
         The session these were recorded in.
     reference_clock : Mapping
@@ -79,8 +92,9 @@ class VideoSource(Compensates):
         (Part 12 §4). Only its `clock_id` is read: the CSV states a frame's tick, so nothing
         here converts.
     uri_base : str, optional
-        Absolute base the videos are addressed under. Without one the packet records a `file://`
-        URI, which resolves only on the machine that built it.
+        Absolute base the videos are addressed under. Without one they are addressed where `root`
+        holds them, which for a local root is a `file://` URI that resolves only on the machine
+        that built it.
     prefix : str, optional
         Prepended to every media asset ID and name, and to the name part of the resource ID each
         video is referenced under, which a build binds to the asset by that name (Part 12 §5).
@@ -128,7 +142,10 @@ class VideoSource(Compensates):
         self.root = source_root(root, cache=source_cache)
         self.session_id = session_id
         self.clock_id = str(reference_clock["clock_id"])
-        self.uri_base = uri_base.rstrip("/") if uri_base else None
+        self.remote = getattr(self.root, "protocol", "") not in ("", "file")
+        #: Whether the addressed videos are the ones read here, which is what makes a size a claim.
+        self.addressed_here = not uri_base
+        self.uri_base = uri_base.rstrip("/") if uri_base else (store_uri(self.root) if self.remote else None)
         self.batch_rows = batch_rows
         self.prefix = prefix
         super().__init__()
@@ -163,20 +180,36 @@ class VideoSource(Compensates):
             return f"{self.uri_base}/{quote(video.name, safe='')}"
         return video.resolve().as_uri()
 
+    def _readable(self, video: Path) -> str:
+        """Return what ffprobe opens for a video: its path, or the HTTPS URL of a public object.
+
+        A store root is opened anonymously (Part 12 §10), so the object is public and its URL needs
+        no signature.
+        """
+        if not self.remote:
+            return str(video)
+        uri = urlsplit(store_uri(video))
+        if uri.scheme in ("http", "https"):
+            return uri.geturl()
+        if uri.scheme == "s3":
+            return f"https://{uri.netloc}.s3.amazonaws.com{quote(uri.path)}"
+        raise SourceDefect(
+            f"{video}: ffprobe reads no {uri.scheme}:// object", code=AindFault.VIDEO_UNREADABLE, where=str(video)
+        )
+
     def external_media(self) -> dict[str, ExternalMedia]:
         """Each video as a resource the packet references and does not own."""
         found = {}
         for video in self.videos():
             name = self._names[video]
-            local = self.uri_base is None
             found[f"core.{name}"] = ExternalMedia(
                 media_asset_id=name,
                 declaration_id=CORE_MEDIA_ASSET_INSTANCES,
                 uri=self._uri(video),
                 format=SUFFIX.lstrip("."),
-                # Part 04 §5.2: a writer records only what it looked at. A local path can be sized;
-                # a remote base says nothing about what is actually there.
-                size_bytes=video.stat().st_size if local else None,
+                # Part 04 §5.2: a writer records only what it looked at. The video read here can be
+                # sized; a base addressing another copy says nothing about what is actually there.
+                size_bytes=video.stat().st_size if self.addressed_here else None,
             )
         return found
 
@@ -219,7 +252,7 @@ class VideoSource(Compensates):
         Rational rather than a float, because 1/90000 has no exact decimal and a
         rounded one accumulates over the millions of frames a session holds.
         """
-        num, _, den = _ffprobe(video, "stream=time_base").strip().partition("/")
+        num, _, den = _ffprobe(self._readable(video), "stream=time_base").strip().partition("/")
         return {"pts_rate_num": int(den or 1), "pts_rate_den": int(num)}
 
     def _presentation(self, video: Path) -> np.ndarray:
@@ -230,7 +263,7 @@ class VideoSource(Compensates):
         frame of the asset. Sorted, because packets arrive in decode order and B-frames reorder
         them; diffing decode order reports gaps that are not there.
         """
-        out = _ffprobe(video, "packet=pts,flags")
+        out = _ffprobe(self._readable(video), "packet=pts,flags")
         presented = (line.split(",") for line in out.split())
         values = np.fromiter((int(pts) for pts, flags in presented if "D" not in flags), dtype=np.int64)
         values.sort()
@@ -243,11 +276,12 @@ class VideoSource(Compensates):
         timing = self._timing(video)
         if timing is None:
             return
-        table = csv.read_csv(
-            timing,
-            read_options=csv.ReadOptions(column_names=list(COLUMNS)),
-            convert_options=csv.ConvertOptions(column_types=dict.fromkeys(COLUMNS, pa.float64())),
-        )
+        with timing.open("rb") as handle:
+            table = csv.read_csv(
+                handle,
+                read_options=csv.ReadOptions(column_names=list(COLUMNS)),
+                convert_options=csv.ConvertOptions(column_types=dict.fromkeys(COLUMNS, pa.float64())),
+            )
         seconds = table.column(COLUMNS[0]).to_numpy(zero_copy_only=False)
         counter = table.column(COLUMNS[1]).to_numpy(zero_copy_only=False).astype(np.int64)
 
@@ -352,12 +386,15 @@ class VideoSource(Compensates):
         return {CORE_MEDIA_FRAMES: frames} if frames else {}
 
 
-def _ffprobe(video: Path, entries: str) -> str:
+def _ffprobe(video: str, entries: str) -> str:
     """Ask ffprobe for one set of entries about a video's first video stream."""
     import subprocess
 
+    # A dropped connection resumes from the byte it reached rather than ending the listing early.
+    resume = ["-reconnect", "1", "-reconnect_on_network_error", "1"] if video.startswith("http") else []
+    selected = ["-select_streams", "v:0", "-show_entries", entries, "-of", "csv=p=0"]
     return subprocess.run(
-        ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", entries, "-of", "csv=p=0", str(video)],
+        ["ffprobe", "-v", "error", *resume, *selected, video],
         capture_output=True,
         text=True,
         check=True,

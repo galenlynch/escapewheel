@@ -70,9 +70,9 @@ electrodes but no behaviour. `--no-codeocean` drafts from DocDB alone.
 
 The sources and their ownership are those an AIND ecephys session needs, so a resource that two
 sources can supply is already settled. Values that no catalogue states are marked `GUESS`. The
-recipe's footer lists each source it left out, with the reason. `video` is added only with
-`--videos`, a local copy of the behaviour videos, because the adapter's `ffprobe` reads a local
-file. The task's trials, blocks and session parameters come from the foraging GUI's behavior
+recipe's footer lists each source it left out, with the reason. `video` references the behaviour
+videos where they are published, and `ffprobe` streams each one's container index over HTTPS;
+`--videos` names a local copy to read instead. The task's trials, blocks and session parameters come from the foraging GUI's behavior
 JSON, and the sniff voltage from the HARP folder holding its register.
 
 `acquisition_start_time` in the raw asset's record is a Pacific wall-clock reading stamped `+00:00`.

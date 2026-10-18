@@ -33,7 +33,7 @@ def _parser() -> argparse.ArgumentParser:
         "--extension", type=Path, action="append", default=[], help="an extension registry a source may fill"
     )
     parser.add_argument("--packet-out", default=None, help="where the build writes the packet (default: the raw name)")
-    parser.add_argument("--videos", type=Path, help="a local copy of the raw asset's behavior-videos")
+    parser.add_argument("--videos", type=Path, help="a local copy of behavior-videos, read instead of S3")
     parser.add_argument(
         "--mirror", type=Path, help="a CSV of asset_name and destination: a readable copy of each private asset"
     )

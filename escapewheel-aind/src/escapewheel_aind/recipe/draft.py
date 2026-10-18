@@ -354,7 +354,15 @@ def sources(choice: Choice, layout: Layout, *, local_videos: Path | None) -> tup
             )
         )
     elif layout.videos is not None:
-        left_out.append(f"video: ffprobe reads a local file, so it needs a copy of {layout.videos} (--videos)")
+        found.append(
+            _Source(
+                "video",
+                "The behaviour videos, referenced where they are published. Their frame times come from the "
+                "CSV beside each and their container index, which ffprobe streams once over HTTPS.",
+                {"root": layout.videos, "in_process": True},
+                owns=[CORE_MEDIA_ASSETS, CORE_MEDIA_FRAMES],
+            )
+        )
     else:
         left_out.append("video: the raw asset holds no behavior-videos")
     return found, left_out

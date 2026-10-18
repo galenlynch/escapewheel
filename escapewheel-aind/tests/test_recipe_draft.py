@@ -161,13 +161,23 @@ def test_layout_reads_known_prefixes_and_falls_back_to_the_sorted_asset_s_nwb():
     text, missing = _render(choice, layout)
     recipe = tomllib.loads(text)
     kinds = {s["kind"]: s for s in recipe["source"]}
-    assert set(kinds) == {"session", "sync", "sorter", "waveforms", "aind_unit_qc", "openephys", "aind_nwb", "lfp"}
+    assert set(kinds) == {
+        "session",
+        "sync",
+        "sorter",
+        "waveforms",
+        "aind_unit_qc",
+        "openephys",
+        "aind_nwb",
+        "lfp",
+        "video",
+    }
+    assert kinds["video"]["root"] == f"{OPEN}/{RAW}/behavior/behavior_786867_2025-09-25_12-44-05/behavior-videos"
     assert kinds["aind_nwb"]["root"] == f"{sorting}/nwb/{RAW}_experiment1_recording1.nwb"
     # The ephys-only NWB holds no trials, so no interval kind names the task and its registry is not bound.
     assert "interval_kind" not in kinds["aind_nwb"]
     assert recipe["packet"]["extensions"] == ["aind_unit_qc.json"]
     assert missing == []
-    assert "video: ffprobe reads a local file" in text
     assert "dynamic_foraging: the raw asset holds no behavior JSON" in text
 
 
@@ -245,6 +255,19 @@ def test_a_combined_nwb_binds_the_task_and_a_local_copy_adds_the_videos(tmp_path
         "owns": ["core.media_assets", "core.media_frames"],
     }
     assert "GUESS" in text and missing == []
+
+
+def test_videos_with_no_local_copy_are_read_where_they_are_published():
+    choice = assets.choose(_catalogue(), RAW)
+    videos = f"{OPEN}/{RAW}/behavior-videos"
+    text, _ = _render(choice, draft.Layout(videos=videos))
+    kinds = {s["kind"]: s for s in tomllib.loads(text)["source"]}
+    assert kinds["video"] == {
+        "kind": "video",
+        "root": videos,
+        "in_process": True,
+        "owns": ["core.media_assets", "core.media_frames"],
+    }
 
 
 def test_a_needed_extension_not_given_is_reported():

@@ -44,6 +44,8 @@ class AindFault(StrEnum):
     NO_UNIT_NAMES = "no_unit_names"
     #: The NWB's units table holds one unit twice.
     UNIT_REPEATED = "unit_repeated"
+    #: A video lives where ffprobe cannot open it.
+    VIDEO_UNREADABLE = "video_unreadable"
 
 
 class DraftFault(StrEnum):
