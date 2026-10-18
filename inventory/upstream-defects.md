@@ -680,21 +680,23 @@ Not filed.
 
 **Found:** 2026-10-17, `ecephys_791093_2025-08-28_15-21-17`
 **Repos:** the acquiring workflow's trigger timestamps
-**Severity:** low — one frame's time is wrong by up to a second, and it breaks frame order
+**Severity:** low — a frame's time is wrong by up to a second, and it breaks frame order
 
 ```text
 791093 2025-08-28, row 1,279,556    12018560.997184   12018560.01616    12018561.001184
-791094 2025-10-09, row 546,117      15642625.000192   15642625.0        15642625.002016
+791094 2025-10-09, rows 546,116-7   15642624.998176   15642625.000192   15642625.0   15642625.002016
 ```
 
 791093 has two such rows, the same rows in all three cameras' CSVs, since the cameras share one
-trigger. Each sits within 20 ms after a whole second, its integer part a second behind. The
-791094 2025-10-09 value is 0.19 ms early, with the times after it continuing at the trigger's
-period. The other eight sessions have none. The cause is not established.
+trigger. Each sits within 20 ms after a whole second, its integer part a second behind. On
+791094 2025-10-09 two adjacent times straddling a whole second are out of order with each other by
+0.19 ms, and the times after them continue at the trigger's period. The other eight sessions have
+none. The cause is not established.
 
-**Workaround:** `VideoSource` replaces a trigger time out of order with both neighbours, where those
-neighbours are themselves in order, by their midpoint, which is within half a trigger period of the
-true time. Declared as `video.trigger_time_out_of_line`. Any other disorder is left for validation
-to refuse.
+**Workaround:** `VideoSource` replaces a trigger time outside the span of its two neighbours, where
+those neighbours are themselves in order, by their recorded midpoint, which is within a trigger
+period of the true time. On 791093 that is the one stray value; on 791094 2025-10-09 it is both
+values of the pair, since neither can be singled out. Declared as `video.trigger_time_out_of_line`.
+Any other disorder is left for validation to refuse.
 
 Not filed.

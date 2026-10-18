@@ -40,7 +40,7 @@ class AindNote(StrEnum):
     FRAME_ABSENT = "frame_absent"
     #: Frames past the last recorded trigger were given extrapolated times.
     FRAME_EXTRAPOLATED = "frame_extrapolated"
-    #: Trigger times out of order with both neighbours were replaced by their midpoint.
+    #: Trigger times outside the span of their two neighbours were replaced by its midpoint.
     TRIGGER_REPAIRED = "trigger_repaired"
     #: A video's MP4 index could not be read, so ffprobe listed every packet.
     INDEX_UNREAD = "index_unread"

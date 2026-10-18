@@ -152,7 +152,7 @@ def test_the_columns_an_older_workflow_appends_are_not_read(root):
     assert [f["t_tick"] for f in _frames(_source(root))] == [31250, 31312, 31532]
 
 
-def test_a_trigger_time_out_of_order_with_both_neighbours_takes_their_midpoint(root, monkeypatch):
+def test_a_trigger_time_outside_its_neighbours_span_takes_their_midpoint(root, monkeypatch):
     """A time a second early between two in order is replaced; the frames stay timed in order."""
     (root / "bottom_camera.csv").write_text("1.0,100,0\n0.002,101,0\n1.004,102,0\n")
     source = _source(root)
@@ -160,6 +160,13 @@ def test_a_trigger_time_out_of_order_with_both_neighbours_takes_their_midpoint(r
     assert [f["t_tick"] for f in _frames(source)] == [31250, 31312, 31375]
     assert "video.trigger_time_out_of_line" in source.compensations
     assert AindNote.TRIGGER_REPAIRED in codes(source.notes)
+
+
+def test_an_adjacent_pair_out_of_order_is_replaced_whole():
+    """Neither of the pair can be singled out, so each takes the midpoint of its recorded neighbours."""
+    triggers = np.array([131, 193, 256, 250, 313, 375])
+    assert video.in_line(triggers).tolist() == [2, 3]
+    assert triggers.tolist() == [131, 193, 221, 284, 313, 375]
 
 
 def test_disorder_beyond_one_time_is_left_for_validation():

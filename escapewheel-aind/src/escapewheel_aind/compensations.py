@@ -51,11 +51,12 @@ COMPENSATIONS: dict[str, Compensation] = {
         evidence="inventory/upstream-defects.md §12",
     ),
     "video.trigger_time_out_of_line": Compensation(
-        defect="a camera's recorded trigger time can break order with both its neighbours at a HARP "
-        "second boundary, once sitting a second early, so frames are no longer timed in order",
-        action="each such time, where its two neighbours are themselves in order, is replaced by "
-        "their midpoint, within half a trigger period of the true time; any other disorder is left "
-        "for validation to refuse",
+        defect="a camera's recorded trigger times can break order at a HARP second boundary, one "
+        "sitting a second early or two adjacent ones out of order by 0.2 ms, so frames are no longer "
+        "timed in order",
+        action="each time outside the span of its two neighbours, where those are themselves in order, "
+        "is replaced by their recorded midpoint, within a trigger period of the true time; any other "
+        "disorder is left for validation to refuse",
         evidence="inventory/upstream-defects.md §13",
     ),
 }

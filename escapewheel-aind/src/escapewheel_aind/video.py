@@ -321,8 +321,8 @@ class VideoSource(Compensates):
             self.compensate("video.trigger_time_out_of_line")
             self.notes.append(
                 Note(
-                    f"{video.name}: {repaired.size} trigger time(s) out of order with both neighbours; "
-                    "replaced by their midpoint",
+                    f"{video.name}: {repaired.size} trigger time(s) outside the span of their neighbours; "
+                    "replaced by its midpoint",
                     AindNote.TRIGGER_REPAIRED,
                 )
             )
@@ -438,11 +438,12 @@ class VideoSource(Compensates):
 
 
 def in_line(triggers: np.ndarray) -> np.ndarray:
-    """Replace, in place, each trigger time out of order with both neighbours, and return where.
+    """Replace, in place, each trigger time outside the span of its two neighbours, and return where.
 
-    Only a value whose neighbours are themselves in order is replaced, by their midpoint: a trigger
-    is periodic, so that is within half a period of the true time. Any other disorder is left for
-    validation to refuse rather than guessed at.
+    Only a value whose neighbours are themselves in order is replaced, by their midpoint as recorded:
+    a trigger is periodic, so that is within a period of the true time. Two adjacent values out of
+    order with each other each qualify, since neither can be singled out, and both are replaced. Any
+    other disorder is left for validation to refuse rather than guessed at.
     """
     before, value, after = triggers[:-2], triggers[1:-1], triggers[2:]
     where = np.nonzero((before <= after) & ((value < before) | (value > after)))[0] + 1
