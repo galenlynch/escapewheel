@@ -40,6 +40,10 @@ class AindNote(StrEnum):
     FRAME_ABSENT = "frame_absent"
     #: Frames past the last recorded trigger were given extrapolated times.
     FRAME_EXTRAPOLATED = "frame_extrapolated"
+    #: Trigger times out of order with both neighbours were replaced by their midpoint.
+    TRIGGER_REPAIRED = "trigger_repaired"
+    #: A video's MP4 index could not be read, so ffprobe listed every packet.
+    INDEX_UNREAD = "index_unread"
     #: The units table names no unit by device and sorter label, so no coordinate is emitted.
     NO_UNIT_NAMES = "no_unit_names"
     #: A task parameter varies across trials, so the session row leaves it unset.

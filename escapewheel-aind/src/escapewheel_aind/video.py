@@ -6,7 +6,8 @@
 
 The source pairs each frame with a time that falls behind by one trigger period for every frame the
 host dropped. The adapter therefore reconstructs `t_tick` from the camera's own frame counter, and
-declares the repair as `video.zip_pairing_repaired`.
+declares the repair as `video.zip_pairing_repaired`. A trigger time out of order with both its
+neighbours is replaced by their midpoint, declared as `video.trigger_time_out_of_line`.
 """
 
 from __future__ import annotations
@@ -37,6 +38,7 @@ from escapewheel_writer.adapter import (
 )
 
 from .errors import AindFault
+from .mp4 import presentation
 from .notes import AindNote
 
 #: Rows per emitted batch. A camera writes ~2.5 M frames a session and three cameras 7.5 M, which
@@ -48,8 +50,9 @@ BATCH_ROWS = 500_000
 #: the payload as opaque and does not enumerate its container (Part 03 §2).
 SUFFIX = ".mp4"
 
-#: What the timing CSV's columns hold, in order. Written by `foraging.bonsai`'s CsvWriter as
-#: `Seconds,Value.ChunkData.FrameID,Value.ChunkData.Timestamp`.
+#: What the timing CSV's leading columns hold, in order. Written by `foraging.bonsai`'s CsvWriter as
+#: `Seconds,Value.ChunkData.FrameID,Value.ChunkData.Timestamp`; an older workflow appends exposure
+#: and gain, which are not read.
 COLUMNS = ("rig_seconds", "frame_counter", "camera_nanoseconds")
 
 #: Ticks per second of the clock the CSV's first column is quantised to.
@@ -83,8 +86,8 @@ class VideoSource(Compensates):
     root : str or Path
         A directory holding videos and, beside each, a CSV of the same stem giving its frame
         timing. A video with no CSV is referenced and contributes no frames. A store root is read
-        in place: the CSVs through the source cache, and each video's container index by ffprobe
-        over HTTPS, which streams the file once rather than keeping a copy.
+        in place: the CSVs through the source cache, and from each video only its MP4 index, by
+        range reads.
     session_id : str
         The session these were recorded in.
     reference_clock : Mapping
@@ -150,6 +153,8 @@ class VideoSource(Compensates):
         self.prefix = prefix
         super().__init__()
         self.notes: list[str] = []
+        self._indexes: dict[Path, tuple[int, int, np.ndarray]] = {}
+        self._triggers: dict[Path, tuple[np.ndarray, np.ndarray]] = {}
 
     def videos(self) -> list[Path]:
         """Every video under `root`, whatever the case of its suffix, sorted so two runs number them alike."""
@@ -229,6 +234,8 @@ class VideoSource(Compensates):
                 )
             else:
                 self.compensate("video.zip_pairing_repaired")
+                # Read here rather than in `_frames`, whose compensations are collected before it runs.
+                self._timed(video)
             rows.append(
                 {
                     "media_asset_id": self._names[video],
@@ -252,38 +259,83 @@ class VideoSource(Compensates):
         Rational rather than a float, because 1/90000 has no exact decimal and a
         rounded one accumulates over the millions of frames a session holds.
         """
-        num, _, den = _ffprobe(self._readable(video), "stream=time_base").strip().partition("/")
-        return {"pts_rate_num": int(den or 1), "pts_rate_den": int(num)}
+        num, den, _ = self._index(video)
+        return {"pts_rate_num": den, "pts_rate_den": num}
 
     def _presentation(self, video: Path) -> np.ndarray:
-        """Presentation timestamps of the frames the video presents, in container units (Part 01 §3.18).
+        """Presentation timestamps of the frames the video presents, in container units (Part 01 §3.18)."""
+        return self._index(video)[2]
 
-        Read from the container index rather than by decoding -- 13 s for 2.5 M frames. ffprobe
-        reports them after the edit list and flags `D` a packet the list excludes, which is no
-        frame of the asset. Sorted, because packets arrive in decode order and B-frames reorder
-        them; diffing decode order reports gaps that are not there.
+    def _index(self, video: Path) -> tuple[int, int, np.ndarray]:
+        """Return a video's time base and sorted presentation timestamps, read once.
+
+        Read from the MP4 index, a few MB however long the video, so a remote one is timed without
+        a download. An MP4 that index cannot time is listed by ffprobe, which reads every packet.
         """
+        if video in self._indexes:
+            return self._indexes[video]
+        opened = source_root(store_uri(video)) if self.remote else video
+        try:
+            with opened.open("rb") as handle:
+                found = presentation(handle)
+        except SourceDefect as why:
+            if why.code != AindFault.VIDEO_UNINDEXED:
+                raise
+            self.notes.append(Note(f"{video.name}: {why}, so ffprobe lists its packets", AindNote.INDEX_UNREAD))
+            found = self._probed(video)
+        self._indexes[video] = found
+        return found
+
+    def _probed(self, video: Path) -> tuple[int, int, np.ndarray]:
+        """Ffprobe's time base and packets for a video, less those it flags `D` as the edit list excludes."""
+        num, _, den = _ffprobe(self._readable(video), "stream=time_base").strip().partition("/")
         out = _ffprobe(self._readable(video), "packet=pts,flags")
         presented = (line.split(",") for line in out.split())
         values = np.fromiter((int(pts) for pts, flags in presented if "D" not in flags), dtype=np.int64)
+        # Packets arrive in decode order, which B-frames reorder; diffing that reports false gaps.
         values.sort()
-        return values
+        return int(num), int(den or 1), values
 
-    def _frames(self, video: Path) -> Iterator[pa.RecordBatch]:
-        """One batch at a time of a video's frames, timed by the reconstruction above."""
+    def _timed(self, video: Path) -> tuple[np.ndarray, np.ndarray]:
+        """Return a video's trigger ticks and frame counter from its CSV, repaired and read once."""
+        if video in self._triggers:
+            return self._triggers[video]
         from pyarrow import csv
 
         timing = self._timing(video)
-        if timing is None:
-            return
+        assert timing is not None
         with timing.open("rb") as handle:
+            width = handle.readline().count(b",") + 1
+            handle.seek(0)
             table = csv.read_csv(
                 handle,
-                read_options=csv.ReadOptions(column_names=list(COLUMNS)),
-                convert_options=csv.ConvertOptions(column_types=dict.fromkeys(COLUMNS, pa.float64())),
+                read_options=csv.ReadOptions(column_names=[*COLUMNS, *(f"_{i}" for i in range(width - 3))]),
+                convert_options=csv.ConvertOptions(
+                    column_types=dict.fromkeys(COLUMNS, pa.float64()), include_columns=list(COLUMNS)
+                ),
             )
         seconds = table.column(COLUMNS[0]).to_numpy(zero_copy_only=False)
         counter = table.column(COLUMNS[1]).to_numpy(zero_copy_only=False).astype(np.int64)
+        triggers = np.rint(seconds * HARP_TICKS).astype(np.int64)
+        if (repaired := in_line(triggers)).size:
+            self.compensate("video.trigger_time_out_of_line")
+            self.notes.append(
+                Note(
+                    f"{video.name}: {repaired.size} trigger time(s) out of order with both neighbours; "
+                    "replaced by their midpoint",
+                    AindNote.TRIGGER_REPAIRED,
+                )
+            )
+        self._triggers[video] = (triggers, counter)
+        return triggers, counter
+
+    def _frames(self, video: Path) -> Iterator[pa.RecordBatch]:
+        """One batch at a time of a video's frames, timed by the reconstruction above."""
+        if self._timing(video) is None:
+            return
+        triggers, counter = self._timed(video)
+        # Held only until its frames are emitted: three cameras' CSVs are tens of MB each.
+        self._triggers.pop(video)
 
         pts = self._presentation(video)
         complete = pts.size == counter.size
@@ -316,7 +368,6 @@ class VideoSource(Compensates):
         # triggered at the k-th recorded time. Frames past the last recorded trigger extrapolate
         # at the period the file measures, which reproduces the recorded times to 0.5 ms where
         # both exist.
-        triggers = np.rint(seconds * HARP_TICKS).astype(np.int64)
         period = (triggers[-1] - triggers[0]) / (triggers.size - 1)
         exposures = counter[rows] - counter[0]
         ticks = np.empty(exposures.size, dtype=np.int64)
@@ -386,6 +437,19 @@ class VideoSource(Compensates):
         return {CORE_MEDIA_FRAMES: frames} if frames else {}
 
 
+def in_line(triggers: np.ndarray) -> np.ndarray:
+    """Replace, in place, each trigger time out of order with both neighbours, and return where.
+
+    Only a value whose neighbours are themselves in order is replaced, by their midpoint: a trigger
+    is periodic, so that is within half a period of the true time. Any other disorder is left for
+    validation to refuse rather than guessed at.
+    """
+    before, value, after = triggers[:-2], triggers[1:-1], triggers[2:]
+    where = np.nonzero((before <= after) & ((value < before) | (value > after)))[0] + 1
+    triggers[where] = (triggers[where - 1] + triggers[where + 1]) // 2
+    return where
+
+
 def _ffprobe(video: str, entries: str) -> str:
     """Ask ffprobe for one set of entries about a video's first video stream."""
     import subprocess
@@ -401,4 +465,4 @@ def _ffprobe(video: str, entries: str) -> str:
     ).stdout
 
 
-__all__ = ["BATCH_ROWS", "COLUMNS", "SUFFIX", "VideoSource"]
+__all__ = ["BATCH_ROWS", "COLUMNS", "SUFFIX", "VideoSource", "in_line"]

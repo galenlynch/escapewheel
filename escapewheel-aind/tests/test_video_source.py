@@ -4,12 +4,14 @@ import json
 import re
 from pathlib import Path
 
+import numpy as np
 import pyarrow as pa
 import pytest
 from escapewheel_writer import PacketWriter
-from escapewheel_writer.adapter import codes
+from escapewheel_writer.adapter import SourceDefect, codes
 
 from escapewheel_aind import video
+from escapewheel_aind.errors import AindFault
 from escapewheel_aind.notes import AindNote
 from escapewheel_aind.video import VideoSource
 
@@ -19,15 +21,25 @@ HARP_ROW = {"clock_id": "harp", "session_id": "s001", "tick_rate_num": 31250, "o
 TIMING = "1.0,100,0\n1.002,101,2000000\n1.006,103,6000000\n"
 
 
-def probe(monkeypatch, *pts, discarded=()):
-    """Answer ffprobe with packets in the order given, flagging `discarded` as an edit list excludes them."""
+def probe(monkeypatch, *pts):
+    """Answer the MP4 index with the presented timestamps given, in a 1/90000 time base."""
+    monkeypatch.setattr(video, "presentation", lambda handle: (1, 90000, np.sort(np.array(pts, dtype=np.int64))))
+
+
+def ffprobe(monkeypatch, *pts, discarded=()):
+    """Leave the index unread and answer ffprobe with packets in the order given, `discarded` flagged `D`."""
+
+    def unindexed(handle):
+        raise SourceDefect("fragmented", code=AindFault.VIDEO_UNINDEXED)
+
     packets = "".join(f"{p},{'_D_' if p in discarded else '___'}\n" for p in pts)
     answers = {"stream=time_base": "1/90000\n", "packet=pts,flags": packets}
+    monkeypatch.setattr(video, "presentation", unindexed)
     monkeypatch.setattr(video, "_ffprobe", lambda path, entries: answers[entries])
 
 
 def camera(root, monkeypatch):
-    """Write one camera with its timing CSV under `root`, and answer ffprobe from here rather than run it."""
+    """Write one camera with its timing CSV under `root`, and answer its index from here."""
     (root / "bottom_camera.mp4").write_bytes(b"")
     (root / "bottom_camera.csv").write_text(TIMING)
     probe(monkeypatch, 0, 3000, 6000)
@@ -123,12 +135,37 @@ def test_frames_are_numbered_in_presentation_order_whatever_order_they_are_store
     assert [f["t_tick"] for f in frames] == [31250, 31312, 31532]
 
 
-def test_a_packet_the_edit_list_excludes_is_no_frame(root, monkeypatch):
+def test_an_unindexed_video_is_listed_by_ffprobe_less_the_packets_it_discards(root, monkeypatch):
     """The excluded packet is stored and never presented, so it has no row and the rest stay complete."""
-    probe(monkeypatch, -3000, 0, 3000, 6000, discarded=(-3000,))
-    frames = _frames(_source(root))
+    ffprobe(monkeypatch, -3000, 6000, 0, 3000, discarded=(-3000,))
+    source = _source(root)
+    (row,) = source.media_assets()
+    assert (row["pts_rate_num"], row["pts_rate_den"]) == (90000, 1)
+    frames = _frames(source)
     assert [f["pts"] for f in frames] == [0, 3000, 6000]
     assert frames[0]["dropped"] is False
+    assert AindNote.INDEX_UNREAD in codes(source.notes)
+
+
+def test_the_columns_an_older_workflow_appends_are_not_read(root):
+    (root / "bottom_camera.csv").write_text("".join(f"{line},8.59,996\n" for line in TIMING.splitlines()))
+    assert [f["t_tick"] for f in _frames(_source(root))] == [31250, 31312, 31532]
+
+
+def test_a_trigger_time_out_of_order_with_both_neighbours_takes_their_midpoint(root, monkeypatch):
+    """A time a second early between two in order is replaced; the frames stay timed in order."""
+    (root / "bottom_camera.csv").write_text("1.0,100,0\n0.002,101,0\n1.004,102,0\n")
+    source = _source(root)
+    source.media_assets()
+    assert [f["t_tick"] for f in _frames(source)] == [31250, 31312, 31375]
+    assert "video.trigger_time_out_of_line" in source.compensations
+    assert AindNote.TRIGGER_REPAIRED in codes(source.notes)
+
+
+def test_disorder_beyond_one_time_is_left_for_validation():
+    """Two neighbouring times out of order leave no in-order pair around either, so neither is guessed at."""
+    triggers = np.array([10, 20, 5, 6, 50, 60])
+    assert video.in_line(triggers.copy()).size == 0
 
 
 #: Part 04 §4.1's resource-ID pattern.

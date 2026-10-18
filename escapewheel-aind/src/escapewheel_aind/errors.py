@@ -46,6 +46,8 @@ class AindFault(StrEnum):
     UNIT_REPEATED = "unit_repeated"
     #: A video lives where ffprobe cannot open it.
     VIDEO_UNREADABLE = "video_unreadable"
+    #: An MP4's index is fragmented, absent, or edited beyond one shift, so it cannot be read alone.
+    VIDEO_UNINDEXED = "video_unindexed"
 
 
 class DraftFault(StrEnum):

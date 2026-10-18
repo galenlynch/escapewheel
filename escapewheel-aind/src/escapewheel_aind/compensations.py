@@ -45,11 +45,18 @@ COMPENSATIONS: dict[str, Compensation] = {
         "position. The host drops frames in bursts, so each drop shifts every later pairing by "
         "one and the recorded time falls behind by one trigger period per lost frame -- measured "
         "at 93.4 s over one 85-minute session, from 46,723 lost frames",
-        action="the time is reconstructed from the camera's own chunk data, which survived: "
-        "t_tick = t0 + (FrameID - FrameID_0) x trigger period, where t0 is the one pairing still "
-        "correct and the period is measured from the file. Checked against the camera's "
-        "independent hardware clock, the two agree to 35-85 ms over 85 minutes",
-        evidence="inventory/upstream-defects.md §video-zip-pairing",
+        action="every recorded time is a real trigger time written beside the wrong frame, so "
+        "exposure k, counted by the camera's FrameID from the first frame, takes the k-th recorded "
+        "time; an exposure past the last recorded time extrapolates at the period the file measures",
+        evidence="inventory/upstream-defects.md §12",
+    ),
+    "video.trigger_time_out_of_line": Compensation(
+        defect="a camera's recorded trigger time can break order with both its neighbours at a HARP "
+        "second boundary, once sitting a second early, so frames are no longer timed in order",
+        action="each such time, where its two neighbours are themselves in order, is replaced by "
+        "their midpoint, within half a trigger period of the true time; any other disorder is left "
+        "for validation to refuse",
+        evidence="inventory/upstream-defects.md §13",
     ),
 }
 

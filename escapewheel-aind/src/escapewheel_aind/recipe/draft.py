@@ -358,7 +358,7 @@ def sources(choice: Choice, layout: Layout, *, local_videos: Path | None) -> tup
             _Source(
                 "video",
                 "The behaviour videos, referenced where they are published. Their frame times come from the "
-                "CSV beside each and their container index, which ffprobe streams once over HTTPS.",
+                "CSV beside each and their MP4 index, read by range requests without fetching the media.",
                 {"root": layout.videos, "in_process": True},
                 owns=[CORE_MEDIA_ASSETS, CORE_MEDIA_FRAMES],
             )

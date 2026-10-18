@@ -637,3 +637,64 @@ recorded, and declares `aind.amplitude_metrics_recomputed`. A value the analyzer
 replaced, so a 0.103 analyzer's cutoffs keep their 0.103 formula.
 
 Not filed.
+
+---
+
+## 12. Video frames are paired with trigger times by position, so every dropped frame shifts the rest
+
+**Found:** 2026-09-04, `ecephys_786867_2025-09-25_12-43-56`; remeasured 2026-10-17 on ten sessions
+**Repos:** `dynamic-foraging-task`, `src/workflows/foraging.bonsai:8112`
+**Severity:** high — a frame's recorded time falls behind by one trigger period per frame lost before it
+
+The workflow joins each camera's frame stream to the rig's trigger-time stream with `rx:Zip`, which
+pairs the k-th frame received with the k-th trigger. The host drops frames in bursts, and a dropped
+frame consumes no trigger, so every later frame is written beside an earlier trigger's time. The
+camera's own `FrameID` counts exposures and skips where one was lost.
+
+Two measurements locate the fault. At every `FrameID` skip, of any length, the recorded time steps
+by one trigger period. And the recorded times span the row count at the trigger's mean period
+(62.5 HARP ticks, 2.000 ms), not the exposure count:
+
+```text
+session              rows        lost    bursts   span / 2 ms   past last trigger
+776259 2025-04-04     770,050   166,632      159       770,049   32,488 (4.2%)
+786867 2025-09-25   2,520,209    46,723   32,237     2,520,186   46,723 (1.9%)
+791094 2025-10-08   2,144,878   187,350  118,364     2,144,858  181,365 (8.5%)
+```
+
+The other seven sessions skip no exposure. Against the camera's hardware clock, the recorded times
+end 93.4 s behind on 786867 and 374.7 s behind on 791094 2025-10-08. That cross-check does not apply
+to 776259 2025-04-04, whose camera timestamp advances 1.914 ms per frame against the 2.000 ms
+trigger; its 159 bursts are each exactly 1,049 frames.
+
+**Workaround:** every recorded time is a real trigger time, so `VideoSource` gives exposure k,
+counted by `FrameID` from the first frame, the k-th recorded time. An exposure past the last
+recorded time extrapolates at the period the file measures. Declared as
+`video.zip_pairing_repaired`.
+
+Not filed.
+
+---
+
+## 13. A camera's trigger time breaks order at a HARP second boundary
+
+**Found:** 2026-10-17, `ecephys_791093_2025-08-28_15-21-17`
+**Repos:** the acquiring workflow's trigger timestamps
+**Severity:** low — one frame's time is wrong by up to a second, and it breaks frame order
+
+```text
+791093 2025-08-28, row 1,279,556    12018560.997184   12018560.01616    12018561.001184
+791094 2025-10-09, row 546,117      15642625.000192   15642625.0        15642625.002016
+```
+
+791093 has two such rows, the same rows in all three cameras' CSVs, since the cameras share one
+trigger. Each sits within 20 ms after a whole second, its integer part a second behind. The
+791094 2025-10-09 value is 0.19 ms early, with the times after it continuing at the trigger's
+period. The other eight sessions have none. The cause is not established.
+
+**Workaround:** `VideoSource` replaces a trigger time out of order with both neighbours, where those
+neighbours are themselves in order, by their midpoint, which is within half a trigger period of the
+true time. Declared as `video.trigger_time_out_of_line`. Any other disorder is left for validation
+to refuse.
+
+Not filed.

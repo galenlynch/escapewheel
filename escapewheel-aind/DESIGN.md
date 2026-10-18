@@ -104,16 +104,21 @@ behind real time by one trigger period per lost frame, which reaches 93.4 s by t
 session. The compensation is `video.zip_pairing_repaired`.
 
 The camera's own chunk data survives intact. `FrameID` counts exposures and skips where one was
-lost, and the hardware timestamp accounts for every gap. The cameras are triggered, so exposure *k*
-is trigger *k*, and the frame's time is recovered exactly:
+lost. The cameras are triggered, so exposure *k* is trigger *k*. Every recorded time is a real
+trigger time written beside the wrong frame, so the repair is a lookup rather than a fit:
 
 ```text
-t_tick = t0 + (FrameID - FrameID_0) x trigger_period
+k      = FrameID - FrameID_0
+t_tick = recorded_time[k]                                         where k < rows
+t_tick = recorded_time[-1] + (k - (rows - 1)) x trigger_period    past the last recorded time
 ```
 
-`t0` is the one pairing that is still correct, since nothing has dropped before the first frame.
-The trigger period is measured from the file. Checked against the camera's independent hardware
-clock, the reconstruction agrees to 35-85 ms over 85 minutes.
+Nothing has dropped before the first frame, so its pairing is correct. The period is measured from
+the file. `inventory/upstream-defects.md §12` gives the measurements.
+
+A recorded time out of order with both its neighbours, where those neighbours are in order, is
+replaced by their midpoint before the lookup (`video.trigger_time_out_of_line`, §13). Any other
+disorder is left for validation to refuse.
 
 ### The packet owns frame times, not video
 
@@ -133,6 +138,8 @@ Each camera writes a CSV beside its video, with one line per frame and three col
 - a frame counter that skips where frames were lost, from which `dropped` is derived;
 - the camera's own clock in nanoseconds, against which the repair was checked.
 
+An older workflow appends exposure and gain, which are not read.
+
 `dropped` is true where the counter skips between a frame and the one before it, and false where
 it steps by one. At the first frame it is false for a video holding every frame its CSV times. A
 video holding fewer is placed by assuming its first frame is the CSV's first exposure, which a
@@ -141,9 +148,12 @@ transcode that lost the leading frames would break undetectably, so its first fl
 
 `pts` comes from none of the three. It is the frame's presentation timestamp in the container, on
 the timeline the container presents after its edit list, an integer in the container's own time
-base (Part 01 §3.18), and it locates a row in the file a consumer opens. ffprobe reports it that
-way by default, and flags `D` a packet the edit list excludes, which the adapter skips as no frame
-of the asset. The asset declares the rate those timestamps count at, so
+base (Part 01 §3.18), and it locates a row in the file a consumer opens. The adapter computes it
+from the MP4's `moov` box: decode times from `stts`, composition offsets from `ctts`, shifted by a
+single-segment `elst`, with a sample the edit list excludes skipped as no frame of the asset. That
+box is a few MB against gigabytes of media, so a published video is timed by range reads where it
+lies. The result matches ffprobe's `packet=pts,flags` less its `D` packets, which is the fallback
+for an MP4 the reader does not take, such as a fragmented one. The asset declares the rate those timestamps count at, so
 `pts * pts_rate_den / pts_rate_num` gives seconds of video without opening the file, and `t_tick`
 gives the same frame on the rig clock.
 
