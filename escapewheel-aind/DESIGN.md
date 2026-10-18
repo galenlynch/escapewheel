@@ -165,10 +165,17 @@ rename is `num_spikes`, which becomes `num_spikes_used` so that it cannot be rea
 `n_spikes`. The synchrony metric arrives as one column per size, `sync_spike_<size>`, and becomes
 one row per size, so a fourth size adds a row and leaves the schema alone.
 
-Where a recipe names the session's NWB, the adapter takes an amplitude metric the analyzer left
-NaN from the NWB's `units` table, which may have been repaired after the analyzer was written. It
-fills a unit only where the analyzer and the NWB agree on every other quality metric both state, so
-an NWB from another sorting fills nothing.
+A SpikeInterface 0.104 analyzer can leave `amplitude_median` and `amplitude_cutoff` NaN for every
+unit, although the spike amplitudes they summarize are stored complete. The adapter recomputes such
+a NaN from those amplitudes rather than resorting: both metrics depend on nothing else, and the
+median reproduces a 0.103 analyzer's stored value exactly. The cutoff follows the 0.104 formula,
+which is what the failed run would have used. A value the analyzer states is kept, so a 0.103
+analyzer keeps its cutoffs, and `aind.amplitude_metrics_recomputed` records that the step ran.
+
+Where a recipe names the session's NWB, the adapter takes a metric still NaN from the NWB's `units`
+table, which may have been repaired after the analyzer was written. It fills a unit only where the
+analyzer and the NWB agree on every other quality metric both state, so an NWB from another sorting
+fills nothing.
 
 ## Compensations cite the inventory
 

@@ -4,11 +4,13 @@
   SpikeInterface analyzer beside the curated sorting.
 - :data:`METRICS`, :data:`WAVEFORM_METRICS` -- a mapping from each table's columns to the analyzer
   columns they are read from.
-- :data:`FILLABLE` -- the metrics a named NWB may supply where the analyzer holds NaN.
+- :data:`FILLABLE` -- the metrics recomputed, or taken from a named NWB, where the analyzer holds NaN.
+- :func:`amplitude_cutoff` -- SpikeInterface's estimate of the spikes an amplitude threshold lost.
 
 The adapter resolves a unit through the build's `units` term by `(device_name, local_unit_label)`.
-An NWB fills a NaN only for a unit on which the NWB and the analyzer agree in every other metric
-that both state.
+A NaN `FILLABLE` metric is recomputed from the analyzer's own spike amplitudes where it holds them,
+and declared as `aind.amplitude_metrics_recomputed`. An NWB fills what is still NaN only for a unit
+on which the NWB and the analyzer agree in every other metric that both state.
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ from escapewheel_writer.adapter import (
     FLIGHT,
     STREAM,
     STREAM_FOLDER,
+    Compensates,
     Note,
     SortedStream,
     SourceDefect,
@@ -92,15 +95,23 @@ WAVEFORM_METRICS = {
 #: A synchrony column, and the size it counts.
 SYNCHRONY = re.compile(r"^sync_spike_(?P<size>\d+)$")
 
-#: `quality_metrics` columns an NWB may supply where the analyzer holds NaN.
+#: `quality_metrics` columns recomputed, or taken from an NWB, where the analyzer holds NaN.
 FILLABLE = ("amplitude_median", "amplitude_cutoff")
+
+#: Each spike's amplitude, its unit's position in `UNIT_IDS`, and the labels, all of one spike vector.
+AMPLITUDES = "extensions/spike_amplitudes/amplitudes"
+SPIKE_UNITS = "sorting/spikes/unit_index"
+UNIT_IDS = "sorting/unit_ids"
+
+#: `amplitude_cutoff`'s parameters where the analyzer records none, SpikeInterface's defaults.
+CUTOFF_PARAMS = {"num_histogram_bins": 100, "histogram_smoothing_value": 3, "amplitudes_bins_min_ratio": 5}
 
 #: How closely a metric the analyzer and the NWB both state must agree for the NWB to fill a unit.
 #: The NWB copies the analyzer's float64 values, so a difference beyond rounding means another unit.
 AGREEMENT_RTOL = 1e-9
 
 
-class UnitQCSource:
+class UnitQCSource(Compensates):
     """`aind_unit_qc.metrics`, `waveform_metrics` and `synchrony`, from a SpikeInterface analyzer.
 
     Parameters
@@ -167,10 +178,12 @@ class UnitQCSource:
         # over rows and this keys them.
         self.units = {(str(row["device_name"]), str(row["local_unit_label"])): row["unit_id"] for row in units}
         self.nwb = SourceStore(nwb, cache=source_cache) if nwb is not None else None
+        Compensates.__init__(self)
         self.notes: list[str] = []
         self._built: dict[str, list[dict[str, Any]]] | None = None
         self._nwb_rows: dict[tuple[str, str], int] | None = None
         self._filled = dict.fromkeys(FILLABLE, 0)
+        self._recomputed = dict.fromkeys(FILLABLE, 0)
         self._disagreed = 0
         self._unstated = 0
 
@@ -252,6 +265,7 @@ class UnitQCSource:
                             where=stream.key,
                         )
                     seen[unit] = stream.key
+                quality = self._recompute(stream, quality, kept)
                 if self.nwb is not None:
                     quality = self._fill(stream, quality, kept)
                 built[AIND_UNIT_QC_METRICS] += self._table(quality, METRICS, kept, identity)
@@ -271,6 +285,11 @@ class UnitQCSource:
                     AindNote.UNIT_UNMATCHED,
                 )
             )
+        if any(self._recomputed.values()):
+            counts = " and ".join(f"{count} {name}" for name, count in self._recomputed.items())
+            self.notes.append(
+                Note(f"spike_amplitudes: recomputed {counts} value(s) the analyzer left NaN", AindNote.NAN_RECOMPUTED)
+            )
         if self.nwb is not None:
             counts = " and ".join(f"{count} {name}" for name, count in self._filled.items())
             self.notes.append(Note(f"nwb: filled {counts} value(s) the analyzer left NaN", AindNote.NAN_FILLED))
@@ -289,6 +308,60 @@ class UnitQCSource:
                 )
         self._built = built
         return built
+
+    def _recompute(
+        self, stream: SortedStream, frame: Mapping[str, NDArray[Any]], kept: Sequence[int]
+    ) -> dict[str, NDArray[Any]]:
+        """Return the frame with each kept unit's NaN `FILLABLE` metric computed from its spike amplitudes.
+
+        Computed as the analyzer's SpikeInterface does over the whole recording, so a unit too
+        sparse for a histogram stays NaN; a unit that sparse never triggers the read.
+        """
+        params = CUTOFF_PARAMS | self._cutoff_params(stream)
+        enough = params["num_histogram_bins"] * params["amplitudes_bins_min_ratio"]
+        offsets = np.asarray(kept, dtype=np.int64)
+        spikes = frame["num_spikes"][offsets] if "num_spikes" in frame else np.full(len(offsets), enough)
+        lacking = {
+            name: offsets[~np.isfinite(frame[name][offsets].astype(np.float64)) & (spikes >= floor)]
+            for name, floor in (("amplitude_median", 1), ("amplitude_cutoff", enough))
+            if name in frame
+        }
+        if not any(len(rows) for rows in lacking.values()) or not self.store.is_array(stream.path / AMPLITUDES):
+            return dict(frame)
+        amplitudes = self.store.array(stream.path / AMPLITUDES)
+        units = self.store.array(stream.path / SPIKE_UNITS)
+        position = {_label(label): index for index, label in enumerate(self.store.array(stream.path / UNIT_IDS))}
+        order = np.argsort(units, kind="stable")
+        bounds = np.searchsorted(units[order], np.arange(len(position) + 1))
+
+        def of(label: Any) -> NDArray[np.float64]:
+            index = position[_label(label)]
+            return amplitudes[order[bounds[index] : bounds[index + 1]]].astype(np.float64)
+
+        filled = dict(frame)
+        for name, rows in lacking.items():
+            values = frame[name].astype(np.float64)
+            for row in rows:
+                spike_amplitudes = of(frame["index"][row])
+                if not spike_amplitudes.size:
+                    continue
+                median = float(np.median(spike_amplitudes))
+                values[row] = (
+                    median
+                    if name == "amplitude_median"
+                    else amplitude_cutoff(-spike_amplitudes if median < 0 else spike_amplitudes, **params)
+                )
+            filled[name] = values
+            self._recomputed[name] += int(np.isfinite(values[rows]).sum())
+        if any(self._recomputed.values()):
+            self.compensate("aind.amplitude_metrics_recomputed")
+        return filled
+
+    def _cutoff_params(self, stream: SortedStream) -> dict[str, Any]:
+        """Return the `amplitude_cutoff` parameters the analyzer's quality metrics recorded, if any."""
+        stated = self.store.attrs(stream.path / "extensions/quality_metrics").get("params", {})
+        recorded = (stated.get("metric_params") or stated.get("qm_params") or {}).get("amplitude_cutoff") or {}
+        return {name: recorded[name] for name in CUTOFF_PARAMS if name in recorded}
 
     def _nwb_row_of(self) -> dict[tuple[str, str], int]:
         """Map each NWB unit's `(device_name, ks_unit_id)` to its row, read once."""
@@ -409,6 +482,29 @@ class UnitQCSource:
         return {resource: len(rows) for resource, rows in self.records().items()}
 
 
+def amplitude_cutoff(
+    amplitudes: NDArray[np.float64],
+    num_histogram_bins: int = 100,
+    histogram_smoothing_value: float = 3,
+    amplitudes_bins_min_ratio: float = 5,
+) -> float:
+    """Estimate the fraction of a unit's spikes lost below detection, as SpikeInterface 0.104 does.
+
+    Its histogram counts are smoothed by `scipy.ndimage.gaussian_filter1d` in the counts' own
+    integer type, which truncates; the smoothing here truncates the same way so the value agrees.
+    """
+    if len(amplitudes) / num_histogram_bins < amplitudes_bins_min_ratio:
+        return float("nan")
+    counts = np.histogram(amplitudes, num_histogram_bins)[0]
+    radius = int(4 * histogram_smoothing_value + 0.5)
+    kernel = np.exp(-0.5 * (np.arange(-radius, radius + 1) / histogram_smoothing_value) ** 2)
+    smoothed = np.convolve(np.pad(counts.astype(np.float64), radius, mode="edge"), kernel / kernel.sum(), "valid")
+    pdf = np.trunc(smoothed + 1e-9)
+    last = np.nonzero(pdf >= pdf[0])[0][-1]
+    missed = float(pdf[last + 1 :].sum())
+    return min(missed / (len(amplitudes) + missed), 0.5)
+
+
 def _label(value: Any) -> str:
     """Return a unit label as the sorter's `local_unit_label` spells it."""
     return str(int(value)) if isinstance(value, (int, np.integer)) else str(value)
@@ -421,4 +517,4 @@ def _values(column: NDArray[Any]) -> list[Any]:
     return list(column.tolist())
 
 
-__all__ = ["FILLABLE", "METRICS", "WAVEFORM_METRICS", "UnitQCSource"]
+__all__ = ["FILLABLE", "METRICS", "WAVEFORM_METRICS", "UnitQCSource", "amplitude_cutoff"]

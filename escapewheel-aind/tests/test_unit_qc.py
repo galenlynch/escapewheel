@@ -20,7 +20,7 @@ from escapewheel_writer.adapter import SourceDefect, coded, codes
 
 from escapewheel_aind.errors import AindFault
 from escapewheel_aind.notes import AindNote
-from escapewheel_aind.unit_qc import METRICS, WAVEFORM_METRICS, UnitQCSource
+from escapewheel_aind.unit_qc import METRICS, WAVEFORM_METRICS, UnitQCSource, amplitude_cutoff
 from tests.nwbfixture import array, group, text
 
 LABELS = [0, 1, 5]
@@ -297,3 +297,54 @@ def test_an_nwb_naming_no_unit_is_refused(asset: Path, tmp_path: Path) -> None:
 
 def test_the_nwb_is_an_option_a_recipe_may_set() -> None:
     assert "nwb" in UnitQCSource.ACCEPTS
+
+
+# -- recomputing the analyzer's NaN from its own spike amplitudes ---------------------------
+
+#: A unit whose low tail a detection threshold cut off, and SpikeInterface 0.104.7's cutoff for it.
+TRUNCATED = np.round(np.random.default_rng(7).normal(80, 20, 4000), 3)
+TRUNCATED = TRUNCATED[TRUNCATED > 60]
+TRUNCATED_CUTOFF = 0.1927158707187651
+
+
+def spike_amplitudes(root: Path, by_label: dict[int, np.ndarray], labels=LABELS) -> None:
+    """Write the analyzer's spike vector and `spike_amplitudes`, the spikes of each unit interleaved."""
+    analyzer = next((root / "postprocessed").glob("*.zarr"))
+    unit = np.concatenate([np.full(len(v), labels.index(k), dtype=np.int64) for k, v in by_label.items()])
+    amplitude = np.concatenate(list(by_label.values())).astype(np.float32)
+    shuffled = np.random.default_rng(0).permutation(len(unit))
+    array(group(analyzer / "sorting/spikes") / "unit_index", unit[shuffled])
+    array(analyzer / "sorting/unit_ids", np.asarray(labels, dtype=np.int64))
+    array(group(analyzer / "extensions/spike_amplitudes") / "amplitudes", amplitude[shuffled])
+
+
+def test_a_nan_amplitude_metric_is_recomputed_from_the_analyzers_spike_amplitudes(tmp_path: Path) -> None:
+    root = stream(
+        tmp_path / "sorted",
+        "experiment1_Record Node 109#Neuropix-PXI-100.A_recording1",
+        num_spikes=np.asarray([3, 1, len(TRUNCATED)], dtype=np.int64),
+    )
+    spike_amplitudes(root, {0: np.asarray([-30.0, -10.0, -20.0]), 1: np.asarray([40.0]), 5: -TRUNCATED})
+    source = UnitQCSource(root, session_id="s1", units=UNITS)
+    metrics = _by_unit(source.records()["aind_unit_qc.metrics"])
+    assert metrics["exp1.A:0"]["amplitude_median"] == -20.0
+    assert metrics["exp1.A:5"]["amplitude_median"] == pytest.approx(-float(np.median(TRUNCATED)), abs=1e-4)
+    assert metrics["exp1.A:5"]["amplitude_cutoff"] == pytest.approx(TRUNCATED_CUTOFF, rel=1e-6)
+    assert metrics["exp1.A:0"]["amplitude_cutoff"] == 0.01
+    assert "spike_amplitudes: recomputed 2 amplitude_median and 1 amplitude_cutoff value(s) the analyzer left NaN" in (
+        source.notes
+    )
+    assert "aind.amplitude_metrics_recomputed" in source.compensations
+
+
+def test_a_unit_too_sparse_for_a_cutoff_stays_null_and_reads_no_amplitudes(asset: Path) -> None:
+    """300 spikes is under SpikeInterface's 500-spike floor, so its NaN cutoff is the right answer."""
+    spike_amplitudes(asset, {0: np.asarray([-5.0]), 5: np.asarray([-7.0])})
+    metrics = _by_unit(UnitQCSource(asset, session_id="s1", units=UNITS).records()["aind_unit_qc.metrics"])
+    assert metrics["exp1.A:5"]["amplitude_cutoff"] is None
+    assert metrics["exp1.A:5"]["amplitude_median"] == -7.0
+
+
+def test_the_cutoff_is_spikeinterfaces() -> None:
+    assert amplitude_cutoff(TRUNCATED) == pytest.approx(TRUNCATED_CUTOFF, rel=1e-12)
+    assert np.isnan(amplitude_cutoff(TRUNCATED[:499]))

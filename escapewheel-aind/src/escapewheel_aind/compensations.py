@@ -30,6 +30,15 @@ COMPENSATIONS: dict[str, Compensation] = {
         "whole-second stamp plus the sub-second wait for the first of thousands of units",
         evidence="inventory/nwb-zarr-776259-2025-04-09.md §3.1, §3.3",
     ),
+    "aind.amplitude_metrics_recomputed": Compensation(
+        defect="a SpikeInterface 0.104 analyzer stores amplitude_median and amplitude_cutoff as NaN "
+        "for every unit: the pipeline passes the 0.103 parameters, which 0.104's functions reject, "
+        "while the spike_amplitudes they are computed from are complete",
+        action="each NaN is recomputed from the analyzer's spike_amplitudes over the whole recording, "
+        "the median as SpikeInterface takes it and the cutoff by its 0.104 formula with the recorded "
+        "bin parameters; a value the analyzer states is kept",
+        evidence="inventory/upstream-defects.md §11",
+    ),
     "video.zip_pairing_repaired": Compensation(
         defect="the acquiring workflow joins the camera stream to the rig's timestamp stream "
         "with rx:Zip (dynamic-foraging-task, src/workflows/foraging.bonsai:8112), which pairs by "

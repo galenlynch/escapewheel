@@ -26,6 +26,8 @@ class AindNote(StrEnum):
     UNIT_UNMATCHED = "unit_unmatched"
     #: How many metric values the analyzer left NaN were filled from the NWB.
     NAN_FILLED = "nan_filled"
+    #: How many metric values the analyzer left NaN were recomputed from its spike amplitudes.
+    NAN_RECOMPUTED = "nan_recomputed"
     #: How many units the NWB and the analyzer disagree on, which are not filled.
     NAN_DISAGREED = "nan_disagreed"
     #: Units with a NaN to fill are absent from the NWB.

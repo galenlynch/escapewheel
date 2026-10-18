@@ -598,3 +598,42 @@ visible in the ephys, and this rig records none.
    continuously monitored quantity rather than an unverifiable assumption.
 
 Not filed.
+
+---
+
+## 11. `amplitude_median` and `amplitude_cutoff` are NaN for every unit of a SpikeInterface 0.104 analyzer
+
+**Found:** 2026-10-17, `ecephys_786867_2025-09-25_12-43-56_sorted_2026-07-29_16-03-08`
+**Repos:** the sorting pipeline's quality-metrics step
+**Severity:** medium — two metrics a curation threshold reads are absent from every unit
+
+```text
+extensions/quality_metrics/.zattrs   version 0.104.7
+  metric_params.amplitude_median     {"peak_sign": "neg", "synchrony_sizes": [2, 4, 8]}
+  metric_params.amplitude_cutoff     {"peak_sign": "neg", "num_histogram_bins": 100, ...}
+extensions/spike_amplitudes          run_completed: true, 14,335,848 spikes, all finite
+quality_metrics/amplitude_median     NaN for 534 of 534 units
+```
+
+The run passed the parameters SpikeInterface 0.103 took. In 0.104, `compute_amplitude_medians`
+takes neither `peak_sign` nor `synchrony_sizes`, and `compute_amplitude_cutoffs` no longer takes
+`peak_sign`, so both metrics fail and are stored as NaN for every unit. The spike amplitudes they
+are computed from are intact. Of the ten sessions built on 2026-10-16, six were sorted with 0.104.7.
+The five sorted in late July 2026 carry the stale parameters and are affected. 776259 2025-04-09,
+sorted on 2026-08-11, passed `amplitude_median: {}` and a cutoff without `peak_sign`, and its
+metrics are stored. The four sorted with 0.103.0 are not affected.
+
+Both metrics are a function of the stored amplitudes alone. On that 2026-08-11 analyzer, the
+median of each unit's `spike_amplitudes` and the 0.104 cutoff of them reproduce the stored values
+for all 241 units of a stream, the cutoff exactly and the median to 6e-5 µV. On a 0.103.0 analyzer
+the median also matches, to 3e-5 µV for 538 units, but the cutoff does not: 0.104 sums the smoothed
+histogram beyond the last bin at least as high as the first, where 0.103 summed from the bin past
+the peak nearest the first bin's height. 0.105.2 keeps the 0.104 formula. Both versions return NaN
+below 500 spikes at the default 100 bins.
+
+**Workaround:** `UnitQCSource` recomputes a NaN `amplitude_median` or `amplitude_cutoff` from the
+analyzer's own `spike_amplitudes`, with the 0.104 cutoff formula and the bin parameters the analyzer
+recorded, and declares `aind.amplitude_metrics_recomputed`. A value the analyzer states is never
+replaced, so a 0.103 analyzer's cutoffs keep their 0.103 formula.
+
+Not filed.
