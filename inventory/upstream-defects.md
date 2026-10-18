@@ -657,20 +657,18 @@ by one trigger period. And the recorded times span the row count at the trigger'
 
 ```text
 session              rows        lost    bursts   span / 2 ms   past last trigger
-776259 2025-04-04     770,050   166,632      159       770,049   32,488 (4.2%)
 786867 2025-09-25   2,520,209    46,723   32,237     2,520,186   46,723 (1.9%)
 791094 2025-10-08   2,144,878   187,350  118,364     2,144,858  181,365 (8.5%)
 ```
 
-The other seven sessions skip no exposure. Against the camera's hardware clock, the recorded times
-end 93.4 s behind on 786867 and 374.7 s behind on 791094 2025-10-08. That cross-check does not apply
-to 776259 2025-04-04, whose camera timestamp advances 1.914 ms per frame against the 2.000 ms
-trigger; its 159 bursts are each exactly 1,049 frames.
+Seven of the other eight sessions skip no exposure; 776259 2025-04-04's `FrameID` is not an
+exposure count (§14). Against the camera's hardware clock, the recorded times end 93.4 s behind on
+786867 and 374.7 s behind on 791094 2025-10-08.
 
 **Workaround:** every recorded time is a real trigger time, so `VideoSource` gives exposure k,
 counted by `FrameID` from the first frame, the k-th recorded time. An exposure past the last
 recorded time extrapolates at the period the file measures. Declared as
-`video.zip_pairing_repaired`.
+`video.zip_pairing_repaired`, and applied only where `FrameID` never steps backwards.
 
 Not filed.
 
@@ -698,5 +696,34 @@ those neighbours are themselves in order, by their recorded midpoint, which is w
 period of the true time. On 791093 that is the one stray value; on 791094 2025-10-09 it is both
 values of the pair, since neither can be singled out. Declared as `video.trigger_time_out_of_line`.
 Any other disorder is left for validation to refuse.
+
+Not filed.
+
+---
+
+## 14. A camera's `FrameID` and timestamp jump together while its pictures run on
+
+**Found:** 2026-10-18, `ecephys_776259_2025-04-04_16-54-50`
+**Repos:** the camera's chunk data, written by `foraging.bonsai`'s CsvWriter
+**Severity:** high if trusted — the §12 lookup maps frames to the wrong triggers, by up to 64 s
+
+`bottom_camera`'s `FrameID` steps by +1,049 159 times and by −1,047 127 times, and its timestamp
+steps by +2,008 ms and −2,004 ms at the same rows; each side camera's steps 151 and 119 times.
+Between jumps the timestamp advances 1.914 ms per frame against the 2.000 ms trigger. The jumps
+cluster every ~23,460 rows, flickering between the two offsets for a few dozen rows before settling
+1,048 higher, and 2,556 to 2,774 `FrameID` values per camera occur twice.
+
+None of it is in the pictures. On `bottom_camera.mp4`, decoded frames either side of a jump differ
+by 1.40 grey levels at row 22,424 and 0.17 at row 749,805, as much as any two neighbours, while
+frames 1,048 rows apart differ by 6.1-7.8 and 3.5-3.7 there. The HARP behaviour board's register
+94 (`raw.harp/BehaviorEvents/Event_94.bin`) logs 770,050 trigger events at 500 Hz, the rate written
+to register 95; they equal each camera's CSV first column tick for tick, and each MP4 presents
+770,050 frames. So each camera exposed once per trigger, no frame was lost, and row k is trigger k. The cause of the
+jumps is not established.
+
+**Workaround:** a `FrameID` that ever steps backwards is not counting exposures, so `VideoSource`
+does not apply §12's lookup: each frame takes the time recorded on its own row, and its dropped flag
+is null, since the CSV alone cannot show that none was lost. Declared as
+`video.frame_counter_distrusted`.
 
 Not filed.

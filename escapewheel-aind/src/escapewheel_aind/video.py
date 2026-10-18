@@ -6,8 +6,10 @@
 
 The source pairs each frame with a time that falls behind by one trigger period for every frame the
 host dropped. The adapter therefore reconstructs `t_tick` from the camera's own frame counter, and
-declares the repair as `video.zip_pairing_repaired`. A trigger time out of order with both its
-neighbours is replaced by their midpoint, declared as `video.trigger_time_out_of_line`.
+declares the repair as `video.zip_pairing_repaired`. A counter that steps backwards is not counting
+exposures, so its frames keep the times recorded beside them, declared as
+`video.frame_counter_distrusted`. A trigger time out of order with both its neighbours is replaced
+by their midpoint, declared as `video.trigger_time_out_of_line`.
 """
 
 from __future__ import annotations
@@ -233,9 +235,19 @@ class VideoSource(Compensates):
                     Note(f"{video.name}: no timing CSV beside it; referenced without frames", AindNote.NO_TIMING)
                 )
             else:
-                self.compensate("video.zip_pairing_repaired")
                 # Read here rather than in `_frames`, whose compensations are collected before it runs.
-                self._timed(video)
+                _, counter = self._timed(video)
+                if counting(counter):
+                    self.compensate("video.zip_pairing_repaired")
+                else:
+                    self.compensate("video.frame_counter_distrusted")
+                    self.notes.append(
+                        Note(
+                            f"{video.name}: frame counter steps backwards, so it counts no exposures; "
+                            "each frame keeps the time recorded beside it",
+                            AindNote.COUNTER_DISTRUSTED,
+                        )
+                    )
             rows.append(
                 {
                     "media_asset_id": self._names[video],
@@ -322,7 +334,7 @@ class VideoSource(Compensates):
             self.notes.append(
                 Note(
                     f"{video.name}: {repaired.size} trigger time(s) outside the span of their neighbours; "
-                    "replaced by its midpoint",
+                    "each replaced by the midpoint of its neighbours",
                     AindNote.TRIGGER_REPAIRED,
                 )
             )
@@ -369,7 +381,8 @@ class VideoSource(Compensates):
         # at the period the file measures, which reproduces the recorded times to 0.5 ms where
         # both exist.
         period = (triggers[-1] - triggers[0]) / (triggers.size - 1)
-        exposures = counter[rows] - counter[0]
+        trusted = counting(counter)
+        exposures = counter[rows] - counter[0] if trusted else rows
         ticks = np.empty(exposures.size, dtype=np.int64)
         known = exposures < triggers.size
         ticks[known] = triggers[exposures[known]]
@@ -385,12 +398,13 @@ class VideoSource(Compensates):
             )
         # True where anything is missing immediately before this frame, from either cause. An
         # incomplete video's first frame is assumed to be the first exposure, so whether any came
-        # before it is unknown, which the flag records as null (Part 01 §3.18).
+        # before it is unknown, which the flag records as null (Part 01 §3.18). Without a counter
+        # nothing shows a loss, so every flag is null.
         gap = np.empty(ticks.size, dtype=bool)
         gap[0] = False
         np.greater(np.diff(exposures), 1, out=gap[1:])
-        unknown = np.zeros(ticks.size, dtype=bool)
-        unknown[0] = not complete
+        unknown = np.full(ticks.size, not trusted, dtype=bool)
+        unknown[0] |= not complete
 
         for start in range(0, ticks.size, self.batch_rows):
             stop = min(start + self.batch_rows, ticks.size)
@@ -437,6 +451,11 @@ class VideoSource(Compensates):
         return {CORE_MEDIA_FRAMES: frames} if frames else {}
 
 
+def counting(counter: np.ndarray) -> bool:
+    """Whether a frame counter can be counting exposures: one that ever steps backwards cannot."""
+    return bool((np.diff(counter) >= 0).all())
+
+
 def in_line(triggers: np.ndarray) -> np.ndarray:
     """Replace, in place, each trigger time outside the span of its two neighbours, and return where.
 
@@ -466,4 +485,4 @@ def _ffprobe(video: str, entries: str) -> str:
     ).stdout
 
 
-__all__ = ["BATCH_ROWS", "COLUMNS", "SUFFIX", "VideoSource", "in_line"]
+__all__ = ["BATCH_ROWS", "COLUMNS", "SUFFIX", "VideoSource", "counting", "in_line"]

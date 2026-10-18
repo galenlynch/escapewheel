@@ -40,8 +40,10 @@ class AindNote(StrEnum):
     FRAME_ABSENT = "frame_absent"
     #: Frames past the last recorded trigger were given extrapolated times.
     FRAME_EXTRAPOLATED = "frame_extrapolated"
-    #: Trigger times outside the span of their two neighbours were replaced by its midpoint.
+    #: Trigger times outside the span of their two neighbours were each replaced by their midpoint.
     TRIGGER_REPAIRED = "trigger_repaired"
+    #: A frame counter steps backwards, so frames keep the times recorded beside them.
+    COUNTER_DISTRUSTED = "counter_distrusted"
     #: A video's MP4 index could not be read, so ffprobe listed every packet.
     INDEX_UNREAD = "index_unread"
     #: The units table names no unit by device and sorter label, so no coordinate is emitted.

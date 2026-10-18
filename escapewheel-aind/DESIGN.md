@@ -116,6 +116,12 @@ t_tick = recorded_time[-1] + (k - (rows - 1)) x trigger_period    past the last 
 Nothing has dropped before the first frame, so its pairing is correct. The period is measured from
 the file. `inventory/upstream-defects.md §12` gives the measurements.
 
+The lookup holds only while `FrameID` counts exposures. A camera's `FrameID` and timestamp can jump
+by about a thousand frames together, forwards and back, while the video and the trigger log run on
+unbroken (§14). A counter that ever steps backwards is therefore not used: each frame keeps the
+time on its own row and a null dropped flag (`video.frame_counter_distrusted`). Read through such a
+counter, the lookup would move frames by seconds.
+
 A recorded time outside the span of its two neighbours, where those neighbours are in order, is
 replaced by their midpoint before the lookup (`video.trigger_time_out_of_line`, §13). Two adjacent
 times out of order with each other both qualify and both are replaced. Any other disorder is left

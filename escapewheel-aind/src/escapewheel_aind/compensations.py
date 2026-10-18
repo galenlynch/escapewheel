@@ -47,8 +47,17 @@ COMPENSATIONS: dict[str, Compensation] = {
         "at 93.4 s over one 85-minute session, from 46,723 lost frames",
         action="every recorded time is a real trigger time written beside the wrong frame, so "
         "exposure k, counted by the camera's FrameID from the first frame, takes the k-th recorded "
-        "time; an exposure past the last recorded time extrapolates at the period the file measures",
+        "time; an exposure past the last recorded time extrapolates at the period the file measures. "
+        "Applied only where FrameID never steps backwards",
         evidence="inventory/upstream-defects.md §12",
+    ),
+    "video.frame_counter_distrusted": Compensation(
+        defect="a camera's FrameID and timestamp can jump together by about a thousand frames, "
+        "forwards and back, while its pictures and its trigger run on unbroken, so FrameID does not "
+        "count exposures",
+        action="a counter that steps backwards is not used: each frame takes the trigger time recorded "
+        "on its own row, and its dropped flag is null, since nothing then shows whether a frame was lost",
+        evidence="inventory/upstream-defects.md §14",
     ),
     "video.trigger_time_out_of_line": Compensation(
         defect="a camera's recorded trigger times can break order at a HARP second boundary, one "

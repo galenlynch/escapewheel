@@ -162,6 +162,19 @@ def test_a_trigger_time_outside_its_neighbours_span_takes_their_midpoint(root, m
     assert AindNote.TRIGGER_REPAIRED in codes(source.notes)
 
 
+def test_a_counter_that_steps_backwards_leaves_each_frame_its_own_rows_time(root):
+    """A counter jumping ahead and back counts no exposures, so it neither moves a time nor flags a loss."""
+    (root / "bottom_camera.csv").write_text("1.0,100,0\n1.002,1149,0\n1.004,102,0\n")
+    source = _source(root)
+    source.media_assets()
+    frames = _frames(source)
+    assert [f["t_tick"] for f in frames] == [31250, 31312, 31375]
+    assert [f["dropped"] for f in frames] == [None, None, None]
+    assert "video.frame_counter_distrusted" in source.compensations
+    assert "video.zip_pairing_repaired" not in source.compensations
+    assert AindNote.COUNTER_DISTRUSTED in codes(source.notes)
+
+
 def test_an_adjacent_pair_out_of_order_is_replaced_whole():
     """Neither of the pair can be singled out, so each takes the midpoint of its recorded neighbours."""
     triggers = np.array([131, 193, 256, 250, 313, 375])
