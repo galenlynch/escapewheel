@@ -189,7 +189,7 @@ class AindNWBSource(NWBSource):
         paired: list[tuple[int, dict[str, Any]]] = []
         missed = 0
         for index in range(len(columns["ks_unit_id"])):
-            device = str(clean(columns["device_name"][index]))
+            device = self.named(clean(columns["device_name"][index]))
             label = str(int(columns["ks_unit_id"][index]))
             unit_id = self.units.get((device, label))
             if unit_id is None:

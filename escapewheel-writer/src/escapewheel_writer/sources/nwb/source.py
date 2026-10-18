@@ -78,6 +78,9 @@ class NWBSource(Devices, Electrodes, Signals, Events):
         Carry each unmapped trial column that varies across trials into `core.intervals.metadata`
         (Part 02 §8.6). A column `TRIAL_MAPPED` names is never carried. Turn it off where an
         extension holds the same columns, which `metadata` must not repeat.
+    groups : Mapping of str to str, optional
+        NWB electrode group or device name to the probe name the acquisition and the sorting use,
+        for a file whose names disagree with theirs. A name the file lacks is refused.
 
     Attributes
     ----------
@@ -163,6 +166,7 @@ class NWBSource(Devices, Electrodes, Signals, Events):
         "interval_kind",
         "emit_clock",
         "attachments",
+        "groups",
         "source_cache",
     )
 

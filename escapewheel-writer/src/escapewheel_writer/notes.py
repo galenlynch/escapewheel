@@ -75,6 +75,8 @@ class NoteCode(StrEnum):
     TIMESTAMPS_DROPPED = "timestamps_dropped"
     #: Devices sharing a serial number are recorded as one.
     DEVICES_MERGED = "devices_merged"
+    #: An NWB's groups or devices are read under the probe names the recipe gives them.
+    GROUPS_RENAMED = "groups_renamed"
     #: A settings file is not XML and is skipped.
     SETTINGS_UNPARSEABLE = "settings_unparseable"
     #: The sorter stamped its run with no UTC offset.

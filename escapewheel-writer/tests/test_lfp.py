@@ -1,5 +1,6 @@
 """The LFP source: external references, and the axes that make them readable."""
 
+import nwbfixture
 import pytest
 
 from escapewheel_writer.errors import SourceDefect, SourceFault, UsageError, UsageFault
@@ -228,3 +229,14 @@ def test_a_digest_also_records_the_members_it_digested(nwb):
     assert all(m["digest"] == digest(f"{array.uri}/{m['key']}") for m in array.members)
     rows = [(m["key"], m["size_bytes"], m["digest"]) for m in array.members]
     assert array.digest == {"algorithm": "sha256", "value": listing_digest(rows)}
+
+
+def test_a_renamed_group_places_its_series_and_labels_under_the_acquisitions_name(tmp_path):
+    """The NWB names the group `45883-7`; the clock and the contacts follow the rename to `45883-1`."""
+    root = tmp_path / "renamed.nwb"
+    lfpfixture.series(root, probe="45883-7")
+    lfpfixture.contacts(root, probe="45883-7")
+    nwbfixture.group(root / "general/extracellular_ephys/45883-7", neurodata_type="ElectrodeGroup")
+    got = lfpfixture.source(root, groups={"45883-7": "45883-1"}).records()
+    assert got["core.array_assets"][0]["clock_id"] == lfpfixture.CLOCK
+    assert [r["label_id"] for r in got["core.array_labels"]] == ["45883-1.CH0", "45883-1.CH4"]

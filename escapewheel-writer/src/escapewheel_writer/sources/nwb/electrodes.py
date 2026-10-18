@@ -51,7 +51,7 @@ class Electrodes(NWBFile):
 
     def _electrode_ids(self, columns: Mapping[str, NDArray[Any]]) -> list[str]:
         """Compose electrode IDs, because no NWB column is unique on its own."""
-        names, note = contact_ids(columns, self.prefix)
+        names, note = contact_ids(columns, self.prefix, self.groups)
         if note is not None and note not in self.notes:
             self.notes.append(note)
         return names
@@ -77,7 +77,7 @@ class Electrodes(NWBFile):
                 {
                     "electrode_id": electrode_id,
                     "session_id": self.session_id,
-                    "probe_id": self.prefix + str(columns["group_name"][index]),
+                    "probe_id": self.prefix + self.named(columns["group_name"][index]),
                     "local_electrode_label": self.local_electrode_label(columns, index),
                     "local_channel_label": clean(columns["channel_name"][index]) if "channel_name" in columns else None,
                     "impedance_ohm": clean(columns["imp"][index]) if "imp" in columns else None,

@@ -1,7 +1,7 @@
 """The values and names every adapter reading one NWB file takes the same way.
 
-- :func:`electrode_name`, :func:`contact_ids`, :func:`contact_columns` -- the one rule naming a
-  contact.
+- :func:`electrode_name`, :func:`contact_ids`, :func:`contact_columns`, :func:`renamed`,
+  :func:`checked_groups` -- the one rule naming a contact, and the renames a recipe gives it.
 - :func:`ucum_code` -- the UCUM code for an NWB `unit` attribute.
 - :data:`ABSENT` -- the spellings an NWB writes where a value is absent.
 - :func:`clean`, :func:`one` -- a source value as a typed column takes it, and the single value of
@@ -19,7 +19,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from ...errors import SourceDefect, SourceFault
+from ...errors import SourceDefect, SourceFault, UsageError, UsageFault
 from ...notes import Note, NoteCode
 
 #: NWB writes the literal string ``None`` where a value is absent -- in `laser_location`,
@@ -89,6 +89,40 @@ def ucum_code(stated: str | None) -> str | None:
     return UCUM_CODES.get(stated, stated) if stated else None
 
 
+def renamed(groups: Mapping[str, str] | None, name: Any) -> str:
+    """Return the probe name a recipe gives an NWB group or device, or the file's own."""
+    text = name.decode() if isinstance(name, bytes) else str(name)
+    return groups.get(text, text) if groups else text
+
+
+#: Where an NWB names the groups and devices a rename may name.
+NAMED = ("general/extracellular_ephys", "general/devices")
+
+
+def checked_groups(store: Any, groups: Mapping[str, str] | None, notes: list[str]) -> dict[str, str]:
+    """Return a recipe's group renames once each names a group or device the file holds.
+
+    A rename of a name the file lacks is refused rather than ignored, since a misspelt one would
+    leave the very mismatch it was written to fix.
+    """
+    if not groups:
+        return {}
+    held = {name for path in NAMED if store.path(path).is_dir() for name in store.members(path)}
+    if unknown := sorted(set(groups) - held):
+        raise UsageError(
+            f"groups renames {', '.join(unknown)}, which the file names no group or device",
+            code=UsageFault.UNKNOWN_GROUP,
+            where="groups",
+        )
+    notes.append(
+        Note(
+            "groups: " + ", ".join(f"{old} read as {new}" for old, new in sorted(groups.items())),
+            NoteCode.GROUPS_RENAMED,
+        )
+    )
+    return dict(groups)
+
+
 def contact_columns(store: Any, table: Path) -> dict[str, Any]:
     """Read the electrode columns a contact's name is composed from, whichever the file carries."""
     return {
@@ -98,12 +132,15 @@ def contact_columns(store: Any, table: Path) -> dict[str, Any]:
     }
 
 
-def contact_ids(columns: Mapping[str, Any], prefix: str = "") -> tuple[list[str], Note | None]:
+def contact_ids(
+    columns: Mapping[str, Any], prefix: str = "", groups: Mapping[str, str] | None = None
+) -> tuple[list[str], Note | None]:
     """Name every contact in electrode-table row order, and say if the fallback was needed.
 
     Three adapters name the same contacts, and a writer numbers a name (Part 05 §4.3), so a second
     spelling of one contact mints a second electrode and the packet then references a row that is
-    not there. The rule lives here once rather than in each of them.
+    not there. The rule lives here once rather than in each of them. `groups` renames an
+    electrode group to the probe name the acquisition gave it.
     """
     if "group_name" not in columns:
         raise SourceDefect(
@@ -111,7 +148,7 @@ def contact_ids(columns: Mapping[str, Any], prefix: str = "") -> tuple[list[str]
             code=SourceFault.NO_ELECTRODE_GROUPS,
             where="electrodes/group_name",
         )
-    group = columns["group_name"]
+    group = [renamed(groups, value) for value in columns["group_name"]]
     if "channel_name" in columns:
         pairs = columns["channel_name"]
         note: Note | None = None
@@ -125,4 +162,15 @@ def contact_ids(columns: Mapping[str, Any], prefix: str = "") -> tuple[list[str]
     return [electrode_name(one, other, prefix) for one, other in zip(group, pairs, strict=True)], note
 
 
-__all__ = ["ABSENT", "alike", "clean", "contact_columns", "contact_ids", "electrode_name", "one", "ucum_code"]
+__all__ = [
+    "ABSENT",
+    "alike",
+    "checked_groups",
+    "clean",
+    "contact_columns",
+    "contact_ids",
+    "electrode_name",
+    "one",
+    "renamed",
+    "ucum_code",
+]

@@ -736,6 +736,8 @@ class UsageFault(StrEnum):
     UNKNOWN_VERIFY_MODE = "unknown_verify_mode"
     #: A source was handed a clock that belongs to another session.
     CLOCK_OTHER_SESSION = "clock_other_session"
+    #: A recipe renames an NWB group or device the file does not name.
+    UNKNOWN_GROUP = "unknown_group"
     #: A source was asked for signals and given no clock to put their ticks on.
     SIGNALS_WITHOUT_CLOCK = "signals_without_clock"
     #: A name or a number already stands for something else of its kind.

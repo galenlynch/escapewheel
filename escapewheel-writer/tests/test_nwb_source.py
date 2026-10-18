@@ -338,6 +338,33 @@ def test_a_probe_finds_its_device_under_a_prefix(nwb, harp):
     assert set(attached.values()) == {d["device_id"] for d in records["core.devices"]}
 
 
+def test_a_renamed_group_names_its_probe_device_and_contacts_as_the_acquisition_does(nwb, harp, tmp_path):
+    """Every name minted from the group follows the rename, the headstage lookup included."""
+    settings = tmp_path / "settings.xml"
+    settings.write_text(SETTINGS.replace('"probeA"', '"probeA-1"'))
+    source = NWBSource(
+        nwb,
+        reference_clock=harp.record(),
+        zone=PACIFIC,
+        interval_kind=KIND,
+        attachments=settings,
+        groups={"probeA": "probeA-1"},
+    )
+    records = source.records()
+    assert {e["probe_id"] for e in records["core.electrodes"]} == {"probeA-1"}
+    assert all(e["electrode_id"].startswith("probeA-1.") for e in records["core.electrodes"])
+    assert [p["probe_id"] for p in records["core.probes"]] == ["probeA-1"]
+    (device,) = records["core.devices"]
+    assert (device["device_id"], device["parent_port"]) == ("probeA-1", "1")
+    assert NoteCode.GROUPS_RENAMED in codes(source.notes)
+
+
+def test_a_rename_of_a_group_the_file_lacks_is_refused(nwb, harp):
+    with pytest.raises(UsageError) as refused:
+        NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, groups={"probeZ": "probeZ-1"})
+    assert refused.value.code is UsageFault.UNKNOWN_GROUP
+
+
 #: One probe, `probeA`, on the headstage in slot 3 port 2, docked at 1.
 SETTINGS = """<SETTINGS><NP_PROBE slot="3" port="2" dock="1" custom_probe_name="probeA"
   bs_part_number="NP2_QBSC" bsc_part_number="NP2_CONN" headstage_part_number="NPM_HS_30"/></SETTINGS>"""

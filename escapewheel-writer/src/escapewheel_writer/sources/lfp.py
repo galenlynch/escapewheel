@@ -27,7 +27,7 @@ from escapewheel_reader.resource_ids import (
 from ..errors import SourceDefect, SourceFault, UsageError, UsageFault
 from ..notes import Note, NoteCode
 from .compensations import Compensates
-from .nwb.names import contact_columns, contact_ids, ucum_code
+from .nwb.names import checked_groups, contact_columns, contact_ids, renamed, ucum_code
 from .store import SourceStore, source_root, store_uri
 
 #: Where an NWB keeps its LFP series.
@@ -58,6 +58,8 @@ class LFPSource(Compensates):
     prefix : str
         Prepended to the contact names this adapter composes. It MUST match what the adapter
         owning `core.electrodes` uses, since a name is what the writer numbers.
+    groups : Mapping of str to str, optional
+        NWB electrode group name to probe name, as the adapter owning `core.electrodes` is given.
     source_cache : str, optional
         The build's source-cache location, which a store root is read through (Part 12 §10).
     verify : str, default "size"
@@ -119,7 +121,7 @@ class LFPSource(Compensates):
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
     #: unset (Part 12 §4). `store` is absent because it is a handle, which a recipe cannot
     #: carry and a declaration may not name.
-    ACCEPTS: ClassVar[tuple[str, ...]] = ("uri_base", "prefix", "verify", "source_cache")
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("uri_base", "prefix", "groups", "verify", "source_cache")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter",)
@@ -132,6 +134,7 @@ class LFPSource(Compensates):
         clocks: Any = (),
         uri_base: str | None = None,
         prefix: str = "",
+        groups: Any = None,
         verify: str = "size",
         store: Any = None,
         source_cache: str | None = None,
@@ -149,6 +152,7 @@ class LFPSource(Compensates):
         self.verify = verify
         Compensates.__init__(self)
         self.notes: list[str] = []
+        self.groups = checked_groups(self.store, groups, self.notes)
         # Part 02 §12.4 makes the two rate forms exclusive, so a clock states one or the other
         # and this reads whichever it states. The rational is the common case; the float is what
         # a source that measured its rate rather than declaring it records.
@@ -192,7 +196,7 @@ class LFPSource(Compensates):
                     code=SourceFault.SERIES_SPANS_GROUPS,
                     where=series.name,
                 )
-            self._probe[series.name] = found.pop()
+            self._probe[series.name] = renamed(self.groups, found.pop())
         return self._probe[series.name]
 
     def array_asset_id(self, series: Path) -> str:
@@ -423,7 +427,7 @@ class LFPSource(Compensates):
         # One rule for naming a contact, shared with the adapter owning `core.electrodes`: a second
         # spelling here would mint a second electrode and leave this axis pointing at neither.
         columns = contact_columns(self.store, table)
-        names, note = contact_ids(columns, self.prefix)
+        names, note = contact_ids(columns, self.prefix, self.groups)
         if note is not None and note not in self.notes:
             self.notes.append(note)
         return table, columns, names

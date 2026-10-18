@@ -39,11 +39,12 @@ class Devices(NWBFile):
             described = self.attrs(f"general/devices/{name}")
             identity = self.device_identity(described)
             serial = identity["serial_number"]
-            attachment = attached.get(name) or {}
+            probe = self.named(name)
+            attachment = attached.get(probe) or {}
             row = {
-                "device_id": self.prefix + name,
+                "device_id": self.prefix + probe,
                 "session_id": self.session_id,
-                "device_name": self.prefix + name,
+                "device_name": self.prefix + probe,
                 "manufacturer": clean(described.get("manufacturer")),
                 "model": identity["model"],
                 "serial_number": serial,
@@ -54,11 +55,11 @@ class Devices(NWBFile):
                 "metadata": identity["metadata"],
             }
             # A device with no serial is its own object: nothing says two of them are one.
-            key = serial or f"\0{name}"
+            key = serial or f"\0{probe}"
             if (kept := found.get(key)) is None:
-                found[key] = row | {"covers": [name]}
+                found[key] = row | {"covers": [probe]}
             else:
-                kept["covers"].append(name)
+                kept["covers"].append(probe)
         rows = []
         for row in found.values():
             covers = row.pop("covers")
@@ -100,7 +101,7 @@ class Devices(NWBFile):
             by_name[name] = self.device_identity(described)["serial_number"]
         rows = {row["serial_number"]: row for row in self.devices() if row["serial_number"]}
         named = {row["device_name"]: row for row in self.devices()}
-        return {name: rows.get(serial) or named.get(self.prefix + name) for name, serial in by_name.items()}
+        return {name: rows.get(serial) or named.get(self.prefix + self.named(name)) for name, serial in by_name.items()}
 
     def probes(self) -> list[dict[str, Any]]:
         """`core.probes`, one row per NWB ElectrodeGroup.
@@ -123,10 +124,10 @@ class Devices(NWBFile):
             device = devices.get(linked[0]) if linked else devices.get(name)
             rows.append(
                 {
-                    "probe_id": self.prefix + name,
+                    "probe_id": self.prefix + self.named(name),
                     "session_id": self.session_id,
                     "device_id": device["device_id"] if device else None,
-                    "probe_name": self.prefix + name,
+                    "probe_name": self.prefix + self.named(name),
                     "probe_type": device["model"] if device else None,
                     "manufacturer": device["manufacturer"] if device else None,
                     "serial_number": device["serial_number"] if device else None,

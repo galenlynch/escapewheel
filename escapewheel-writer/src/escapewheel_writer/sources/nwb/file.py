@@ -17,7 +17,7 @@ from ...notes import Note, NoteCode
 from ..compensations import Compensates
 from ..store import SourceStore, source_root
 from ..values import utc_offset as _offset
-from .names import one
+from .names import checked_groups, one, renamed
 
 
 def _resolve(root: Path) -> Path:
@@ -51,6 +51,7 @@ class NWBFile(Compensates):
         interval_kind: str | None = None,
         emit_clock: bool = True,
         attachments: str | Path | None = None,
+        groups: Mapping[str, str] | None = None,
         store: Any = None,
         source_cache: str | None = None,
     ) -> None:
@@ -101,6 +102,11 @@ class NWBFile(Compensates):
                 code=UsageFault.CLOCK_OTHER_SESSION,
                 where=self.clock.clock_id,
             )
+        self.groups = checked_groups(self.store, groups, self.notes)
+
+    def named(self, name: Any) -> str:
+        """Return the probe name for an NWB group or device, after any rename the recipe states."""
+        return renamed(self.groups, name)
 
     # -- source access ----------------------------------------------------------------
 
