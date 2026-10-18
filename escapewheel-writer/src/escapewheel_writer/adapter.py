@@ -23,7 +23,8 @@ What an adapter reads with:
 
 - :class:`Clock`, :func:`epoch_from`, :func:`zone_of`, :data:`HARP_TICK_RATE_HZ`,
   :data:`TICK_MIN`, :data:`TICK_MAX` -- a declared clock and the ticks it converts to.
-- :class:`SourceStore`, :func:`source_root` -- a source tree, local or remote, read once.
+- :class:`SourceStore`, :func:`source_root`, :func:`store_uri` -- a source tree, local or remote,
+  read once, and where a path in it lives.
 - :func:`sex`, :func:`utc_offset`, :func:`clean`, :data:`ABSENT` -- source spellings as the values
   a core column takes.
 - :class:`SortedStream`, :data:`STREAM_FOLDER`, :data:`ANALYZERS` -- one stream folder of a
@@ -76,7 +77,7 @@ from .sources.analyzer import STREAM_FOLDER, SortedStream
 from .sources.compensations import COMPENSATION_GROUP, Compensates, Compensation
 from .sources.nwb.names import ABSENT, clean
 from .sources.nwb.source import NWBSource
-from .sources.store import SourceStore, source_root
+from .sources.store import SourceStore, source_root, store_uri
 from .sources.values import sex, utc_offset
 from .sources.waveforms import ANALYZERS
 
@@ -132,6 +133,7 @@ __all__ = [
     "sex",
     "shape_problems",
     "source_root",
+    "store_uri",
     "utc_offset",
     "write_zarr",
     "zone_of",

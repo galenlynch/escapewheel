@@ -143,6 +143,7 @@ Reading a source
    adapter.TICK_MAX
    adapter.SourceStore
    adapter.source_root
+   adapter.store_uri
    adapter.sex
    adapter.utc_offset
    adapter.clean
